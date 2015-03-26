@@ -72,42 +72,73 @@
     :else (.resolve js/Promise v)))
 
 (defn promise?
+  "Returns true if `p` is a primise
+  instance."
   [p]
   (instance? js/Promise p))
 
 (defn fulfilled?
+  "Returns true if promise `p` is
+  already fulfilled."
   [p]
   {:pre [(promise? p)]}
   (.isFulFilled p))
 
 (defn rejected?
+  "Returns true if promise `p` is
+  already rejected."
   [p]
   {:pre [(promise? p)]}
   (.isRejected p))
 
 (defn pending?
+  "Returns true if promise `p` is
+  stil pending."
   [p]
   {:pre [(promise? p)]}
   (.isPending p))
 
 (defn all
+  "Given an array of promises, return a promise
+  that is fulfilled  when all the items in the
+  array are fulfilled."
   [& promises]
   (.all js/Promise promises))
 
 (defn any
+  "Given an array of promises, return a promise
+  that is fulfilled when first one item in the
+  array is fulfilled."
   [& promises]
   (.any js/Promise promises))
 
 (defn delay
+  "Given a timeout in miliseconds and optional
+  value, returns a promise that will fulfilled
+  with provided value (or nil) after the
+  time is reached."
   ([t] (delay t nil))
   ([t v]
    (.delay js/Promise v t)))
 
 (defn then
+  "A chain helper for promises."
   [p callback]
   (.then p callback))
 
 (defn catch
+  "Catch all promise chain helper."
+  ([p callback]
+   (.catch p callback))
+  ([p type callback]
+   (let [type (condp = type
+                :timeout (.-TimeoutError js/Promise)
+                :cancel (.-CancellationError js/Promise)
+                type)]
+     (.catch p type callback))))
+
+(defn error
+  "Catch operational errors promise chain helper."
   [p callback]
-  (.catch p callback))
+  (.error p callback))
 
