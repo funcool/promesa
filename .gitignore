@@ -1,0 +1,15 @@
+/target
+/classes
+/checkouts
+pom.xml
+pom.xml.asc
+*.jar
+*.class
+/.lein-*
+/.nrepl-port
+/*-init.clj
+doc/index.html
+doc/codox
+/output
+/repl
+/node_modules
