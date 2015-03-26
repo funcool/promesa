@@ -29,7 +29,7 @@ This section covers the installation and requirements of the _promesa_ library.
 
 === Leiningen
 
-The simplest way to use _promesa_ library in a Clojure project is by including
+The simplest way to use _promesa_ library in a ClojureScript project is by including
 it as a dependency in your *_project.clj_*:
 
 [source,clojure]
@@ -49,37 +49,13 @@ git clone https://github.com/funcool/promesa
 ----
 
 
-== Getting Started
-
-This library gives you access tu bluebird promise library with full support for
-clojurescript advanced compilation.
-
-For start using it, just require it like any other clojurescript ns:
-
-[source, clojure]
-----
-(ns yourapp.core
-  (:require [org.bluebird]))
-
-(def p (js/Promise. (fn [resolve reject]
-                      (resolve 1))))
-(.then p (fn [v]
-           (.log js/console v)))
-;; => 1
-----
-
-== Additional steroids
-
-Moreover, this library inclues some extra features.
-
-
-=== Lightweight wrapper
+== User guide
 
 This library also comes with lighweight abstraction for make use promises in a more
 idiomatic way.
 
 
-==== Creating a promise
+=== Creating a promise
 
 Let start creating a promise:
 
@@ -95,7 +71,7 @@ Let start creating a promise:
              (resolve 1)))
 ----
 
-==== Chain computations
+=== Chain computations
 
 Also, you can chain computations with `then`:
 
@@ -106,13 +82,35 @@ Also, you can chain computations with `then`:
     (p/then (fn [v] (* v 2))))
 ----
 
-Catch the exceptions with `catch`:
+=== Error handling
+
+Catch all exceptions with `catch` function:
 
 ```clojure
 (-> (p/promise (fn [_ reject] (reject "test error")))
-    (p/carch (fn [error] (.log js/console error))))
+    (p/catch (fn [error] (.log js/console error))))
 ;; will print "test error" in the console
 ```
+
+
+=== Raw access to bluebird api
+
+This library gives you the full access to the fantastic bluebird promise library.
+
+For start using it, just require it like any other clojurescript ns:
+
+[source, clojure]
+----
+(ns yourapp.core
+  (:require [org.bluebird]))
+
+(def p (js/Promise. (fn [resolve reject]
+                      (resolve 1))))
+(.then p (fn [v]
+           (.log js/console v)))
+;; => 1
+----
+
 
 == Promise as a Monad
 
@@ -134,6 +132,7 @@ abstraction, allowing the use of `mlet` macro as sugar syntax for async computat
 Let see an example:
 
 [source, clojure]
+----
 (require '[cats.core :as m])
 
 (defn do-stuff []
@@ -192,7 +191,7 @@ You should have nodejs or iojs installed in your system or any node version mana
 like **nvm**.
 
 
-=== License
+== License
 
 _promesa_ is licensed under BSD (2-Clause) license:
 
