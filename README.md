@@ -39,7 +39,7 @@ For start using it, just require it like any other clojurescript ns:
 
 Moreover, this library inclues some extra features.
 
-### Ligweight wrapper ###
+### Lightweight wrapper ###
 
 The promise library comes with lighweight abstraction for make use primises
 more idiomatic and more in clojure style.
