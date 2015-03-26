@@ -91,9 +91,10 @@ http://pouchdb.com/2015/03/05/taming-the-async-beast-with-es7.html
 That's ok, but the purposed sugar syntax is bound only to promises. That limits extend that
 sugar syntax with other abstractions.
 
-This library uses the [cats](https://github.com/funcool/cats) monad abstractions for create
-promise and use it `mlet` macro as sugar syntax for async computations composition:
+This library adds to bluebird promise type the [cats](https://github.com/funcool/cats) monad
+abstraction, allowing the use of `mlet` macro as sugar syntax for async computations composition.
 
+Let see an example:
 
 ```clojure
 (require '[cats.core :as m])
