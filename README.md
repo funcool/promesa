@@ -133,3 +133,21 @@ You may observe that the clojurescript version looks like synchronous code, in s
 way as you will use the ES7 `async` and `await` syntax. The difference is that the `mlet`
 sugar syntax works on an monadic abstraction, that allows build other implementatations
 like this library is doing for other types of compositions
+
+
+## Contribute ##
+
+**promesa** unlike Clojure and other Clojure contrib libs, does not have many
+restrictions for contributions. Just follow open a issue or pull request.
+
+
+## Run tests ##
+
+For run tests just execute this:
+
+```bash
+lein cljsbuild test
+```
+
+You should have nodejs or iojs installed in your system or any node version manager
+like **nvm**.
