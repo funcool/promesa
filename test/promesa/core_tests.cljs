@@ -1,8 +1,7 @@
 (ns promesa.core-tests
   (:require [cljs-testrunners.node :as node]
             [cljs.test :as t]
-            [cats.protocols :as pt]
-            [cats.monad.promise :as p]
+            [promesa.core :as p]
             [cats.core :as m]))
 
 (defn error-promise
