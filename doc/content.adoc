@@ -1,0 +1,224 @@
+= promesa - A promise library for ClojureScript.
+Andrey Antukh, <niwi@niwi.be>
+:toc: left
+:numbered:
+:source-highlighter: pygments
+:pygments-style: friendly
+:sectlinks:
+
+
+== Introduction
+
+A promise library for ClojureScript.
+
+This library offers link:https://github.com/petkaantonov/bluebird/[bluebird], a full featured promise
+javascript library with additional steroids.
+
+You can found the api documentation link:doc/index.html[here].
+
+
+== Project Maturity
+
+Since _promesa_ is a young project there may be some API breakage.
+
+
+== Install
+
+This section covers the installation and requirements of the _promesa_ library.
+
+
+=== Leiningen
+
+The simplest way to use _promesa_ library in a Clojure project is by including
+it as a dependency in your *_project.clj_*:
+
+[source,clojure]
+----
+[funcool/promise "0.1.0-SNAPSHOT"]
+----
+
+=== Get the Code
+
+_promesa_ is open source and can be found on link:https://github.com/funcool/promesa[github].
+
+You can clone the public repository with this command:
+
+[source,text]
+----
+git clone https://github.com/funcool/promesa
+----
+
+
+== Getting Started
+
+This library gives you access tu bluebird promise library with full support for
+clojurescript advanced compilation.
+
+For start using it, just require it like any other clojurescript ns:
+
+[source, clojure]
+----
+(ns yourapp.core
+  (:require [org.bluebird]))
+
+(def p (js/Promise. (fn [resolve reject]
+                      (resolve 1))))
+(.then p (fn [v]
+           (.log js/console v)))
+;; => 1
+----
+
+== Additional steroids
+
+Moreover, this library inclues some extra features.
+
+
+=== Lightweight wrapper
+
+This library also comes with lighweight abstraction for make use promises in a more
+idiomatic way.
+
+
+==== Creating a promise
+
+Let start creating a promise:
+
+[source, clojure]
+----
+(require '[promesa.core :as p])
+
+;; Create a fulfilled promise
+(p/promise 1)
+
+;; Create a promise from callback
+(p/promise (fn [resolve reject]
+             (resolve 1)))
+----
+
+==== Chain computations
+
+Also, you can chain computations with `then`:
+
+[source, clojure]
+----
+(-> (p/promise 1)
+    (p/then (fn [v] (inc v)))
+    (p/then (fn [v] (* v 2))))
+----
+
+Catch the exceptions with `catch`:
+
+```clojure
+(-> (p/promise (fn [_ reject] (reject "test error")))
+    (p/carch (fn [error] (.log js/console error))))
+;; will print "test error" in the console
+```
+
+== Promise as a Monad
+
+In asynchronous environments, specially in javascript, promises is one of the most used
+primitives for make composition of async computations. But using promises _as is_ not solves
+you from the callback hell.
+
+The upcoming ES7 standard will introduce a sugar syntax for work with promises in a painless
+way: using new `async` y `await` keywords. You can read more about that here:
+http://jakearchibald.com/2014/es7-async-functions/ and
+http://pouchdb.com/2015/03/05/taming-the-async-beast-with-es7.html
+
+That's ok, but the purposed sugar syntax is bound only to promises. That limits extend that
+sugar syntax with other abstractions.
+
+This library adds to bluebird promise type the [cats](https://github.com/funcool/cats) monad
+abstraction, allowing the use of `mlet` macro as sugar syntax for async computations composition.
+
+Let see an example:
+
+[source, clojure]
+(require '[cats.core :as m])
+
+(defn do-stuff []
+  (m/mlet [x (p/promise 1)
+           _ (p/delay 1000)
+           y (p/promise 2)]
+    (m/return (+ x y))))
+
+(p/then (do-stuff) (fn [v] (println v)))
+----
+
+And, so will be look the code using plain javascript and bluebird promises:
+
+[source, javascript]
+----
+function doStuff() {
+    return Promise.resolve(1)
+        .then(function(v) {
+            retuen Promise.delay(v, 1000);
+        })
+        .then(function(v) {
+            return Promise.resolve([v, 2]);
+        })
+        .then(function(v) {
+           var x = v[0];
+           var y = v[1];
+           return x + y;
+       });
+}
+
+doStuff().then(function(v) { console.log(v); });
+----
+
+You may observe that the clojurescript version looks like synchronous code, in same
+way as you will use the ES7 `async` and `await` syntax. The difference is that the `mlet`
+sugar syntax works on an monadic abstraction, that allows build other implementatations
+like this library is doing for other types of compositions
+
+
+== Contribute
+
+**promesa** unlike Clojure and other Clojure contrib libs, does not have many
+restrictions for contributions. Just follow open a issue or pull request.
+
+
+== Run tests
+
+For run tests just execute this:
+
+[source, text]
+----
+lein cljsbuild test
+----
+
+You should have nodejs or iojs installed in your system or any node version manager
+like **nvm**.
+
+
+=== License
+
+_promesa_ is licensed under BSD (2-Clause) license:
+
+----
+Copyright (c) 2015 Andrey Antukh <niwi@niwi.be>
+
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+----
