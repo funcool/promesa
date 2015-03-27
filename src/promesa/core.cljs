@@ -207,7 +207,15 @@
   as the last argument and return an other function
   that returns a promise."
   [callable]
-  (.promisify js/Promise callable))
+  ;; (.promisify js/Promise callable)
+  ;; Use own implementation because
+  ;; due to strange reasons it not works
+  ;; properly with bluebird implementation.
+  (fn [& args]
+    (promise (fn [resolve]
+               (let [args (-> (vec args)
+                              (conj resolve))]
+                 (apply callable args))))))
 
 (defn cancelable
   "Mark a promise as cancellable."

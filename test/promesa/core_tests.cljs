@@ -97,5 +97,15 @@
                    (done))))))
 
 
+(t/deftest promisify
+  (t/async done
+    (let [func1 (fn [x cb] (cb (inc x)))
+          func2 (p/promisify func1)
+          p1 (func2 2)]
+      (p/then p1 (fn [x]
+                   (t/is (= x 3))
+                   (done))))))
+
+
 (defn main [] (node/run-tests))
 (set! *main-cli-fn* main)
