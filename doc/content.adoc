@@ -37,6 +37,7 @@ it as a dependency in your *_project.clj_*:
 [funcool/promise "0.1.0-SNAPSHOT"]
 ----
 
+
 === Get the Code
 
 _promesa_ is open source and can be found on link:https://github.com/funcool/promesa[github].
@@ -82,15 +83,85 @@ Also, you can chain computations with `then`:
     (p/then (fn [v] (* v 2))))
 ----
 
+
 === Error handling
 
 Catch all exceptions with `catch` function:
 
-```clojure
+[source, clojure]
+----
 (-> (p/promise (fn [_ reject] (reject "test error")))
     (p/catch (fn [error] (.log js/console error))))
+
 ;; will print "test error" in the console
-```
+----
+
+
+=== Synchronization
+
+In some situations you will want wait the fulfillment of multiple promises, for that
+purpose exists the `all` function. Let see it in action:
+
+[source, clojure]
+----
+(-> (p/all (p/resolved 1)
+           (p/resolved 2))
+    (p/spread (fn [x y]
+                (.log js/console x y))))
+----
+
+Also, the `spread` function is used. It works very similar to the `then` chain
+but with slightly difference that it unrolls the parameter of list of promises
+as a list of parameters.
+
+
+=== Delays and timeouts.
+
+Javascript due its nature, does not can block or sleep. But with promises you can emulate
+it using `delay` function:
+
+[source, clojure]
+----
+(-> (p/delay 1000 "foobar")
+    (p/then (fn [v]
+              (.log js/console "Received:" v))))
+
+;; After 1 second it will print the message
+;; to the console: "Received: foobar"
+----
+
+Also, the promise library offers put a timeout to some async operation thanks
+to `timeout` function:
+
+[source, clojure]
+----
+(-> (some-async-task)
+    (p/timeout 200)
+    (p/then (fn [x]
+              (.log js/console "Task finished")))
+    (p/catch (fn [_]
+               (.log js/console "Timeout"))))
+----
+
+In case of the async task is slow more that 200ms, the promise will be rejected
+with timeout error and successfuly captured with `catch` handler.
+
+
+=== Choice
+
+You also can choice a first `n` number of promises that will filfilled first
+using the `some` function:
+
+[source, clojure]
+----
+(let [p (p/some 2 [(p/delay 100 1)
+                   (p/delay 200 2)
+                   (p/delay 120 3)])]
+  (p/spread p (fn [x y]
+                (.log js/console "The first two finished: " x y))))
+----
+
+TODO
 
 
 === Raw access to bluebird api
