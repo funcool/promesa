@@ -24,7 +24,7 @@
 ;; THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (ns promesa.core
-  (:refer-clojure :exclude [delay])
+  (:refer-clojure :exclude [delay spread])
   (:require [cats.core :as m]
             [cats.protocols :as proto]
             [org.bluebird]))
@@ -34,6 +34,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (declare then)
+(declare promise)
 
 (def ^{:no-doc true}
   promise-monad
@@ -64,12 +65,23 @@
 ;; Public Api
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn resolved
+  "Return a resolved promise with provided value."
+  [v]
+  (.resolve js/Promise v))
+
+(defn rejected
+  "Return a rejected promise with provided reason."
+  [v]
+  (.reject js/Promise v))
+
 (defn promise
   "The promise instance constructor."
   [v]
   (cond
     (fn? v) (js/Promise. v)
-    :else (.resolve js/Promise v)))
+    (instance? js/Error v) (rejected v)
+    :else (resolved v)))
 
 (defn promise?
   "Returns true if `p` is a primise
@@ -82,7 +94,7 @@
   already fulfilled."
   [p]
   {:pre [(promise? p)]}
-  (.isFulFilled p))
+  (.isFulfilled p))
 
 (defn rejected?
   "Returns true if promise `p` is
@@ -98,19 +110,26 @@
   {:pre [(promise? p)]}
   (.isPending p))
 
+(defn cancellable?
+  "Returns true if promise `p` is
+  cancelable."
+  [p]
+  {:pre [(promise? p)]}
+  (.isCancellable p))
+
 (defn all
   "Given an array of promises, return a promise
   that is fulfilled  when all the items in the
   array are fulfilled."
   [& promises]
-  (.all js/Promise promises))
+  (.all js/Promise (clj->js promises)))
 
 (defn any
   "Given an array of promises, return a promise
   that is fulfilled when first one item in the
   array is fulfilled."
   [& promises]
-  (.any js/Promise promises))
+  (.any js/Promise (clj->js promises)))
 
 (defn delay
   "Given a timeout in miliseconds and optional
@@ -121,10 +140,32 @@
   ([t v]
    (.delay js/Promise v t)))
 
+(defn timeout
+  "Returns a cancellable promise that will be fulfilled
+  with this promise's fulfillment value or rejection reason.
+  However, if this promise is not fulfilled or rejected
+  within `ms` milliseconds, the returned promise is cancelled
+  with a TimeoutError"
+  ([p t] (.timeout p t))
+  ([p t v] (.timeout p t v)))
+
 (defn then
   "A chain helper for promises."
   [p callback]
   (.then p callback))
+
+(defn spread
+  "A chain helper like `then` but recevies a
+  resolved promises unrolled as parameters."
+  [p callback]
+  (.spread p callback))
+
+(defn finally
+  "A chain helper that associate handler to
+  the promise that will be called regardless
+  if it is resolved or rejected."
+  [p callback]
+  (.finally p callback))
 
 (defn catch
   "Catch all promise chain helper."
@@ -142,3 +183,31 @@
   [p callback]
   (.error p callback))
 
+(defn value
+  "Get the fulfillment value of this promise.
+  Throws an error if the promise isn't fulfilled."
+  [p]
+  (.value p))
+
+(defn reason
+  "Get the rejection reason of this promise.
+  Throws an error if the promise isn't rejected."
+  [p]
+  (.reason p))
+
+(defn promisify
+  "Given a nodejs like function that accepts a callback
+  as the last argument and return an other function
+  that returns a promise."
+  [callable]
+  (.promisify js/Promise callable))
+
+(defn cancelable
+  "Mark a promise as cancellable."
+  [p]
+  (.cancellable p))
+
+(defn cancel
+  "Cancel a cancellable promise."
+  [p]
+  (.cancel p))
