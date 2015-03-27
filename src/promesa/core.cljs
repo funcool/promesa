@@ -24,7 +24,7 @@
 ;; THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (ns promesa.core
-  (:refer-clojure :exclude [delay spread])
+  (:refer-clojure :exclude [delay spread some])
   (:require [cats.core :as m]
             [cats.protocols :as proto]
             [org.bluebird]))
@@ -130,6 +130,13 @@
   array is fulfilled."
   [& promises]
   (.any js/Promise (clj->js promises)))
+
+(defn some
+  "Given an array of promises, return a promise
+  that is fulfilled when `n` number of promises
+  is fulfilled."
+  [n & promises]
+  (.some js/Promise (clj->js promises) n))
 
 (defn delay
   "Given a timeout in miliseconds and optional
