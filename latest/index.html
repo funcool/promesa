@@ -497,13 +497,15 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_creating_a_promise">4.1. Creating a promise</a></li>
 <li><a href="#_chain_computations">4.2. Chain computations</a></li>
 <li><a href="#_error_handling">4.3. Error handling</a></li>
-<li><a href="#_synchronization">4.4. Synchronization</a></li>
-<li><a href="#_delays_and_timeouts">4.5. Delays and timeouts.</a></li>
-<li><a href="#_choice">4.6. Choice</a></li>
-<li><a href="#_raw_access_to_bluebird_api">4.7. Raw access to bluebird api</a></li>
+<li><a href="#_sequences">4.4. Sequences</a></li>
+<li><a href="#_parallelism">4.5. Parallelism</a></li>
+<li><a href="#_delays_and_timeouts">4.6. Delays and timeouts.</a></li>
+<li><a href="#_choice">4.7. Choice</a></li>
+<li><a href="#_sugar_syntax">4.8. Sugar syntax</a></li>
+<li><a href="#_raw_access_to_bluebird_api">4.9. Raw access to bluebird api</a></li>
 </ul>
 </li>
-<li><a href="#_promise_as_a_monad">5. Promise as a Monad</a></li>
+<li><a href="#_advanced_usage">5. Advanced usage</a></li>
 <li><a href="#_contribute">6. Contribute</a></li>
 <li><a href="#_run_tests">7. Run tests</a></li>
 <li><a href="#_license">8. License</a></li>
@@ -515,14 +517,8 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <h2 id="_introduction"><a class="link" href="#_introduction">1. Introduction</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>A promise library for ClojureScript.</p>
-</div>
-<div class="paragraph">
-<p>This library offers <a href="https://github.com/petkaantonov/bluebird/">bluebird</a>, a full featured promise
-javascript library with additional steroids.</p>
-</div>
-<div class="paragraph">
-<p>You can found the api documentation <a href="doc/index.html">here</a>.</p>
+<p>A promise library for ClojureScript that uses <a href="https://github.com/petkaantonov/bluebird/">bluebird</a>
+behind the scenes.</p>
 </div>
 </div>
 </div>
@@ -589,14 +585,39 @@ idiomatic way.</p>
 
 <span class="tok-c1">;; Create a promise from callback</span>
 <span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nb">resolve </span><span class="tok-nv">reject</span><span class="tok-p">]</span>
+             <span class="tok-c1">;; Do things, maybe async...</span>
              <span class="tok-p">(</span><span class="tok-nb">resolve </span><span class="tok-mi">1</span><span class="tok-p">)))</span></code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p>The <code>promise</code> function is polymorphic. If it receives a plain value, it return a resolved
+promise with provided plain value. If it receives an instance of <code>Error</code>, it return a rejected
+promise.</p>
+</div>
+<div class="paragraph">
+<p>And finally, if it receives a callback with two parameters, resolve and reject. Do something
+within the callback, perhaps async, then call resolve if everything worked, otherwise call reject.</p>
 </div>
 </div>
 <div class="sect2">
 <h3 id="_chain_computations"><a class="link" href="#_chain_computations">4.2. Chain computations</a></h3>
 <div class="paragraph">
-<p>Also, you can chain computations with <code>then</code>:</p>
+<p>Here&#8217;s how you use that promise:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nb">-&gt; </span><span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">1</span><span class="tok-p">)</span>
+    <span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">v</span><span class="tok-p">]</span> <span class="tok-p">(</span><span class="tok-nb">inc </span><span class="tok-nv">v</span><span class="tok-p">)))</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>then</code> function takes one argument: a callback that will be called when the promise
+successfully resolved.</p>
+</div>
+<div class="paragraph">
+<p>But <code>then</code> is not the end, it also returns a promise that will resolved or rejected depending
+on return value of the first chain callback. That will allow compose async computations
+in an easy way.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -609,39 +630,79 @@ idiomatic way.</p>
 <div class="sect2">
 <h3 id="_error_handling"><a class="link" href="#_error_handling">4.3. Error handling</a></h3>
 <div class="paragraph">
-<p>Catch all exceptions with <code>catch</code> function:</p>
+<p>Until now, we have seen resolved promises, but that is happens when an error ocurrs?</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nb">-&gt; </span><span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">_</span> <span class="tok-nv">reject</span><span class="tok-p">]</span> <span class="tok-p">(</span><span class="tok-nf">reject</span> <span class="tok-s">&quot;test error&quot;</span><span class="tok-p">)))</span>
-    <span class="tok-p">(</span><span class="tok-nf">p/catch</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">error</span><span class="tok-p">]</span> <span class="tok-p">(</span><span class="tok-nf">.log</span> <span class="tok-nv">js/console</span> <span class="tok-nv">error</span><span class="tok-p">))))</span>
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nb">-&gt; </span><span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-p">(</span><span class="tok-nf">ex-info</span> <span class="tok-s">&quot;error&quot;</span> <span class="tok-nv">nil</span><span class="tok-p">))</span>
+    <span class="tok-p">(</span><span class="tok-nf">p/catch</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">error</span><span class="tok-p">]</span>
+               <span class="tok-p">(</span><span class="tok-nf">.log</span> <span class="tok-nv">js/console</span> <span class="tok-nv">error</span><span class="tok-p">))))</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>catch</code> function adds a new handler to the promise chain that will be called when
+any of the previous promises in the chain is rejected or an exception is raised.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_sequences"><a class="link" href="#_sequences">4.4. Sequences</a></h3>
+<div class="paragraph">
+<p>Creating the sequence:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">cats.core</span> <span class="tok-ss">:as</span> <span class="tok-nv">m</span><span class="tok-p">])</span>
 
-<span class="tok-c1">;; will print &quot;test error&quot; in the console</span></code></pre>
+<span class="tok-p">(</span><span class="tok-k">let </span><span class="tok-p">[</span><span class="tok-nv">p</span> <span class="tok-p">(</span><span class="tok-nf">m/&gt;&gt;=</span> <span class="tok-p">(</span><span class="tok-nf">do-something-first</span><span class="tok-p">)</span>
+               <span class="tok-p">(</span><span class="tok-nf">do-something-second</span><span class="tok-p">)</span>
+               <span class="tok-p">(</span><span class="tok-nf">do-something-third</span><span class="tok-p">))]</span>
+  <span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-nv">p</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">result</span><span class="tok-p">]</span>
+              <span class="tok-p">(</span><span class="tok-nf">.log</span> <span class="tok-nv">js/console</span> <span class="tok-s">&quot;Result: &quot;</span> <span class="tok-nv">result</span><span class="tok-p">))))</span></code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p>The standard promises library and javascript does not offers a standard way of chaining
+promises in sequence and in that situation we use the <em>cats</em> library <code>&gt;&gt;=</code> function for it.</p>
+</div>
+<div class="paragraph">
+<p>The <em>cats</em> library offers a monad abstractios and helpers for work with them, but do not worry,
+you don&#8217;t need understand nothing related to monads. Just use the <code>&gt;&gt;=</code> function as helper
+for make chain sequences of promises.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_synchronization"><a class="link" href="#_synchronization">4.4. Synchronization</a></h3>
+<h3 id="_parallelism"><a class="link" href="#_parallelism">4.5. Parallelism</a></h3>
 <div class="paragraph">
-<p>In some situations you will want wait the fulfillment of multiple promises, for that
-purpose exists the <code>all</code> function. Let see it in action:</p>
+<p>Javascript environments like browsers or nodejs are pretty good parallelizing IO operations
+how download content using ajax or reading a file in nodejs.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nb">-&gt; </span><span class="tok-p">(</span><span class="tok-nf">p/all</span> <span class="tok-p">(</span><span class="tok-nf">p/resolved</span> <span class="tok-mi">1</span><span class="tok-p">)</span>
-           <span class="tok-p">(</span><span class="tok-nf">p/resolved</span> <span class="tok-mi">2</span><span class="tok-p">))</span>
-    <span class="tok-p">(</span><span class="tok-nf">p/spread</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">x</span> <span class="tok-nv">y</span><span class="tok-p">]</span>
-                <span class="tok-p">(</span><span class="tok-nf">.log</span> <span class="tok-nv">js/console</span> <span class="tok-nv">x</span> <span class="tok-nv">y</span><span class="tok-p">))))</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-k">let </span><span class="tok-p">[</span><span class="tok-nv">p</span> <span class="tok-p">(</span><span class="tok-nf">p/all</span> <span class="tok-p">[(</span><span class="tok-nf">do-some-io</span><span class="tok-p">)</span>
+                <span class="tok-p">(</span><span class="tok-nf">do-some-other-io</span><span class="tok-p">)])]</span>
+  <span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-nv">p</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">array-of-results</span><span class="tok-p">]</span>
+              <span class="tok-p">(</span><span class="tok-nf">do-something-with-results</span> <span class="tok-nv">array-of-results</span><span class="tok-p">))))</span></code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Also, the <code>spread</code> function is used. It works very similar to the <code>then</code> chain
-but with slightly difference that it unrolls the parameter of list of promises
-as a list of parameters.</p>
+<p>It there an other helper that allos unroll arguments wen working with multiple promises:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-k">let </span><span class="tok-p">[</span><span class="tok-nv">p</span> <span class="tok-p">(</span><span class="tok-nf">p/all</span> <span class="tok-p">[(</span><span class="tok-nf">do-some-io</span><span class="tok-p">)</span>
+                <span class="tok-p">(</span><span class="tok-nf">do-some-other-io</span><span class="tok-p">)])]</span>
+  <span class="tok-p">(</span><span class="tok-nf">p/spread</span> <span class="tok-nv">p</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">result1</span> <span class="tok-nv">result2</span><span class="tok-p">]</span>
+                <span class="tok-p">(</span><span class="tok-nf">do-stuff-with</span> <span class="tok-nv">result1</span> <span class="tok-nv">result2</span><span class="tok-p">))))</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>spread</code> function works like <code>then</code> function, with unique diferrence that
+it unroll the received array of promises as positional arguments to the handler
+callback.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_delays_and_timeouts"><a class="link" href="#_delays_and_timeouts">4.5. Delays and timeouts.</a></h3>
+<h3 id="_delays_and_timeouts"><a class="link" href="#_delays_and_timeouts">4.6. Delays and timeouts.</a></h3>
 <div class="paragraph">
 <p>Javascript due its nature, does not can block or sleep. But with promises you can emulate
 it using <code>delay</code> function:</p>
@@ -676,7 +737,7 @@ with timeout error and successfuly captured with <code>catch</code> handler.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_choice"><a class="link" href="#_choice">4.6. Choice</a></h3>
+<h3 id="_choice"><a class="link" href="#_choice">4.7. Choice</a></h3>
 <div class="paragraph">
 <p>You also can choice a first <code>n</code> number of promises that will filfilled first
 using the <code>some</code> function:</p>
@@ -691,11 +752,54 @@ using the <code>some</code> function:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>TODO</p>
+<p>It there a helper function called <code>any</code> that works very similar to <code>some</code> with
+<code>1</code> as first argument and it return a promise that will fullfilled with one value
+instead of array of length 1.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-k">let </span><span class="tok-p">[</span><span class="tok-nv">p</span> <span class="tok-p">(</span><span class="tok-nf">p/any</span> <span class="tok-p">[(</span><span class="tok-nf">p/delay</span> <span class="tok-mi">100</span> <span class="tok-mi">1</span><span class="tok-p">)</span>
+                <span class="tok-p">(</span><span class="tok-nf">p/delay</span> <span class="tok-mi">200</span> <span class="tok-mi">2</span><span class="tok-p">)</span>
+                <span class="tok-p">(</span><span class="tok-nf">p/delay</span> <span class="tok-mi">120</span> <span class="tok-mi">3</span><span class="tok-p">)])]</span>
+  <span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-nv">p</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">x</span><span class="tok-p">]</span>
+              <span class="tok-p">(</span><span class="tok-nf">.log</span> <span class="tok-nv">js/console</span> <span class="tok-s">&quot;The first one finished: &quot;</span> <span class="tok-nv">x</span><span class="tok-p">))))</span></code></pre>
+</div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_raw_access_to_bluebird_api"><a class="link" href="#_raw_access_to_bluebird_api">4.7. Raw access to bluebird api</a></h3>
+<h3 id="_sugar_syntax"><a class="link" href="#_sugar_syntax">4.8. Sugar syntax</a></h3>
+<div class="paragraph">
+<p>Promises is one of the most used primitives for make composition of async computations. But using
+promises <em>as is</em> not solves you from the callback hell.</p>
+</div>
+<div class="paragraph">
+<p>The upcoming ES7 standard will introduce a sugar syntax for work with promises in a painless
+way, using new <code>async</code> y <code>await</code> keywords. You can read more about that
+<a href="http://jakearchibald.com/2014/es7-async-functions/">here</a> and
+<a href="http://pouchdb.com/2015/03/05/taming-the-async-beast-with-es7.html">here</a>.</p>
+</div>
+<div class="paragraph">
+<p>Let see how we use similar sugar syntax in clojurescript:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-kd">defn </span><span class="tok-nv">do-stuff</span> <span class="tok-p">[]</span>
+  <span class="tok-p">(</span><span class="tok-nf">m/mlet</span> <span class="tok-p">[</span><span class="tok-nv">x</span> <span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">1</span><span class="tok-p">)</span>   <span class="tok-c1">;; do async operation</span>
+           <span class="tok-nv">_</span> <span class="tok-p">(</span><span class="tok-nf">p/delay</span> <span class="tok-mi">1000</span><span class="tok-p">)</span>  <span class="tok-c1">;; emulate sleep</span>
+           <span class="tok-nv">y</span> <span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">2</span><span class="tok-p">)]</span>  <span class="tok-c1">;; do an other async operation</span>
+    <span class="tok-p">(</span><span class="tok-nb">+ </span><span class="tok-nv">x</span> <span class="tok-nv">y</span><span class="tok-p">)))</span>                <span class="tok-c1">;; do the operation with results</span>
+                             <span class="tok-c1">;; of previous two async operations</span>
+
+<span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-p">(</span><span class="tok-nf">do-stuff</span><span class="tok-p">)</span>
+        <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">v</span><span class="tok-p">]</span> <span class="tok-p">(</span><span class="tok-nb">println </span><span class="tok-nv">v</span><span class="tok-p">)))</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In this example we have used the <code>mlet</code> macro that comes from <code>cats</code> library.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_raw_access_to_bluebird_api"><a class="link" href="#_raw_access_to_bluebird_api">4.9. Raw access to bluebird api</a></h3>
 <div class="paragraph">
 <p>This library gives you the full access to the fantastic bluebird promise library.</p>
 </div>
@@ -718,71 +822,27 @@ using the <code>some</code> function:</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_promise_as_a_monad"><a class="link" href="#_promise_as_a_monad">5. Promise as a Monad</a></h2>
+<h2 id="_advanced_usage"><a class="link" href="#_advanced_usage">5. Advanced usage</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>In asynchronous environments, specially in javascript, promises is one of the most used
-primitives for make composition of async computations. But using promises <em>as is</em> not solves
-you from the callback hell.</p>
+<p>Behind the scenes, the <em>promise</em> library implements and uses monadic abstractions. And in this
+case, the <em>Promise</em> type implements a <em>Functor</em> and <em>Monad</em> abstractions.</p>
 </div>
 <div class="paragraph">
-<p>The upcoming ES7 standard will introduce a sugar syntax for work with promises in a painless
-way: using new <code>async</code> y <code>await</code> keywords. You can read more about that here:
-<a href="http://jakearchibald.com/2014/es7-async-functions/" class="bare">http://jakearchibald.com/2014/es7-async-functions/</a> and
-<a href="http://pouchdb.com/2015/03/05/taming-the-async-beast-with-es7.html" class="bare">http://pouchdb.com/2015/03/05/taming-the-async-beast-with-es7.html</a></p>
+<p>This part of documentation, requires a minimal knowledge about that concepts but is not mandatory
+to kwnon and read this part for use the library.</p>
 </div>
 <div class="paragraph">
-<p>That&#8217;s ok, but the purposed sugar syntax is bound only to promises. That limits extend that
-sugar syntax with other abstractions.</p>
+<p>Previously we have seen the <code>mlet</code> macro that does very similar things to the ES7 <code>async</code>
+and <code>await</code> sugar syntax.</p>
 </div>
 <div class="paragraph">
-<p>This library adds to bluebird promise type the [cats](<a href="https://github.com/funcool/cats" class="bare">https://github.com/funcool/cats</a>) monad
-abstraction, allowing the use of <code>mlet</code> macro as sugar syntax for async computations composition.</p>
+<p>The main difference with ES7 syntax is that is not bound only to promises, is a generic and
+extensible abstraction that allows work with different kind of types and different types of
+logic for composition of computations.</p>
 </div>
 <div class="paragraph">
-<p>Let see an example:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">cats.core</span> <span class="tok-ss">:as</span> <span class="tok-nv">m</span><span class="tok-p">])</span>
-
-<span class="tok-p">(</span><span class="tok-kd">defn </span><span class="tok-nv">do-stuff</span> <span class="tok-p">[]</span>
-  <span class="tok-p">(</span><span class="tok-nf">m/mlet</span> <span class="tok-p">[</span><span class="tok-nv">x</span> <span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">1</span><span class="tok-p">)</span>
-           <span class="tok-nv">_</span> <span class="tok-p">(</span><span class="tok-nf">p/delay</span> <span class="tok-mi">1000</span><span class="tok-p">)</span>
-           <span class="tok-nv">y</span> <span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">2</span><span class="tok-p">)]</span>
-    <span class="tok-p">(</span><span class="tok-nf">m/return</span> <span class="tok-p">(</span><span class="tok-nb">+ </span><span class="tok-nv">x</span> <span class="tok-nv">y</span><span class="tok-p">))))</span>
-
-<span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-p">(</span><span class="tok-nf">do-stuff</span><span class="tok-p">)</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">v</span><span class="tok-p">]</span> <span class="tok-p">(</span><span class="tok-nb">println </span><span class="tok-nv">v</span><span class="tok-p">)))</span></code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>And, so will be look the code using plain javascript and bluebird promises:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="pygments highlight"><code data-lang="javascript"><span class="tok-kd">function</span> <span class="tok-nx">doStuff</span><span class="tok-p">()</span> <span class="tok-p">{</span>
-    <span class="tok-k">return</span> <span class="tok-nx">Promise</span><span class="tok-p">.</span><span class="tok-nx">resolve</span><span class="tok-p">(</span><span class="tok-mi">1</span><span class="tok-p">)</span>
-        <span class="tok-p">.</span><span class="tok-nx">then</span><span class="tok-p">(</span><span class="tok-kd">function</span><span class="tok-p">(</span><span class="tok-nx">v</span><span class="tok-p">)</span> <span class="tok-p">{</span>
-            <span class="tok-nx">retuen</span> <span class="tok-nx">Promise</span><span class="tok-p">.</span><span class="tok-nx">delay</span><span class="tok-p">(</span><span class="tok-nx">v</span><span class="tok-p">,</span> <span class="tok-mi">1000</span><span class="tok-p">);</span>
-        <span class="tok-p">})</span>
-        <span class="tok-p">.</span><span class="tok-nx">then</span><span class="tok-p">(</span><span class="tok-kd">function</span><span class="tok-p">(</span><span class="tok-nx">v</span><span class="tok-p">)</span> <span class="tok-p">{</span>
-            <span class="tok-k">return</span> <span class="tok-nx">Promise</span><span class="tok-p">.</span><span class="tok-nx">resolve</span><span class="tok-p">([</span><span class="tok-nx">v</span><span class="tok-p">,</span> <span class="tok-mi">2</span><span class="tok-p">]);</span>
-        <span class="tok-p">})</span>
-        <span class="tok-p">.</span><span class="tok-nx">then</span><span class="tok-p">(</span><span class="tok-kd">function</span><span class="tok-p">(</span><span class="tok-nx">v</span><span class="tok-p">)</span> <span class="tok-p">{</span>
-           <span class="tok-kd">var</span> <span class="tok-nx">x</span> <span class="tok-o">=</span> <span class="tok-nx">v</span><span class="tok-p">[</span><span class="tok-mi">0</span><span class="tok-p">];</span>
-           <span class="tok-kd">var</span> <span class="tok-nx">y</span> <span class="tok-o">=</span> <span class="tok-nx">v</span><span class="tok-p">[</span><span class="tok-mi">1</span><span class="tok-p">];</span>
-           <span class="tok-k">return</span> <span class="tok-nx">x</span> <span class="tok-o">+</span> <span class="tok-nx">y</span><span class="tok-p">;</span>
-       <span class="tok-p">});</span>
-<span class="tok-p">}</span>
-
-<span class="tok-nx">doStuff</span><span class="tok-p">().</span><span class="tok-nx">then</span><span class="tok-p">(</span><span class="tok-kd">function</span><span class="tok-p">(</span><span class="tok-nx">v</span><span class="tok-p">)</span> <span class="tok-p">{</span> <span class="tok-nx">console</span><span class="tok-p">.</span><span class="tok-nx">log</span><span class="tok-p">(</span><span class="tok-nx">v</span><span class="tok-p">);</span> <span class="tok-p">});</span></code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>You may observe that the clojurescript version looks like synchronous code, in same
-way as you will use the ES7 <code>async</code> and <code>await</code> syntax. The difference is that the <code>mlet</code>
-sugar syntax works on an monadic abstraction, that allows build other implementatations
-like this library is doing for other types of compositions</p>
+<p>Please, read the <a href="http://funcool.github.io/cats/latest/">cats documentation</a> for see other types and other abstractions.</p>
 </div>
 </div>
 </div>
@@ -851,7 +911,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2015-03-28 00:01:00 CET
+Last updated 2015-03-28 11:16:40 CET
 </div>
 </div>
 </body>
