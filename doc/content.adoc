@@ -262,7 +262,7 @@ way, using new `async` y `await` keywords. You can read more about that
 link:http://jakearchibald.com/2014/es7-async-functions/[here] and
 link:http://pouchdb.com/2015/03/05/taming-the-async-beast-with-es7.html[here].
 
-Let see how we use similar sugar syntax in clojurescript:
+Let see how we cam use a similar sugar syntax in clojurescript:
 
 [source, clojure]
 ----
