@@ -1,5 +1,4 @@
 ;; Copyright (c) 2015 Andrey Antukh
-;; Copyright (c) 2015 Alejandro Gómez
 ;; All rights reserved.
 ;;
 ;; Redistribution and use in source and binary forms, with or without
@@ -121,21 +120,21 @@
   "Given an array of promises, return a promise
   that is fulfilled  when all the items in the
   array are fulfilled."
-  [& promises]
+  [promises]
   (.all js/Promise (clj->js promises)))
 
 (defn any
   "Given an array of promises, return a promise
   that is fulfilled when first one item in the
   array is fulfilled."
-  [& promises]
+  [promises]
   (.any js/Promise (clj->js promises)))
 
 (defn some
   "Given an array of promises, return a promise
   that is fulfilled when `n` number of promises
   is fulfilled."
-  [n & promises]
+  [n promises]
   (.some js/Promise (clj->js promises) n))
 
 (defn delay

@@ -28,5 +28,10 @@
   :profiles {:dev {:dependencies [[org.clojure/clojure "1.6.0"]
                                   [org.clojure/clojurescript "0.0-3126"]
                                   [funcool/cljs-testrunners "0.1.0-SNAPSHOT"]]
+                   :codeina {:sources ["src"]
+                             :language :clojurescript
+                             :output-dir "doc/api"}
                    :plugins [[lein-cljsbuild "1.0.4"]
+                             [funcool/codeina "0.1.0-SNAPSHOT"
+                              :exclusions [org.clojure/clojure]]
                              [lein-externs "0.1.3"]]}})

@@ -6,15 +6,10 @@ Andrey Antukh, <niwi@niwi.be>
 :pygments-style: friendly
 :sectlinks:
 
-
 == Introduction
 
-A promise library for ClojureScript.
-
-This library offers link:https://github.com/petkaantonov/bluebird/[bluebird], a full featured promise
-javascript library with additional steroids.
-
-You can found the api documentation link:doc/index.html[here].
+A promise library for ClojureScript that uses link:https://github.com/petkaantonov/bluebird/[bluebird]
+behind the scenes.
 
 
 == Project Maturity
@@ -69,12 +64,34 @@ Let start creating a promise:
 
 ;; Create a promise from callback
 (p/promise (fn [resolve reject]
+             ;; Do things, maybe async...
              (resolve 1)))
 ----
 
+The `promise` function is polymorphic. If it receives a plain value, it return a resolved
+promise with provided plain value. If it receives an instance of `Error`, it return a rejected
+promise.
+
+And finally, if it receives a callback with two parameters, resolve and reject. Do something
+within the callback, perhaps async, then call resolve if everything worked, otherwise call reject.
+
+
 === Chain computations
 
-Also, you can chain computations with `then`:
+Here's how you use that promise:
+
+[source, clojure]
+----
+(-> (p/promise 1)
+    (p/then (fn [v] (inc v)))
+----
+
+The `then` function takes one argument: a callback that will be called when the promise
+successfully resolved.
+
+But `then` is not the end, it also returns a promise that will resolved or rejected depending
+on return value of the first chain callback. That will allow compose async computations
+in an easy way.
 
 [source, clojure]
 ----
@@ -86,33 +103,68 @@ Also, you can chain computations with `then`:
 
 === Error handling
 
-Catch all exceptions with `catch` function:
+Until now, we have seen resolved promises, but that is happens when an error ocurrs?
 
 [source, clojure]
 ----
-(-> (p/promise (fn [_ reject] (reject "test error")))
-    (p/catch (fn [error] (.log js/console error))))
-
-;; will print "test error" in the console
+(-> (p/promise (ex-info "error" nil))
+    (p/catch (fn [error]
+               (.log js/console error))))
 ----
 
+The `catch` function adds a new handler to the promise chain that will be called when
+any of the previous promises in the chain is rejected or an exception is raised.
 
-=== Synchronization
 
-In some situations you will want wait the fulfillment of multiple promises, for that
-purpose exists the `all` function. Let see it in action:
+=== Sequences
+
+Creating the sequence:
 
 [source, clojure]
 ----
-(-> (p/all (p/resolved 1)
-           (p/resolved 2))
-    (p/spread (fn [x y]
-                (.log js/console x y))))
+(require '[cats.core :as m])
+
+(let [p (m/>>= (do-something-first)
+               (do-something-second)
+               (do-something-third))]
+  (p/then p (fn [result]
+              (.log js/console "Result: " result))))
 ----
 
-Also, the `spread` function is used. It works very similar to the `then` chain
-but with slightly difference that it unrolls the parameter of list of promises
-as a list of parameters.
+The standard promises library and javascript does not offers a standard way of chaining
+promises in sequence and in that situation we use the _cats_ library `>>=` function for it.
+
+The _cats_ library offers a monad abstractios and helpers for work with them, but do not worry,
+you don't need understand nothing related to monads. Just use the `>>=` function as helper
+for make chain sequences of promises.
+
+
+=== Parallelism
+
+Javascript environments like browsers or nodejs are pretty good parallelizing IO operations
+how download content using ajax or reading a file in nodejs.
+
+[source, clojure]
+----
+(let [p (p/all [(do-some-io)
+                (do-some-other-io)])]
+  (p/then p (fn [array-of-results]
+              (do-something-with-results array-of-results))))
+----
+
+It there an other helper that allos unroll arguments wen working with multiple promises:
+
+[source, clojure]
+----
+(let [p (p/all [(do-some-io)
+                (do-some-other-io)])]
+  (p/spread p (fn [result1 result2]
+                (do-stuff-with result1 result2))))
+----
+
+The `spread` function works like `then` function, with unique diferrence that
+it unroll the received array of promises as positional arguments to the handler
+callback.
 
 
 === Delays and timeouts.
@@ -161,7 +213,45 @@ using the `some` function:
                 (.log js/console "The first two finished: " x y))))
 ----
 
-TODO
+It there a helper function called `any` that works very similar to `some` with
+`1` as first argument and it return a promise that will fullfilled with one value
+instead of array of length 1.
+
+[source, clojure]
+----
+(let [p (p/any [(p/delay 100 1)
+                (p/delay 200 2)
+                (p/delay 120 3)])]
+  (p/then p (fn [x]
+              (.log js/console "The first one finished: " x))))
+----
+
+=== Sugar syntax
+
+Promises is one of the most used primitives for make composition of async computations. But using
+promises _as is_ not solves you from the callback hell.
+
+The upcoming ES7 standard will introduce a sugar syntax for work with promises in a painless
+way, using new `async` y `await` keywords. You can read more about that
+link:http://jakearchibald.com/2014/es7-async-functions/[here] and
+link:http://pouchdb.com/2015/03/05/taming-the-async-beast-with-es7.html[here].
+
+Let see how we use similar sugar syntax in clojurescript:
+
+[source, clojure]
+----
+(defn do-stuff []
+  (m/mlet [x (p/promise 1)   ;; do async operation
+           _ (p/delay 1000)  ;; emulate sleep
+           y (p/promise 2)]  ;; do an other async operation
+    (+ x y)))                ;; do the operation with results
+                             ;; of previous two async operations
+
+(p/then (do-stuff)
+        (fn [v] (println v)))
+----
+
+In this example we have used the `mlet` macro that comes from `cats` library.
 
 
 === Raw access to bluebird api
@@ -182,65 +272,22 @@ For start using it, just require it like any other clojurescript ns:
 ;; => 1
 ----
 
+== Advanced usage
 
-== Promise as a Monad
+Behind the scenes, the _promise_ library implements and uses monadic abstractions. And in this
+case, the _Promise_ type implements a _Functor_ and _Monad_ abstractions.
 
-In asynchronous environments, specially in javascript, promises is one of the most used
-primitives for make composition of async computations. But using promises _as is_ not solves
-you from the callback hell.
+This part of documentation, requires a minimal knowledge about that concepts but is not mandatory
+to kwnon and read this part for use the library.
 
-The upcoming ES7 standard will introduce a sugar syntax for work with promises in a painless
-way: using new `async` y `await` keywords. You can read more about that here:
-http://jakearchibald.com/2014/es7-async-functions/ and
-http://pouchdb.com/2015/03/05/taming-the-async-beast-with-es7.html
+Previously we have seen the `mlet` macro that does very similar things to the ES7 `async`
+and `await` sugar syntax.
 
-That's ok, but the purposed sugar syntax is bound only to promises. That limits extend that
-sugar syntax with other abstractions.
+The main difference with ES7 syntax is that is not bound only to promises, is a generic and
+extensible abstraction that allows work with different kind of types and different types of
+logic for composition of computations.
 
-This library adds to bluebird promise type the [cats](https://github.com/funcool/cats) monad
-abstraction, allowing the use of `mlet` macro as sugar syntax for async computations composition.
-
-Let see an example:
-
-[source, clojure]
-----
-(require '[cats.core :as m])
-
-(defn do-stuff []
-  (m/mlet [x (p/promise 1)
-           _ (p/delay 1000)
-           y (p/promise 2)]
-    (m/return (+ x y))))
-
-(p/then (do-stuff) (fn [v] (println v)))
-----
-
-And, so will be look the code using plain javascript and bluebird promises:
-
-[source, javascript]
-----
-function doStuff() {
-    return Promise.resolve(1)
-        .then(function(v) {
-            retuen Promise.delay(v, 1000);
-        })
-        .then(function(v) {
-            return Promise.resolve([v, 2]);
-        })
-        .then(function(v) {
-           var x = v[0];
-           var y = v[1];
-           return x + y;
-       });
-}
-
-doStuff().then(function(v) { console.log(v); });
-----
-
-You may observe that the clojurescript version looks like synchronous code, in same
-way as you will use the ES7 `async` and `await` syntax. The difference is that the `mlet`
-sugar syntax works on an monadic abstraction, that allows build other implementatations
-like this library is doing for other types of compositions
+Please, read the link:http://funcool.github.io/cats/latest/[cats documentation] for see other types and other abstractions.
 
 
 == Contribute

@@ -40,7 +40,7 @@
                    (done))))))
 
 (t/deftest spread-all-chain
-  (let [p1 (-> (p/all (p/promise 1) (p/promise 2))
+  (let [p1 (-> (p/all [(p/promise 1) (p/promise 2)])
                (p/spread (fn [x y]
                            (t/is (= x 1))
                            (t/is (= y 2))
@@ -50,7 +50,7 @@
 
 (t/deftest any-with-delay-chain
   (t/async done
-    (let [p1 (p/any (p/delay 300 1) (p/delay 200 2))]
+    (let [p1 (p/any [(p/delay 300 1) (p/delay 200 2)])]
       (p/then p1 (fn [v]
                    (t/is (= v 2))
                    (done))))))
