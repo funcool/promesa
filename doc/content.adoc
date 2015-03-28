@@ -13,6 +13,33 @@ A promise library for ClojureScript that uses link:https://github.com/petkaanton
 behind the scenes.
 
 
+== Rationale
+
+Befor start writing this library I found this ones:
+
+* link:https://github.com/bodil/redlobster[redlobster]
+* link:https://github.com/Breezeemr/promise[promise]
+* link:https://github.com/jamesmacaulay/cljs-promises[cljs-promises]
+
+And all them have one thing in common, they are not actively maintained.
+
+With exception of cljs-promises, the other two libraries tries emulate the clojure promise that
+is based in blocking api that is not very natural in javascript environments.
+
+Also, the last one, uses core.async abstraction that is not bad as is, because core.async is a very
+well done library, but it does it in a questionable way in my opion.
+
+And finally, them all lacks of good documentation and docstrings.
+
+The *promise* library instead of reinventing the wheel, uses a powerful and very performant
+link:https://github.com/petkaantonov/bluebird/[bluebird] javascript promises library and includes
+it in the package as builtin dependency (using clojurescript `:foreign-libs` compiler option).
+
+It exposes a lightweight and idiomatic api for almost all methods and functions of
+bluebird library and includes a sugar syntax for make the code looks sync like if you are
+using ES7 async/await syntax.
+
+
 == Project Maturity
 
 Since _promesa_ is a young project there may be some API breakage.
