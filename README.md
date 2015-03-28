@@ -1,9 +1,7 @@
 # promesa #
 
-A promise library for ClojureScript.
-
-This library offers [bluebird](https://github.com/petkaantonov/bluebird/), a full featured promise
-javascript library with additional steroids.
+A promise library for ClojureScript that uses [bluebird](https://github.com/petkaantonov/bluebird/)
+behind the scenes.
 
 [![Clojars Project](http://clojars.org/funcool/promesa/latest-version.svg)](http://clojars.org/funcool/promesa)
 
