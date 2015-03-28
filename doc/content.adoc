@@ -1,4 +1,4 @@
-= promesa - A promise library for ClojureScript.
+= promesa - a promise library for ClojureScript.
 Andrey Antukh, <niwi@niwi.be>
 :toc: left
 :numbered:
