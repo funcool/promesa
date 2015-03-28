@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 1.5.2">
 <meta name="author" content="Andrey Antukh, &lt;niwi@niwi.be&gt;">
-<title>promesa - A promise library for ClojureScript.</title>
+<title>promesa - a promise library for ClojureScript.</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400">
 <style>
 /* Asciidoctor default stylesheet | MIT License | http://asciidoctor.org */
@@ -477,7 +477,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </head>
 <body class="article toc2 toc-left">
 <div id="header">
-<h1>promesa - A promise library for ClojureScript.</h1>
+<h1>promesa - a promise library for ClojureScript.</h1>
 <div class="details">
 <span id="author" class="author">Andrey Antukh, &lt;niwi@niwi.be&gt;</span><br>
 </div>
@@ -485,30 +485,31 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
 <li><a href="#_introduction">1. Introduction</a></li>
-<li><a href="#_project_maturity">2. Project Maturity</a></li>
-<li><a href="#_install">3. Install</a>
+<li><a href="#_rationale">2. Rationale</a></li>
+<li><a href="#_project_maturity">3. Project Maturity</a></li>
+<li><a href="#_install">4. Install</a>
 <ul class="sectlevel2">
-<li><a href="#_leiningen">3.1. Leiningen</a></li>
-<li><a href="#_get_the_code">3.2. Get the Code</a></li>
+<li><a href="#_leiningen">4.1. Leiningen</a></li>
+<li><a href="#_get_the_code">4.2. Get the Code</a></li>
 </ul>
 </li>
-<li><a href="#_user_guide">4. User guide</a>
+<li><a href="#_user_guide">5. User guide</a>
 <ul class="sectlevel2">
-<li><a href="#_creating_a_promise">4.1. Creating a promise</a></li>
-<li><a href="#_chain_computations">4.2. Chain computations</a></li>
-<li><a href="#_error_handling">4.3. Error handling</a></li>
-<li><a href="#_sequences">4.4. Sequences</a></li>
-<li><a href="#_parallelism">4.5. Parallelism</a></li>
-<li><a href="#_delays_and_timeouts">4.6. Delays and timeouts.</a></li>
-<li><a href="#_choice">4.7. Choice</a></li>
-<li><a href="#_sugar_syntax">4.8. Sugar syntax</a></li>
-<li><a href="#_raw_access_to_bluebird_api">4.9. Raw access to bluebird api</a></li>
+<li><a href="#_creating_a_promise">5.1. Creating a promise</a></li>
+<li><a href="#_chain_computations">5.2. Chain computations</a></li>
+<li><a href="#_error_handling">5.3. Error handling</a></li>
+<li><a href="#_sequences">5.4. Sequences</a></li>
+<li><a href="#_parallelism">5.5. Parallelism</a></li>
+<li><a href="#_delays_and_timeouts">5.6. Delays and timeouts.</a></li>
+<li><a href="#_choice">5.7. Choice</a></li>
+<li><a href="#_sugar_syntax">5.8. Sugar syntax</a></li>
+<li><a href="#_raw_access_to_bluebird_api">5.9. Raw access to bluebird api</a></li>
 </ul>
 </li>
-<li><a href="#_advanced_usage">5. Advanced usage</a></li>
-<li><a href="#_contribute">6. Contribute</a></li>
-<li><a href="#_run_tests">7. Run tests</a></li>
-<li><a href="#_license">8. License</a></li>
+<li><a href="#_advanced_usage">6. Advanced usage</a></li>
+<li><a href="#_contribute">7. Contribute</a></li>
+<li><a href="#_run_tests">8. Run tests</a></li>
+<li><a href="#_license">9. License</a></li>
 </ul>
 </div>
 </div>
@@ -523,7 +524,52 @@ behind the scenes.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_project_maturity"><a class="link" href="#_project_maturity">2. Project Maturity</a></h2>
+<h2 id="_rationale"><a class="link" href="#_rationale">2. Rationale</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Befor start writing this library I found this ones:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://github.com/bodil/redlobster">redlobster</a></p>
+</li>
+<li>
+<p><a href="https://github.com/Breezeemr/promise">promise</a></p>
+</li>
+<li>
+<p><a href="https://github.com/jamesmacaulay/cljs-promises">cljs-promises</a></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>And all them have one thing in common, they are not actively maintained.</p>
+</div>
+<div class="paragraph">
+<p>With exception of cljs-promises, the other two libraries tries emulate the clojure promise that
+is based in blocking api that is not very natural in javascript environments.</p>
+</div>
+<div class="paragraph">
+<p>Also, the last one, uses core.async abstraction that is not bad as is, because core.async is a very
+well done library, but it does it in a questionable way in my opion.</p>
+</div>
+<div class="paragraph">
+<p>And finally, them all lacks of good documentation and docstrings.</p>
+</div>
+<div class="paragraph">
+<p>The <strong>promise</strong> library instead of reinventing the wheel, uses a powerful and very performant
+<a href="https://github.com/petkaantonov/bluebird/">bluebird</a> javascript promises library and includes
+it in the package as builtin dependency (using clojurescript <code>:foreign-libs</code> compiler option).</p>
+</div>
+<div class="paragraph">
+<p>It exposes a lightweight and idiomatic api for almost all methods and functions of
+bluebird library and includes a sugar syntax for make the code looks sync like if you are
+using ES7 async/await syntax.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_project_maturity"><a class="link" href="#_project_maturity">3. Project Maturity</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Since <em>promesa</em> is a young project there may be some API breakage.</p>
@@ -531,25 +577,25 @@ behind the scenes.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_install"><a class="link" href="#_install">3. Install</a></h2>
+<h2 id="_install"><a class="link" href="#_install">4. Install</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>This section covers the installation and requirements of the <em>promesa</em> library.</p>
 </div>
 <div class="sect2">
-<h3 id="_leiningen"><a class="link" href="#_leiningen">3.1. Leiningen</a></h3>
+<h3 id="_leiningen"><a class="link" href="#_leiningen">4.1. Leiningen</a></h3>
 <div class="paragraph">
 <p>The simplest way to use <em>promesa</em> library in a ClojureScript project is by including
 it as a dependency in your <strong><em>project.clj</em></strong>:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">[</span><span class="tok-nv">funcool/promise</span> <span class="tok-s">&quot;0.1.0-SNAPSHOT&quot;</span><span class="tok-p">]</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">[</span><span class="tok-nv">funcool/promise</span> <span class="tok-s">&quot;0.1.0&quot;</span><span class="tok-p">]</span></code></pre>
 </div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_get_the_code"><a class="link" href="#_get_the_code">3.2. Get the Code</a></h3>
+<h3 id="_get_the_code"><a class="link" href="#_get_the_code">4.2. Get the Code</a></h3>
 <div class="paragraph">
 <p><em>promesa</em> is open source and can be found on <a href="https://github.com/funcool/promesa">github</a>.</p>
 </div>
@@ -565,14 +611,14 @@ it as a dependency in your <strong><em>project.clj</em></strong>:</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_user_guide"><a class="link" href="#_user_guide">4. User guide</a></h2>
+<h2 id="_user_guide"><a class="link" href="#_user_guide">5. User guide</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>This library also comes with lighweight abstraction for make use promises in a more
 idiomatic way.</p>
 </div>
 <div class="sect2">
-<h3 id="_creating_a_promise"><a class="link" href="#_creating_a_promise">4.1. Creating a promise</a></h3>
+<h3 id="_creating_a_promise"><a class="link" href="#_creating_a_promise">5.1. Creating a promise</a></h3>
 <div class="paragraph">
 <p>Let start creating a promise:</p>
 </div>
@@ -600,7 +646,7 @@ within the callback, perhaps async, then call resolve if everything worked, othe
 </div>
 </div>
 <div class="sect2">
-<h3 id="_chain_computations"><a class="link" href="#_chain_computations">4.2. Chain computations</a></h3>
+<h3 id="_chain_computations"><a class="link" href="#_chain_computations">5.2. Chain computations</a></h3>
 <div class="paragraph">
 <p>Here&#8217;s how you use that promise:</p>
 </div>
@@ -628,7 +674,7 @@ in an easy way.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_error_handling"><a class="link" href="#_error_handling">4.3. Error handling</a></h3>
+<h3 id="_error_handling"><a class="link" href="#_error_handling">5.3. Error handling</a></h3>
 <div class="paragraph">
 <p>Until now, we have seen resolved promises, but that is happens when an error ocurrs?</p>
 </div>
@@ -645,7 +691,7 @@ any of the previous promises in the chain is rejected or an exception is raised.
 </div>
 </div>
 <div class="sect2">
-<h3 id="_sequences"><a class="link" href="#_sequences">4.4. Sequences</a></h3>
+<h3 id="_sequences"><a class="link" href="#_sequences">5.4. Sequences</a></h3>
 <div class="paragraph">
 <p>Creating the sequence:</p>
 </div>
@@ -671,7 +717,7 @@ for make chain sequences of promises.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_parallelism"><a class="link" href="#_parallelism">4.5. Parallelism</a></h3>
+<h3 id="_parallelism"><a class="link" href="#_parallelism">5.5. Parallelism</a></h3>
 <div class="paragraph">
 <p>Javascript environments like browsers or nodejs are pretty good parallelizing IO operations
 how download content using ajax or reading a file in nodejs.</p>
@@ -702,7 +748,7 @@ callback.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_delays_and_timeouts"><a class="link" href="#_delays_and_timeouts">4.6. Delays and timeouts.</a></h3>
+<h3 id="_delays_and_timeouts"><a class="link" href="#_delays_and_timeouts">5.6. Delays and timeouts.</a></h3>
 <div class="paragraph">
 <p>Javascript due its nature, does not can block or sleep. But with promises you can emulate
 it using <code>delay</code> function:</p>
@@ -725,10 +771,8 @@ to <code>timeout</code> function:</p>
 <div class="content">
 <pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nb">-&gt; </span><span class="tok-p">(</span><span class="tok-nf">some-async-task</span><span class="tok-p">)</span>
     <span class="tok-p">(</span><span class="tok-nf">p/timeout</span> <span class="tok-mi">200</span><span class="tok-p">)</span>
-    <span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">x</span><span class="tok-p">]</span>
-              <span class="tok-p">(</span><span class="tok-nf">.log</span> <span class="tok-nv">js/console</span> <span class="tok-s">&quot;Task finished&quot;</span><span class="tok-p">)))</span>
-    <span class="tok-p">(</span><span class="tok-nf">p/catch</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">_</span><span class="tok-p">]</span>
-               <span class="tok-p">(</span><span class="tok-nf">.log</span> <span class="tok-nv">js/console</span> <span class="tok-s">&quot;Timeout&quot;</span><span class="tok-p">))))</span></code></pre>
+    <span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-o">#</span><span class="tok-p">(</span><span class="tok-nf">.log</span> <span class="tok-nv">js/console</span> <span class="tok-s">&quot;Task finished&quot;</span><span class="tok-p">))</span>
+    <span class="tok-p">(</span><span class="tok-nf">p/catch</span> <span class="tok-o">#</span><span class="tok-p">(</span><span class="tok-nf">.log</span> <span class="tok-nv">js/console</span> <span class="tok-s">&quot;Timeout&quot;</span><span class="tok-p">)))</span></code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -737,7 +781,7 @@ with timeout error and successfuly captured with <code>catch</code> handler.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_choice"><a class="link" href="#_choice">4.7. Choice</a></h3>
+<h3 id="_choice"><a class="link" href="#_choice">5.7. Choice</a></h3>
 <div class="paragraph">
 <p>You also can choice a first <code>n</code> number of promises that will filfilled first
 using the <code>some</code> function:</p>
@@ -767,7 +811,7 @@ instead of array of length 1.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_sugar_syntax"><a class="link" href="#_sugar_syntax">4.8. Sugar syntax</a></h3>
+<h3 id="_sugar_syntax"><a class="link" href="#_sugar_syntax">5.8. Sugar syntax</a></h3>
 <div class="paragraph">
 <p>Promises is one of the most used primitives for make composition of async computations. But using
 promises <em>as is</em> not solves you from the callback hell.</p>
@@ -799,7 +843,7 @@ way, using new <code>async</code> y <code>await</code> keywords. You can read mo
 </div>
 </div>
 <div class="sect2">
-<h3 id="_raw_access_to_bluebird_api"><a class="link" href="#_raw_access_to_bluebird_api">4.9. Raw access to bluebird api</a></h3>
+<h3 id="_raw_access_to_bluebird_api"><a class="link" href="#_raw_access_to_bluebird_api">5.9. Raw access to bluebird api</a></h3>
 <div class="paragraph">
 <p>This library gives you the full access to the fantastic bluebird promise library.</p>
 </div>
@@ -822,7 +866,7 @@ way, using new <code>async</code> y <code>await</code> keywords. You can read mo
 </div>
 </div>
 <div class="sect1">
-<h2 id="_advanced_usage"><a class="link" href="#_advanced_usage">5. Advanced usage</a></h2>
+<h2 id="_advanced_usage"><a class="link" href="#_advanced_usage">6. Advanced usage</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Behind the scenes, the <em>promise</em> library implements and uses monadic abstractions. And in this
@@ -847,7 +891,7 @@ logic for composition of computations.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_contribute"><a class="link" href="#_contribute">6. Contribute</a></h2>
+<h2 id="_contribute"><a class="link" href="#_contribute">7. Contribute</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p><strong>promesa</strong> unlike Clojure and other Clojure contrib libs, does not have many
@@ -856,7 +900,7 @@ restrictions for contributions. Just follow open a issue or pull request.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_run_tests"><a class="link" href="#_run_tests">7. Run tests</a></h2>
+<h2 id="_run_tests"><a class="link" href="#_run_tests">8. Run tests</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>For run tests just execute this:</p>
@@ -873,7 +917,7 @@ like <strong>nvm</strong>.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_license"><a class="link" href="#_license">8. License</a></h2>
+<h2 id="_license"><a class="link" href="#_license">9. License</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p><em>promesa</em> is licensed under BSD (2-Clause) license:</p>
@@ -911,7 +955,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2015-03-28 11:16:40 CET
+Last updated 2015-03-28 11:51:37 CET
 </div>
 </div>
 </body>
