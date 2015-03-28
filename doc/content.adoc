@@ -57,7 +57,7 @@ it as a dependency in your *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promise "0.1.0-SNAPSHOT"]
+[funcool/promise "0.1.0"]
 ----
 
 
