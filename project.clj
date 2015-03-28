@@ -8,7 +8,7 @@
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
 
-  :source-paths ["src"]
+  :source-paths ["src" "assets"]
   :test-paths ["test"]
 
   :cljsbuild {:test-commands {"test" ["node" "output/tests.js"]}
