@@ -217,10 +217,8 @@ to `timeout` function:
 ----
 (-> (some-async-task)
     (p/timeout 200)
-    (p/then (fn [x]
-              (.log js/console "Task finished")))
-    (p/catch (fn [_]
-               (.log js/console "Timeout"))))
+    (p/then #(.log js/console "Task finished"))
+    (p/catch #(.log js/console "Timeout")))
 ----
 
 In case of the async task is slow more that 200ms, the promise will be rejected
