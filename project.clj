@@ -27,7 +27,7 @@
 
   :jar-exclusions [#"\.swp|\.swo|user.clj"]
   :profiles {:dev {:dependencies [[org.clojure/clojure "1.6.0"]
-                                  [org.clojure/clojurescript "0.0-3126"]
+                                  [org.clojure/clojurescript "0.0-3196"]
                                   [funcool/cljs-testrunners "0.1.0-SNAPSHOT"]]
                    :codeina {:sources ["src"]
                              :language :clojurescript
