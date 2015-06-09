@@ -2,7 +2,7 @@
  :source-paths #{"src"}
  :resource-paths #{"assets"}
  :dependencies '[[cats "0.4.0"]
-                 [funcool/bootutils "0.1.0" :scope "test"]
+                 [funcool/bootutils "0.1.0-SNAPSHOT" :scope "test"]
                  [adzerk/boot-cljs "0.0-2814-3" :scope "test"]
                  [boot-cljs-test/node-runner "0.1.0" :scope "test"]
                  [org.clojure/clojurescript "0.0-3123"  :scope "test"]
@@ -11,7 +11,7 @@
 
 (require
  '[adzerk.boot-cljs :refer [cljs]]
- '[funcool.bootutils :refer :all]
+ '[bootutils.core :refer :all]
  '[boot-cljs-test.node-runner :refer :all])
 
 (def +version+ "0.1.2")
