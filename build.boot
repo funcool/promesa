@@ -54,8 +54,8 @@
   (comp (pom :project     'funcool/promesa
              :version     +version+
              :description "A promise library for ClojureScript"
-             :url         "https://github.com/funcool/promesa"
-             :scm         {:url "https://github.com/funcool/promesa"}
+             :url         "https://github.com/funcool/promise"
+             :scm         {:url "https://github.com/funcool/promise"}
              :license     {"BSD (2 Clause)" "http://opensource.org/licenses/BSD-2-Clause"})
         (jar)))
 
