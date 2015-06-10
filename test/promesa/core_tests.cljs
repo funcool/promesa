@@ -1,5 +1,6 @@
 (ns promesa.core-tests
-  (:require [cljs.test :as t]
+  (:require [cljs-testrunners.node :as node]
+            [cljs.test :as t]
             [promesa.core :as p]
             [cats.core :as m]))
 
@@ -104,3 +105,7 @@
       (p/then p1 (fn [x]
                    (t/is (= x 3))
                    (done))))))
+
+
+(defn main [] (node/run-tests))
+(set! *main-cli-fn* main)
