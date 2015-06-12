@@ -2,7 +2,7 @@
 
 ## Version 0.1.3 ##
 
-Date: unreleased
+Date: 2015-06-13
 
 - Go back to use leiningen.
 - Update bluebird version to 2.9.27
