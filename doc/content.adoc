@@ -89,19 +89,22 @@ Let start creating a promise:
 
 ;; Create a fulfilled promise
 (p/promise 1)
+;; => #<Promise [1]>
+----
 
+If `promise` function receives a plain value, it return a resolved promise with provided plain
+value. If it receives an instance of `Error`, it return a rejected promise.
+
+And finally it also accepts a factory callback that recevies two callable parameters: `resolve`
+and `reject`. So you can use one or other for resolve or reject the promise respectivelly.
+
+[source, clojure]
+----
 ;; Create a promise from callback
 (p/promise (fn [resolve reject]
              ;; Do things, maybe async...
              (resolve 1)))
 ----
-
-The `promise` function is polymorphic. If it receives a plain value, it return a resolved
-promise with provided plain value. If it receives an instance of `Error`, it return a rejected
-promise.
-
-And finally, if it receives a callback with two parameters, resolve and reject. Do something
-within the callback, perhaps async, then call resolve if everything worked, otherwise call reject.
 
 
 === Chain computations
