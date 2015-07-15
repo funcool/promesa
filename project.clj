@@ -4,7 +4,7 @@
   :license {:name "BSD (2 Clause)"
             :url "http://opensource.org/licenses/BSD-2-Clause"}
 
-  :dependencies [[cats "0.4.0"]]
+  :dependencies [[cats "0.5.0-SNAPSHOT"]]
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
 
@@ -26,8 +26,8 @@
                                    :pretty-print true}}]}
 
   :jar-exclusions [#"\.swp|\.swo|user.clj"]
-  :profiles {:dev {:dependencies [[org.clojure/clojure "1.7.0-beta3"]
-                                  [org.clojure/clojurescript "0.0-3269"]
+  :profiles {:dev {:dependencies [[org.clojure/clojure "1.7.0"]
+                                  [org.clojure/clojurescript "0.0-3308"]
                                   [funcool/cljs-testrunners "0.1.0-SNAPSHOT"]]
                    :codeina {:sources ["src"]
                              :language :clojurescript

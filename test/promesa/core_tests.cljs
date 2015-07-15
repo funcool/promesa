@@ -89,6 +89,13 @@
                    (t/is (= v 3))
                    (done))))))
 
+(t/deftest promise-as-applicative
+  (t/async done
+    (let [rp (m/fapply (p/resolved inc) (p/promise 2))]
+      (p/then rp (fn [v]
+                   (t/is (= v 3))
+                   (done))))))
+
 (t/deftest promise-as-monad
   (t/async done
     (let [p1 (m/>>= (p/promise 2) (fn [v] (m/return (inc v))))]

@@ -33,6 +33,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (declare then)
+(declare spread)
+(declare all)
 (declare promise)
 
 (def ^{:no-doc true}
@@ -41,6 +43,15 @@
     proto/Functor
     (fmap [mn f mv]
       (then mv f))
+
+    proto/Applicative
+    (pure [_ v]
+      (promise v))
+
+    (fapply [_ pf pv]
+      (spread (all [pf pv])
+              (fn [f v]
+                (f v))))
 
     proto/Monad
     (mreturn [_ v]
