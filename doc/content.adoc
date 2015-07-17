@@ -15,7 +15,7 @@ behind the scenes.
 
 == Rationale
 
-Befor start writing this library I found this ones:
+Before I started writing this library I reviewed the following:
 
 * link:https://github.com/bodil/redlobster[redlobster]
 * link:https://github.com/Breezeemr/promise[promise]
@@ -23,21 +23,21 @@ Befor start writing this library I found this ones:
 
 And all them have one thing in common, they are not actively maintained.
 
-With exception of cljs-promises, the other two libraries tries emulate the clojure promise that
-is based in blocking api that is not very natural in javascript environments.
+With the exception of cljs-promises, the other two libraries attempt to emulate the clojure promise which
+is based on a blocking api this is not very natural in JavaScript environments.
 
-Also, the last one, uses core.async abstraction that is not bad as is, because core.async is a very
-well done library, but it does it in a questionable way in my opion.
+Also, the last one, uses a core.async abstraction. This is not bad as core.async is a very
+well done library, but it does it in a questionable way in my opinion.
 
-And finally, them all lacks of good documentation and docstrings.
+Finally, they all lack good documentation and docstrings.
 
-The *promise* library instead of reinventing the wheel, uses a powerful and very performant
-link:https://github.com/petkaantonov/bluebird/[bluebird] javascript promises library and includes
-it in the package as builtin dependency (using clojurescript `:foreign-libs` compiler option).
+Instead of reinventing the wheel the *promise* library uses the powerful and very performant
+link:https://github.com/petkaantonov/bluebird/[bluebird] JavaScript promise library and includes
+it in the package as built in dependency (using ClojureScript `:foreign-libs` compiler option).
 
-It exposes a lightweight and idiomatic api for almost all methods and functions of
-bluebird library and includes a sugar syntax for make the code looks sync like if you are
-using ES7 async/await syntax.
+It exposes a lightweight and idiomatic api for almost all methods and functions
+of the bluebird library. It also includes syntactic sugar for making the code
+resemble ES7 async/await syntax.
 
 
 == Project Maturity
@@ -75,7 +75,7 @@ git clone https://github.com/funcool/promesa
 
 == User guide
 
-This library also comes with lighweight abstraction for make use promises in a more
+This library also comes with lightweight abstraction for making use of promises in a more
 idiomatic way.
 
 
@@ -92,11 +92,11 @@ Let start creating a promise:
 ;; => #<Promise [1]>
 ----
 
-If `promise` function receives a plain value, it return a resolved promise with provided plain
-value. If it receives an instance of `Error`, it return a rejected promise.
+If a `promise` function receives a plain value, it returns a resolved promise with the provided plain
+value. If it receives an instance of `Error`, it returns a rejected promise.
 
-And finally it also accepts a factory callback that recevies two callable parameters: `resolve`
-and `reject`. So you can use one or other for resolve or reject the promise respectivelly.
+And finally it also accepts a factory callback that receives two callable parameters: `resolve`
+and `reject`. So you can use one or other to resolve or reject the promise respectively.
 
 [source, clojure]
 ----
@@ -118,10 +118,10 @@ Here's how you use that promise:
 ----
 
 The `then` function takes one argument: a callback that will be called when the promise
-successfully resolved.
+is successfully resolved.
 
-But `then` is not the end, it also returns a promise that will resolved or rejected depending
-on return value of the first chain callback. That will allow compose async computations
+But `then` is not the end, it also returns a promise that will be resolved or rejected depending
+on return value of the first chain callback. That will allow you to compose async computations
 in an easy way.
 
 [source, clojure]
@@ -134,7 +134,7 @@ in an easy way.
 
 === Error handling
 
-Until now, we have seen resolved promises, but that is happens when an error ocurrs?
+Until now, we have seen resolved promises, but what happens when an error occurs?
 
 [source, clojure]
 ----
@@ -144,7 +144,7 @@ Until now, we have seen resolved promises, but that is happens when an error ocu
 ----
 
 The `catch` function adds a new handler to the promise chain that will be called when
-any of the previous promises in the chain is rejected or an exception is raised.
+any of the previous promises in the chain are rejected or an exception is raised.
 
 
 === Sequences
@@ -162,18 +162,18 @@ Creating the sequence:
               (.log js/console "Result: " result))))
 ----
 
-The standard promises library and javascript does not offers a standard way of chaining
-promises in sequence and in that situation we use the _cats_ library `>>=` function for it.
+The standard promise library and JavaScript do not offer a standard way of chaining
+promises in sequence in that situation we use the _cats_ library `>>=` function.
 
-The _cats_ library offers a monad abstractios and helpers for work with them, but do not worry,
-you don't need understand nothing related to monads. Just use the `>>=` function as helper
-for make chain sequences of promises.
+The _cats_ library offers monad abstractions and helpers to work with them, but do not worry,
+you don't need to understand anything related to monads. Just use the `>>=` function as a helper
+to chain together a sequence of promises.
 
 
 === Parallelism
 
-Javascript environments like browsers or nodejs are pretty good parallelizing IO operations
-how download content using ajax or reading a file in nodejs.
+JavaScript environments like browsers or nodejs are pretty good at parallelizing IO operations
+like downloading content, using ajax or reading a file in nodejs.
 
 [source, clojure]
 ----
@@ -183,7 +183,7 @@ how download content using ajax or reading a file in nodejs.
               (do-something-with-results array-of-results))))
 ----
 
-It there an other helper that allos unroll arguments wen working with multiple promises:
+There is another helper that allows you to unroll arguments when working with multiple promises:
 
 [source, clojure]
 ----
@@ -193,15 +193,15 @@ It there an other helper that allos unroll arguments wen working with multiple p
                 (do-stuff-with result1 result2))))
 ----
 
-The `spread` function works like `then` function, with unique diferrence that
-it unroll the received array of promises as positional arguments to the handler
+The `spread` function works like the `then` function, with a unique difference being that
+it unrolls the received array of promises as positional arguments to the handler
 callback.
 
 
 === Delays and timeouts.
 
-Javascript due its nature, does not can block or sleep. But with promises you can emulate
-it using `delay` function:
+JavaScript due its nature, does not allow you to block or sleep. But with promises you can emulate
+the functionality using `delay` like so:
 
 [source, clojure]
 ----
@@ -213,8 +213,8 @@ it using `delay` function:
 ;; to the console: "Received: foobar"
 ----
 
-Also, the promise library offers put a timeout to some async operation thanks
-to `timeout` function:
+The promise library offers the ability to add a timeout to async operations thanks
+to the `timeout` function:
 
 [source, clojure]
 ----
@@ -224,13 +224,13 @@ to `timeout` function:
     (p/catch #(.log js/console "Timeout")))
 ----
 
-In case of the async task is slow more that 200ms, the promise will be rejected
-with timeout error and successfuly captured with `catch` handler.
+In case the async task is slow, in the example more that 200ms, the promise will be rejected
+with timeout error and successfully captured with the `catch` handler.
 
 
 === Choice
 
-You also can choice a first `n` number of promises that will filfilled first
+You also can choose the first `n` number of promises to be fulfilled before moving on by
 using the `some` function:
 
 [source, clojure]
@@ -242,9 +242,9 @@ using the `some` function:
                 (.log js/console "The first two finished: " x y))))
 ----
 
-It there a helper function called `any` that works very similar to `some` with
-`1` as first argument and it return a promise that will fullfilled with one value
-instead of array of length 1.
+There is a helper function called `any` that works very similar to `some` with
+`1` as the first argument. It returns a promise that will be fulfilled with one value
+instead of an array with the length of 1.
 
 [source, clojure]
 ----
@@ -257,15 +257,15 @@ instead of array of length 1.
 
 === Sugar syntax
 
-Promises is one of the most used primitives for make composition of async computations. But using
-promises _as is_ not solves you from the callback hell.
+Promises are one of the most used primitives for the composition of async functions. However, using
+promises _as is_ doesn't save you from callback hell.
 
-The upcoming ES7 standard will introduce a sugar syntax for work with promises in a painless
-way, using new `async` y `await` keywords. You can read more about that
+The upcoming ES7 standard will introduce syntactic sugar for working with promises in a less painful
+way by introducing the new `async` and `await` keywords. You can read more about them
 link:http://jakearchibald.com/2014/es7-async-functions/[here] and
 link:http://pouchdb.com/2015/03/05/taming-the-async-beast-with-es7.html[here].
 
-Let see how we cam use a similar sugar syntax in clojurescript:
+Let's see how we cam use similar syntactic sugar in ClojureScript:
 
 [source, clojure]
 ----
@@ -280,14 +280,14 @@ Let see how we cam use a similar sugar syntax in clojurescript:
         (fn [v] (println v)))
 ----
 
-In this example we have used the `mlet` macro that comes from `cats` library.
+In this example we have used the `mlet` macro from the `cats` library.
 
 
 === Raw access to bluebird api
 
 This library gives you the full access to the fantastic bluebird promise library.
 
-For start using it, just require it like any other clojurescript ns:
+To start using it, you just need to require it like any other ClojureScript ns:
 
 [source, clojure]
 ----
@@ -306,35 +306,37 @@ For start using it, just require it like any other clojurescript ns:
 Behind the scenes, the _promise_ library implements and uses monadic abstractions. And in this
 case, the _Promise_ type implements a _Functor_ and _Monad_ abstractions.
 
-This part of documentation, requires a minimal knowledge about that concepts but is not mandatory
-to kwnon and read this part for use the library.
+This part of the documentation, requires a minimal amount of knowledge about
+these concepts. However, it is not mandatory to read and understand this
+portion in order to make use of this library.
 
-Previously we have seen the `mlet` macro that does very similar things to the ES7 `async`
-and `await` sugar syntax.
+Previously we have seen the `mlet` macro which is very similar in functionality to the ES7 `async`
+and `await` functions.
 
-The main difference with ES7 syntax is that is not bound only to promises, is a generic and
-extensible abstraction that allows work with different kind of types and different types of
-logic for composition of computations.
+The main difference with the ES7 syntax is that it is not bound only to
+promises. It is a generic and extensible abstraction that allows you to work
+with different types of logic allowing for composition of computations.
 
-Please, read the link:http://funcool.github.io/cats/latest/[cats documentation] for see other types and other abstractions.
+Please, read the link:http://funcool.github.io/cats/latest/[cats documentation]
+to see other types and abstractions.
 
 
 == Contribute
 
 **promesa** unlike Clojure and other Clojure contrib libs, does not have many
-restrictions for contributions. Just follow open a issue or pull request.
+restrictions for contributions. Just open a issue or pull request.
 
 
 == Run tests
 
-For run tests just execute this:
+To run the tests execute the following:
 
 [source, text]
 ----
 lein cljsbuild test
 ----
 
-You should have nodejs or iojs installed in your system or any node version manager
+You will need to have nodejs or iojs installed on your system or a node version manager
 like **nvm**.
 
 
