@@ -1,5 +1,13 @@
 # Changelog #
 
+## Version 0.2.0 ##
+
+Date: Unreleased
+
+- Remove all method related to cancellable promises.
+- Implement everything in terms of protocols.
+
+
 ## Version 0.1.3 ##
 
 Date: 2015-06-13
