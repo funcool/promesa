@@ -1,4 +1,4 @@
-;; Copyright (c) 2015 Andrey Antukh
+;; Copyright (c) 2015 Andrey Antukh <niwi@niwi.nz>
 ;; All rights reserved.
 ;;
 ;; Redistribution and use in source and binary forms, with or without
@@ -25,59 +25,62 @@
 (ns promesa.core
   (:refer-clojure :exclude [delay spread some])
   (:require [cats.core :as m]
-            [cats.protocols :as proto]
+            [cats.protocols :as cats]
+            [promesa.protocols :as proto]
             [org.bluebird]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(declare then)
-(declare spread)
-(declare all)
-(declare promise)
-
-(def ^{:no-doc true}
-  promise-monad
-  (reify
-    proto/Functor
-    (fmap [mn f mv]
-      (then mv f))
-
-    proto/Applicative
-    (pure [_ v]
-      (promise v))
-
-    (fapply [_ pf pv]
-      (spread (all [pf pv])
-              (fn [f v]
-                (f v))))
-
-    proto/Monad
-    (mreturn [_ v]
-      (promise v))
-
-    (mbind [mn mv f]
-      (let [ctx m/*context*]
-        (then mv (fn [v]
-                    (m/with-monad ctx
-                      (f v))))))))
+(declare promise-monad)
 
 (extend-type js/Promise
-  proto/Context
+  cats/Context
   (get-context [_] promise-monad)
 
-  proto/Extract
+  cats/Extract
   (extract [it]
     (.value it))
 
   IDeref
   (-deref [it]
-    (.value it)))
+    (.value it))
+
+  proto/IPromise
+  (-then [it cb]
+    (.then it cb))
+
+  (-catch
+    ([it cb]
+     (.catch it cb))
+    ([it type cb]
+     (let [type (case type
+                  :timeout (.-TimeoutError js/Promise)
+                  :cancel (.-CancellationError js/Promise)
+                  type)]
+       (.catch it type cb))))
+
+  (-finally [it cb]
+    (.finally it cb))
+
+  proto/IState
+  (-resolved? [it]
+    (.isFulfilled it))
+  (-rejected? [it]
+    (.isRejected it))
+  (-pending? [it]
+    (.isPending it))
+  (-value [it]
+    (.value it))
+  (-reason [it]
+    (.reason it)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public Api
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; Constructors
 
 (defn resolved
   "Return a resolved promise with provided value."
@@ -90,46 +93,72 @@
   (.reject js/Promise v))
 
 (defn promise
-  "The promise instance constructor."
+  "The promise constructor."
   [v]
   (cond
     (fn? v) (js/Promise. v)
     (instance? js/Error v) (rejected v)
     :else (resolved v)))
 
+;; Predicates
+
 (defn promise?
-  "Returns true if `p` is a primise
-  instance."
+  "Returns true if `p` is a primise instance."
   [p]
-  (instance? js/Promise p))
+  (satisfies? proto/IPromise p))
+
+(defn resolved?
+  "Returns true if promise `p` is already fulfilled."
+  [p]
+  (proto/-resolved? p))
 
 (defn fulfilled?
-  "Returns true if promise `p` is
-  already fulfilled."
+  "Convenience alias for the `resolved?` predicate."
   [p]
-  {:pre [(promise? p)]}
-  (.isFulfilled p))
+  (proto/-resolved? p))
 
 (defn rejected?
-  "Returns true if promise `p` is
-  already rejected."
+  "Returns true if promise `p` is already rejected."
   [p]
-  {:pre [(promise? p)]}
-  (.isRejected p))
+  (proto/-rejected? p))
 
 (defn pending?
-  "Returns true if promise `p` is
-  stil pending."
+  "Returns true if promise `p` is stil pending."
   [p]
-  {:pre [(promise? p)]}
-  (.isPending p))
+  (proto/-pending? p))
 
-(defn cancellable?
-  "Returns true if promise `p` is
-  cancelable."
+(defn done?
+  "Returns true if promise `p` is already done."
   [p]
-  {:pre [(promise? p)]}
-  (.isCancellable p))
+  (not (proto/-pending? p)))
+
+;; Chain operations
+
+(defn then
+  "A chain helper for promises."
+  [p callback]
+  (proto/-then p callback))
+
+(defn finally
+  "A chain helper that associate handler to the promise
+  that will be called regardless if it is resolved or
+  rejected."
+  [p callback]
+  (proto/-finally p callback))
+
+(defn catch
+  "Catch all promise chain helper."
+  ([p callback]
+   (proto/-catch p callback))
+  ([p type callback]
+   (proto/-catch p type callback)))
+
+(defn error
+  "Catch operational errors promise chain helper."
+  [p callback]
+  (.error p callback))
+
+;; Helpers
 
 (defn all
   "Given an array of promises, return a promise
@@ -152,69 +181,23 @@
   [n promises]
   (.some js/Promise (clj->js promises) n))
 
-(defn delay
-  "Given a timeout in miliseconds and optional
-  value, returns a promise that will fulfilled
-  with provided value (or nil) after the
-  time is reached."
-  ([t] (delay t nil))
-  ([t v]
-   (.delay js/Promise v t)))
-
-(defn timeout
-  "Returns a cancellable promise that will be fulfilled
-  with this promise's fulfillment value or rejection reason.
-  However, if this promise is not fulfilled or rejected
-  within `ms` milliseconds, the returned promise is cancelled
-  with a TimeoutError"
-  ([p t] (.timeout p t))
-  ([p t v] (.timeout p t v)))
-
-(defn then
-  "A chain helper for promises."
-  [p callback]
-  (.then p callback))
-
 (defn spread
   "A chain helper like `then` but recevies a
   resolved promises unrolled as parameters."
   [p callback]
   (.spread p callback))
 
-(defn finally
-  "A chain helper that associate handler to
-  the promise that will be called regardless
-  if it is resolved or rejected."
-  [p callback]
-  (.finally p callback))
-
-(defn catch
-  "Catch all promise chain helper."
-  ([p callback]
-   (.catch p callback))
-  ([p type callback]
-   (let [type (condp = type
-                :timeout (.-TimeoutError js/Promise)
-                :cancel (.-CancellationError js/Promise)
-                type)]
-     (.catch p type callback))))
-
-(defn error
-  "Catch operational errors promise chain helper."
-  [p callback]
-  (.error p callback))
-
 (defn value
   "Get the fulfillment value of this promise.
   Throws an error if the promise isn't fulfilled."
   [p]
-  (.value p))
+  (proto/-value p))
 
 (defn reason
   "Get the rejection reason of this promise.
   Throws an error if the promise isn't rejected."
   [p]
-  (.reason p))
+  (proto/-reason p))
 
 (defn promisify
   "Given a nodejs like function that accepts a callback
@@ -231,12 +214,51 @@
                               (conj resolve))]
                  (apply callable args))))))
 
-(defn cancelable
-  "Mark a promise as cancellable."
-  [p]
-  (.cancellable p))
+(defn timeout
+  "Returns a cancellable promise that will be fulfilled
+  with this promise's fulfillment value or rejection reason.
+  However, if this promise is not fulfilled or rejected
+  within `ms` milliseconds, the returned promise is cancelled
+  with a TimeoutError"
+  ([p t] (.timeout p t))
+  ([p t v] (.timeout p t v)))
 
-(defn cancel
-  "Cancel a cancellable promise."
-  [p]
-  (.cancel p))
+(defn delay
+  "Given a timeout in miliseconds and optional
+  value, returns a promise that will fulfilled
+  with provided value (or nil) after the
+  time is reached."
+  ([t] (delay t nil))
+  ([t v]
+   (.delay js/Promise v t)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Monad Type
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def ^{:no-doc true}
+  promise-monad
+  (reify
+    cats/Functor
+    (fmap [mn f mv]
+      (then mv f))
+
+    cats/Applicative
+    (pure [_ v]
+      (promise v))
+
+    (fapply [_ pf pv]
+      (spread (all [pf pv])
+              (fn [f v]
+                (f v))))
+
+    cats/Monad
+    (mreturn [_ v]
+      (promise v))
+
+    (mbind [mn mv f]
+      (let [ctx m/*context*]
+        (then mv (fn [v]
+                    (m/with-monad ctx
+                      (f v))))))))
+

@@ -1,8 +1,9 @@
 (ns promesa.core-tests
-  (:require [cljs-testrunners.node :as node]
-            [cljs.test :as t]
-            [promesa.core :as p]
-            [cats.core :as m]))
+  (:require [cljs.test :as t]
+            [cats.core :as m]
+            [promesa.core :as p]))
+
+(enable-console-print!)
 
 (t/deftest promise-constructor
   ;; Constructor with value
@@ -114,5 +115,11 @@
                    (done))))))
 
 
-(defn main [] (node/run-tests))
-(set! *main-cli-fn* main)
+(set! *main-cli-fn* #(t/run-tests))
+
+
+(defmethod cljs.test/report [:cljs.test/default :end-run-tests]
+  [m]
+  (if (cljs.test/successful? m)
+    (set! (.-exitCode js/process) 0)
+    (set! (.-exitCode js/process) 1)))
