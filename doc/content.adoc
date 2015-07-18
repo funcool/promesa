@@ -84,11 +84,13 @@ Let start creating a promise:
 ;; => #<Promise [1]>
 ----
 
-If a `promise` function receives a plain value, it returns a resolved promise with the provided plain
-value. If it receives an instance of `Error`, it returns a rejected promise.
+If a `promise` function receives a plain value, it returns a resolved promise with the
+provided plain value. If it receives an instance of `Error`, it returns a rejected
+promise.
 
-And finally it also accepts a factory callback that receives two callable parameters: `resolve`
-and `reject`. So you can use one or other to resolve or reject the promise respectively.
+And finally it also accepts a factory callback that receives two callable parameters:
+`resolve` and `reject`. So you can use one or other to resolve or reject the promise
+respectively.
 
 [source, clojure]
 ----
@@ -112,9 +114,9 @@ Here's how you use that promise:
 The `then` function takes one argument: a callback that will be called when the promise
 is successfully resolved.
 
-But `then` is not the end, it also returns a promise that will be resolved or rejected depending
-on return value of the first chain callback. That will allow you to compose async computations
-in an easy way.
+But `then` is not the end, it also returns a promise that will be resolved or rejected
+depending on return value of the first chain callback. That will allow you to compose
+async computations in an easy way.
 
 [source, clojure]
 ----
@@ -193,7 +195,7 @@ callback.
 
 === Delays and timeouts.
 
-JavaScript due its nature, does not allow you to block or sleep. But with promises you 
+JavaScript due its nature, does not allow you to block or sleep. But with promises you
 can emulate the functionality using `delay` like so:
 
 [source, clojure]
@@ -217,7 +219,7 @@ to the `timeout` function:
     (p/catch #(.log js/console "Timeout")))
 ----
 
-In case the async task is slow, in the example more that 200ms, the promise will be 
+In case the async task is slow, in the example more that 200ms, the promise will be
 rejected with timeout error and successfully captured with the `catch` handler.
 
 
@@ -248,13 +250,14 @@ instead of an array with the length of 1.
               (.log js/console "The first one finished: " x))))
 ----
 
+
 === Sugar syntax
 
-Promises are one of the most used primitives for the composition of async functions. 
+Promises are one of the most used primitives for the composition of async functions.
 However, using promises _as is_ doesn't save you from callback hell.
 
-The upcoming ES7 standard will introduce syntactic sugar for working with promises in a 
-less painful way by introducing the new `async` and `await` keywords. You can read more 
+The upcoming ES7 standard will introduce syntactic sugar for working with promises in a
+less painful way by introducing the new `async` and `await` keywords. You can read more
 about them link:http://jakearchibald.com/2014/es7-async-functions/[here] and
 link:http://pouchdb.com/2015/03/05/taming-the-async-beast-with-es7.html[here].
 
@@ -275,6 +278,25 @@ Let's see how we cam use similar syntactic sugar in ClojureScript:
 
 In this example we have used the `mlet` macro from the `cats` library.
 
+Behind the scenes, the _promise_ library implements and uses monadic abstractions. And
+in this case, the _Promise_ type implements a _Functor_ and _Monad_ abstractions.
+
+This part of the documentation, requires a minimal amount of knowledge about
+these concepts. However, it is not mandatory to read and understand this
+portion in order to make use of this library.
+
+Previously we have seen the `mlet` macro which is very similar in functionality to the ES7
+`async` and `await` functions.
+
+The main difference with the ES7 syntax is that it is not bound only to promises. It is a
+generic and extensible abstraction that allows you to work with different types of logic
+allowing for composition of computations.
+
+Please, read the link:http://funcool.github.io/cats/latest/[cats documentation] to see
+other types and abstractions.
+
+
+
 
 === Raw access to bluebird api
 
@@ -293,25 +315,6 @@ To start using it, you just need to require it like any other ClojureScript ns:
            (.log js/console v)))
 ;; => 1
 ----
-
-=== Cats integration
-
-Behind the scenes, the _promise_ library implements and uses monadic abstractions. And 
-in this case, the _Promise_ type implements a _Functor_ and _Monad_ abstractions.
-
-This part of the documentation, requires a minimal amount of knowledge about
-these concepts. However, it is not mandatory to read and understand this
-portion in order to make use of this library.
-
-Previously we have seen the `mlet` macro which is very similar in functionality to the ES7
-`async` and `await` functions.
-
-The main difference with the ES7 syntax is that it is not bound only to promises. It is a 
-generic and extensible abstraction that allows you to work with different types of logic
-allowing for composition of computations.
-
-Please, read the link:http://funcool.github.io/cats/latest/[cats documentation] to see 
-other types and abstractions.
 
 
 == Developers Guide
