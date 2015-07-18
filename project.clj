@@ -27,12 +27,10 @@
 
   :jar-exclusions [#"\.swp|\.swo|user.clj"]
   :profiles {:dev {:dependencies [[org.clojure/clojure "1.7.0"]
-                                  [org.clojure/clojurescript "0.0-3308"]
-                                  [funcool/cljs-testrunners "0.1.0-SNAPSHOT"]]
+                                  [org.clojure/clojurescript "0.0-3308"]]
                    :codeina {:sources ["src"]
-                             :language :clojurescript
-                             :output-dir "doc/api"}
-                   :plugins [[lein-cljsbuild "1.0.4"]
-                             [funcool/codeina "0.1.0"
-                              :exclusions [org.clojure/clojure]]
+                             :reader :clojurescript
+                             :target "doc/dist/latest/api"}
+                   :plugins [[lein-cljsbuild "1.0.6"]
+                             [funcool/codeina "0.2.0"]
                              [lein-externs "0.1.3"]]}})
