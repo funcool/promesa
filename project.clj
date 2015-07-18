@@ -4,7 +4,7 @@
   :license {:name "BSD (2 Clause)"
             :url "http://opensource.org/licenses/BSD-2-Clause"}
 
-  :dependencies [[cats "0.5.0-SNAPSHOT"]]
+  :dependencies [[funcool/cats "0.5.0"]]
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
 
