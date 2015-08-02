@@ -343,7 +343,8 @@ To run the tests execute the following:
 
 [source, text]
 ----
-lein cljsbuild test
+./scripts/build
+iojs out/tests.js
 ----
 
 You will need to have nodejs or iojs installed on your system.
