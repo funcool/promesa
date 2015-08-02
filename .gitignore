@@ -9,6 +9,6 @@ pom.xml.asc
 /.nrepl-port
 /*-init.clj
 /doc/dist
-/output
+/out
 /repl
 /node_modules
