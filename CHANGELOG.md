@@ -1,5 +1,16 @@
 # Changelog #
 
+## Version 0.3.0 ##
+
+Date: 2015-08-02
+
+- Update bluebird version to 2.9.34
+- Update cljs compiler version to 1.7.28
+- Start using cljs compiler own compilation facilities
+  instead of lein-cljsbuld.
+- Now requires the clojurescript >= 1.7.28
+
+
 ## Version 0.2.0 ##
 
 Date: 2015-07-18
