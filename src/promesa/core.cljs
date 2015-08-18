@@ -25,6 +25,7 @@
 (ns promesa.core
   (:refer-clojure :exclude [delay spread some])
   (:require [cats.core :as m]
+            [cats.context :as mctx]
             [cats.protocols :as cats]
             [promesa.protocols :as proto]
             [org.bluebird]))
@@ -257,7 +258,7 @@
       (promise v))
 
     (mbind [mn mv f]
-      (let [ctx m/*context*]
+      (let [ctx mctx/*context*]
         (then mv (fn [v]
                     (m/with-monad ctx
                       (f v))))))))
