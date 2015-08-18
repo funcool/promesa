@@ -1,5 +1,12 @@
 # Changelog #
 
+## Version 0.4.0 ##
+
+Date: 2015-08-18
+
+- Update cats dependency to 0.6.1
+
+
 ## Version 0.3.0 ##
 
 Date: 2015-08-02
