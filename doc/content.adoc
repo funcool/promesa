@@ -1,6 +1,6 @@
 = promesa
 Andrey Antukh, <niwi@niwi.nz>
-0.3.0
+0.4.0
 :toc: left
 :!numbered:
 :source-highlighter: pygments
@@ -62,7 +62,7 @@ it as a dependency in your *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "0.3.0"]
+[funcool/promesa "0.4.0"]
 ----
 
 
