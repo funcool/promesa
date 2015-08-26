@@ -6,6 +6,8 @@
   :dependencies [[org.clojure/clojure "1.7.0" :scope "provided"]
                  [org.clojure/clojurescript "1.7.48" :scope "provided"]
                  [funcool/cats "0.6.1"]]
+
+  :repositories [["clojars" {:sign-releases false}]]
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
 
@@ -15,5 +17,5 @@
   :codeina {:sources ["src"]
             :reader :clojurescript
             :target "doc/dist/latest/api"}
-  :plugins [[funcool/codeina "0.3.0-SNAPSHOT"]
+  :plugins [[funcool/codeina "0.3.0"]
             [lein-externs "0.1.3"]])
