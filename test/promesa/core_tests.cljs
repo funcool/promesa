@@ -5,33 +5,17 @@
 
 (enable-console-print!)
 
-(t/deftest promise-constructor
-  ;; Constructor with value
+(t/deftest promise-from-value
   (let [p1 (p/promise 1)]
     (t/is (p/fulfilled? p1))
-    (t/is (= (m/extract p1) 1)))
+    (t/is (= (m/extract p1) 1))))
 
-  ;; Constructor with callable
+(t/deftest promise-from-factory
   (let [p1 (p/promise (fn [resolve] (resolve 1)))]
     (t/is (p/fulfilled? p1))
-    (t/is (= (m/extract p1) 1)))
+    (t/is (= (m/extract p1) 1))))
 
-  (let [p1 (p/promise (ex-info "foo" 1))]
-    (t/is (p/rejected? p1))
-    (p/catch p1 (fn [x] x)))
-
-  (let [p1 (p/resolved 1)]
-    (t/is (p/fulfilled? p1)))
-
-  (let [p1 (p/rejected 1)]
-    (t/is (p/rejected? p1))
-    (p/catch p1 (fn [x] x)))
-
-  (let [p1 (p/promise (fn [_ _] 1))]
-    (t/is (p/pending? p1)))
-)
-
-(t/deftest promise-async-constructor-async
+(t/deftest promise-async-factory
   (t/async done
     (let [p1 (p/promise (fn [resolve]
                           (js/setTimeout (partial resolve 1) 0)))]
@@ -40,23 +24,38 @@
                    (t/is (= (m/extract p1)  1))
                    (done))))))
 
-(t/deftest spread-all-chain
+(t/deftest promise-from-exception
+  (let [p1 (p/promise (ex-info "foo" 1))]
+    (t/is (p/rejected? p1))
+    (p/catch p1 (fn [x] x))))
+
+(t/deftest promise-rejected
+  (let [p1 (p/rejected 1)]
+    (t/is (p/rejected? p1))
+    (p/catch p1 (fn [x] x))))
+
+(t/deftest promise-from-promise
+  (let [p1 (p/promise 1)
+        p2 (p/promise p1)]
+    (t/is (identical? p1 p2))))
+
+(t/deftest syncrhonize-promises
   (let [p1 (-> (p/all [(p/promise 1) (p/promise 2)])
-               (p/spread (fn [x y]
-                           (t/is (= x 1))
-                           (t/is (= y 2))
-                           (+ x y))))]
+               (p/then (fn [[x y]]
+                         (t/is (= x 1))
+                         (t/is (= y 2))
+                         (+ x y))))]
     (p/then p1 (fn [v]
                  (t/is (= v 3))))))
 
-(t/deftest any-with-delay-chain
+(t/deftest arbitrary-choice
   (t/async done
     (let [p1 (p/any [(p/delay 300 1) (p/delay 200 2)])]
       (p/then p1 (fn [v]
                    (t/is (= v 2))
                    (done))))))
 
-(t/deftest any-with-timeout-catch
+(t/deftest catch-timeout
   (t/async done
     (let [p1 (-> (p/delay 300 1)
                  (p/timeout 200))]
@@ -64,24 +63,6 @@
                              (t/is (instance? js/Error v))
                              (t/is (p/rejected? p1))
                              (done))))))
-
-(t/deftest timeout-with-finally
-  (t/async done
-    (let [p1 (-> (p/delay 300 1)
-                 (p/timeout 200 1))]
-      (-> p1
-          (p/catch #(t/is (instance? js/Error %)))
-          (p/finally (fn [v]
-                       (t/is (= v nil))
-                       (done)))))))
-
-(t/deftest rejected-promise
-  (t/async done
-    (let [p1 (p/rejected 1)]
-      (t/is (p/rejected? p1))
-      (p/catch p1 (fn [v]
-                    (t/is (= v 1))
-                    (done))))))
 
 (t/deftest promise-as-functor
   (t/async done
@@ -103,7 +84,6 @@
       (p/then p1 (fn [v]
                    (t/is (= v 3))
                    (done))))))
-
 
 (t/deftest promisify
   (t/async done
