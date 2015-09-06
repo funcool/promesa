@@ -25,30 +25,28 @@
 (ns promesa.core
   (:refer-clojure :exclude [delay spread some])
   (:require [cats.core :as m]
-            [cats.context :as mctx]
-            [cats.protocols :as cats]
-            [promesa.protocols :as proto]
+            [cats.context :as mc]
+            [cats.protocols :as mp]
+            [promesa.protocols :as p]
             [org.bluebird]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(declare promise-monad)
+(declare promise-context)
 
 (extend-type js/Promise
-  cats/Context
-  (get-context [_] promise-monad)
+  mp/Context
+  (-get-context [_] promise-context)
 
-  cats/Extract
-  (extract [it]
-    (.value it))
+  mp/Extract
+  (-extract [it]
+    (if (.isRejected it)
+      (.cause it)
+      (.value it)))
 
-  IDeref
-  (-deref [it]
-    (.value it))
-
-  proto/IPromise
+  p/IPromise
   (-then [it cb]
     (.then it cb))
 
@@ -62,20 +60,15 @@
                   type)]
        (.catch it type cb))))
 
-  (-finally [it cb]
-    (.finally it cb))
-
-  proto/IState
+  p/IState
   (-resolved? [it]
     (.isFulfilled it))
+
   (-rejected? [it]
     (.isRejected it))
-  (-pending? [it]
-    (.isPending it))
-  (-value [it]
-    (.value it))
-  (-reason [it]
-    (.reason it)))
+
+  (-done? [it]
+    (not (.isPending it))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public Api
@@ -106,58 +99,51 @@
 (defn promise?
   "Returns true if `p` is a primise instance."
   [p]
-  (satisfies? proto/IPromise p))
+  (satisfies? p/IPromise p))
 
 (defn resolved?
   "Returns true if promise `p` is already fulfilled."
   [p]
-  (proto/-resolved? p))
+  (p/-resolved? p))
 
 (defn fulfilled?
   "Convenience alias for the `resolved?` predicate."
   [p]
-  (proto/-resolved? p))
+  (p/-resolved? p))
 
 (defn rejected?
   "Returns true if promise `p` is already rejected."
   [p]
-  (proto/-rejected? p))
+  (p/-rejected? p))
 
 (defn pending?
   "Returns true if promise `p` is stil pending."
   [p]
-  (proto/-pending? p))
+  (not (p/-done? p)))
 
 (defn done?
   "Returns true if promise `p` is already done."
   [p]
-  (not (proto/-pending? p)))
+  (p/-done? p))
 
 ;; Chain operations
 
 (defn then
   "A chain helper for promises."
   [p callback]
-  (proto/-then p callback))
+  (p/-then p callback))
 
-(defn finally
-  "A chain helper that associate handler to the promise
-  that will be called regardless if it is resolved or
-  rejected."
-  [p callback]
-  (proto/-finally p callback))
+(defn chain
+  "A variadic chain operation."
+  [p & funcs]
+  (reduce #(then %1 %2) p funcs))
 
 (defn catch
   "Catch all promise chain helper."
   ([p callback]
-   (proto/-catch p callback))
+   (p/-catch p callback))
   ([p type callback]
-   (proto/-catch p type callback)))
-
-(defn error
-  "Catch operational errors promise chain helper."
-  [p callback]
-  (.error p callback))
+   (p/-catch p type callback)))
 
 ;; Helpers
 
@@ -166,7 +152,8 @@
   that is fulfilled  when all the items in the
   array are fulfilled."
   [promises]
-  (.all js/Promise (clj->js promises)))
+  (m/sequence promises))
+  ;; (.all js/Promise (clj->js promises)))
 
 (defn any
   "Given an array of promises, return a promise
@@ -182,33 +169,11 @@
   [n promises]
   (.some js/Promise (clj->js promises) n))
 
-(defn spread
-  "A chain helper like `then` but recevies a
-  resolved promises unrolled as parameters."
-  [p callback]
-  (.spread p callback))
-
-(defn value
-  "Get the fulfillment value of this promise.
-  Throws an error if the promise isn't fulfilled."
-  [p]
-  (proto/-value p))
-
-(defn reason
-  "Get the rejection reason of this promise.
-  Throws an error if the promise isn't rejected."
-  [p]
-  (proto/-reason p))
-
 (defn promisify
   "Given a nodejs like function that accepts a callback
   as the last argument and return an other function
   that returns a promise."
   [callable]
-  ;; (.promisify js/Promise callable)
-  ;; Use own implementation because
-  ;; due to strange reasons it not works
-  ;; properly with bluebird implementation.
   (fn [& args]
     (promise (fn [resolve]
                (let [args (-> (vec args)
@@ -238,28 +203,35 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def ^{:no-doc true}
-  promise-monad
+  promise-context
   (reify
-    cats/Functor
-    (fmap [mn f mv]
+    mp/ContextClass
+    (-get-level [_] mc/+level-default+)
+
+    mp/Functor
+    (-fmap [mn f mv]
       (then mv f))
 
-    cats/Applicative
-    (pure [_ v]
+    mp/Applicative
+    (-pure [_ v]
       (promise v))
 
-    (fapply [_ pf pv]
-      (spread (all [pf pv])
-              (fn [f v]
-                (f v))))
+    (-fapply [_ pf pv]
+      (then (all [pf pv])
+            (fn [[f v]]
+              (f v))))
 
-    cats/Monad
-    (mreturn [_ v]
+    mp/Semigroup
+    (-mappend [_ mv mv']
+      (p/-then (m/sequence [mv mv'])
+               (fn [[mvv mvv']]
+                 (let [ctx (mp/-get-context mvv)]
+                   (mp/-mappend ctx mvv mvv')))))
+
+    mp/Monad
+    (-mreturn [_ v]
       (promise v))
 
-    (mbind [mn mv f]
-      (let [ctx mctx/*context*]
-        (then mv (fn [v]
-                    (m/with-monad ctx
-                      (f v))))))))
+    (-mbind [mn mv f]
+      (then mv f))))
 
