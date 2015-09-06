@@ -24,20 +24,14 @@
 
 (ns promesa.protocols)
 
-(defprotocol IPromiseFactory
-  (promise [_] "Return a promise instance."))
-
 (defprotocol IPromise
   "A basic promise abstraction."
   (-then [_ cb] "Then chain operation over promise.")
-  (-catch [_ cb] [_ type cb] "Catch chain operation over promise.")
-  (-finally [_ cb] "Finally chain operation over promise"))
+  (-catch [_ cb] [_ type cb] "Catch chain operation over promise."))
 
 (defprotocol IState
   "Additional state related abstraction."
-  (-rejected? [_] "Returns true if a promise is rejected.")
   (-resolved? [_] "Returns true if a promise is resolved.")
-  (-pending? [_] "Retutns true if a promise is pending.")
-  (-value [_] "Return a current value.")
-  (-reason [_] "Return a current rejection reason."))
+  (-rejected? [_] "Returns true if a promise is rejected.")
+  (-done? [_] "Retutns true if a promise is pending."))
 
