@@ -1,4 +1,4 @@
-= promesa
+= promesa - composable promise library for ClojureScript
 Andrey Antukh, <niwi@niwi.nz>
 0.4.0
 :toc: left
