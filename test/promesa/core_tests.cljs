@@ -40,15 +40,24 @@
     (t/is (identical? p1 p2))))
 
 (t/deftest syncrhonize-two-promises
-  (let [p1 (-> (p/all [(p/promise 1) (p/promise 2)])
-               (p/then (fn [[x y]]
-                         (t/is (= x 1))
-                         (t/is (= y 2))
-                         (+ x y))))]
-    (p/then p1 (fn [v]
-                 (t/is (= v 3))))))
+  (t/async done
+    (let [p1 (p/all [(p/promise 1) (p/promise 2)])]
+      (p/then p1 (fn [[x y]]
+                   (t/is (= x 1))
+                   (t/is (= y 2))
+                   (done))))))
 
-(t/deftest arbitrary-choice
+(t/deftest arbitrary-choice-with-some
+  (t/async done
+    (let [p1 (p/some 2 [(future 200 1)
+                        (future 200 2)
+                        (future 300 3)])]
+      (p/then p1 (fn [[x y]]
+                   (t/is (= x 1))
+                   (t/is (= y 2))
+                   (done))))))
+
+(t/deftest arbitrary-choice-with-any
   (t/async done
     (let [p1 (p/any [(p/delay 300 1) (p/delay 200 2)])]
       (p/then p1 (fn [v]
@@ -75,6 +84,36 @@
                    (t/is (= v "foo"))
                    (done))))))
 
+
+(defn future
+  [sleep value]
+  (p/promise (fn [resolve]
+               (js/setTimeout #(resolve value) sleep))))
+
+(t/deftest chaining-using-then
+  (t/async done
+    (let [p1 (future 200 2)
+          p2 (p/then p1 inc)
+          p3 (p/then p2 inc)]
+      (p/then p3 (fn [v]
+                   (t/is (= v 4))
+                   (done))))))
+
+(t/deftest chaining-using-chain
+  (t/async done
+    (let [p1 (future 200 2)
+          p2 (p/chain p1 inc inc inc)]
+      (p/then p2 (fn [v]
+                   (t/is (= v 5))
+                   (done))))))
+
+(t/deftest chaining-using->>=
+  (t/async done
+    (let [p1 (future 200 2)
+          p2 (m/>>= p1 inc inc inc)]
+      (p/then p2 (fn [v]
+                   (t/is (= v 5))
+                   (done))))))
 
 (t/deftest promise-as-functor
   (t/async done
