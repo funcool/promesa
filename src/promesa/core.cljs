@@ -167,7 +167,8 @@
   that is fulfilled when `n` number of promises
   is fulfilled."
   [n promises]
-  (.some js/Promise (clj->js promises) n))
+  (then (.some js/Promise (clj->js promises) n)
+        #(js->clj %)))
 
 (defn promisify
   "Given a nodejs like function that accepts a callback
