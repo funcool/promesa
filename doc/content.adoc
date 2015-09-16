@@ -3,11 +3,11 @@ Andrey Antukh, <niwi@niwi.nz>
 0.4.0
 :toc: left
 :!numbered:
-:source-highlighter: pygments
-:pygments-style: friendly
-:sectlinks:
 :idseparator: -
 :idprefix:
+:sectlinks:
+:source-highlighter: pygments
+:pygments-style: friendly
 
 
 == Introduction
