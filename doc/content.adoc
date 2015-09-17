@@ -1,6 +1,6 @@
 = promesa - composable promise library for ClojureScript
 Andrey Antukh, <niwi@niwi.nz>
-0.4.0
+0.5.0
 :toc: left
 :!numbered:
 :idseparator: -
@@ -57,7 +57,7 @@ it as a dependency in your *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "0.4.0"]
+[funcool/promesa "0.5.0"]
 ----
 
 
@@ -91,8 +91,8 @@ Let start creating a promise from a plain value:
 ;; => #<Promise [1]>
 ----
 
-If a `promise` function receives a plain value, it returns a resolved promise with 
-the provided plain value. If it receives an instance of `Error`, it returns a 
+If a `promise` function receives a plain value, it returns a resolved promise with
+the provided plain value. If it receives an instance of `Error`, it returns a
 rejected promise.
 
 And finally it also accepts a factory callback that receives two callable parameters:
@@ -108,7 +108,7 @@ respectively.
 ----
 
 
-=== Chain computations
+=== Simple chaining
 
 It there different ways to compose/chain computations using promises. We will start
 with the basic: lineal way of chaining computations.
@@ -119,7 +119,8 @@ namespace. Bot them are mainly interchangeable. The main differencia is that
 
 [source, clojure]
 ----
-(def pr (-> (p/promise 2)
+(def pr (-> (p/promise 1)
+            (p/then inc)
             (p/then inc)
             (p/then inc)))
 
@@ -132,16 +133,20 @@ And here the same example using the `chain` function instead of `then`:
 
 [source, clojure]
 ----
-(def pr (p/chain (p/promise 2) inc inc))
+(def pr (-> (p/promise 1)
+            (p/chain inc inc inc))
 
 (p/then pr (fn [v]
              (println v)))
 ;; => Stdout: 4
 ----
 
+
+=== Advanced chaining
+
 Later, thanks to the link:https://github.com/funcool/cats[cats] library, it there
 other few methods of create promise compositions in more powerfull way: `mlet`
-and `alet` macros.
+and `alet` macros and `fmap` function.
 
 For demostration purposes, imagine you have this function that emulates async
 operation and return a promise:
@@ -157,8 +162,25 @@ operation and return a promise:
                (js/setTimeout #(deliver wait) wait))))
 ----
 
-Now, we will try to use this function together with `mlet` macro and additionally
-messure the execution time:
+The `cats.core/fmap` function allows us apply a function to the value
+into the promise and return an other promise with the result:
+
+[source, clojure]
+----
+(require '[cats.core :as m])
+
+(-> (m/fmap inc (sleep-promise 10))
+    (p/then (fn [v]
+              (println v))))
+
+;; => Stdout: 11
+----
+
+Until now, we have seen a very simple promise compositions that does not depends
+on previous results. The `cats.core/mlet` macro allows us build more complex and
+more powerfull promise compositions.
+
+Let's see an example using `mlet` macro and additionally messure the execution time:
 
 [source, clojure]
 ----
@@ -177,7 +199,7 @@ messure the execution time:
 The `mlet` bindings are executed sequentially, waiting in each step for promise
 resolution. If an error occurs in some step, the entire composition will be
 short-circuited, returing exceptionally resolved promise. This is very similar
-to the up coming link:http://jakearchibald.com/2014/es7-async-functions/[ES7 async/await], but built in a generic way and as a library and not language feature.
+to the up coming link:http://jakearchibald.com/2014/es7-async-functions/[ES7 async/await], but built in a generic way and as a library and not as language feature.
 
 The main disadvantage of `mlet` is that it's evaluation model is strictly
 secuential. It is ok for some use cases, when the sequential order is mandatory.
