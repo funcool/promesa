@@ -153,7 +153,6 @@
   array are fulfilled."
   [promises]
   (m/sequence promises))
-  ;; (.all js/Promise (clj->js promises)))
 
 (defn any
   "Given an array of promises, return a promise
