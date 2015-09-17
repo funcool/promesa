@@ -2,7 +2,7 @@
 
 ## Version 0.5.0 ##
 
-Date: unreleased
+Date: 2015-09-18
 
 - Update cats to 1.0.0
 - Adapt code to cats 1.0.0 breaking changes.
