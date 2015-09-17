@@ -10,6 +10,7 @@ Date: unreleased
 - Remove spread operator beacuse it is no longer needed (you can use clojure
   destructuring with `then` combinator.
 - Start using the `-name` protocol naming convention.
+- Update bluebird to 2.10.0
 
 
 ## Version 0.4.0 ##
