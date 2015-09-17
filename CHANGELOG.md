@@ -1,5 +1,17 @@
 # Changelog #
 
+## Version 0.5.0 ##
+
+Date: unreleased
+
+- Update cats to 1.0.0
+- Adapt code to cats 1.0.0 breaking changes.
+- Add more tests.
+- Remove spread operator beacuse it is no longer needed (you can use clojure
+  destructuring with `then` combinator.
+- Start using the `-name` protocol naming convention.
+
+
 ## Version 0.4.0 ##
 
 Date: 2015-08-18
