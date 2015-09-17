@@ -37,7 +37,7 @@
 (declare promise-context)
 
 (extend-type js/Promise
-  mp/Context
+  mp/Contextual
   (-get-context [_] promise-context)
 
   mp/Extract
@@ -205,7 +205,7 @@
 (def ^{:no-doc true}
   promise-context
   (reify
-    mp/ContextClass
+    mp/Context
     (-get-level [_] mc/+level-default+)
 
     mp/Functor
