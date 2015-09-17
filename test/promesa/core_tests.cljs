@@ -5,6 +5,11 @@
 
 (enable-console-print!)
 
+(defn future
+  [sleep value]
+  (p/promise (fn [resolve]
+               (js/setTimeout #(resolve value) sleep))))
+
 (t/deftest promise-from-value
   (let [p1 (p/promise 1)]
     (t/is (p/fulfilled? p1))
@@ -83,12 +88,6 @@
       (p/then p3 (fn [v]
                    (t/is (= v "foo"))
                    (done))))))
-
-
-(defn future
-  [sleep value]
-  (p/promise (fn [resolve]
-               (js/setTimeout #(resolve value) sleep))))
 
 (t/deftest chaining-using-then
   (t/async done
