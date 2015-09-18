@@ -148,13 +148,13 @@ Later, thanks to the link:https://github.com/funcool/cats[cats] library, it ther
 other few methods of create promise compositions in more powerfull way: `mlet`
 and `alet` macros and `fmap` function.
 
-For demostration purposes, imagine you have this function that emulates async
+For demostration purposes, imagine that you have this function that emulates async
 operation and return a promise:
 
 [source, clojure]
 ----
 (require '[cats.core :as m])
-(require '[promissum.core :as p])
+(require '[promesa.core :as p])
 
 (defn sleep-promise
   [wait]
