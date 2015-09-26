@@ -255,6 +255,21 @@ raised. The `catch` function also returns a promise that will be resolved or rej
 depending on that will happen inside the catch hanlder.
 
 
+=== Branching
+
+For adding both success and error handlers to a promise at the same time you can use
+the `branch` function:
+
+[source, clojure]
+----
+(p/branch a-promise
+          (fn [v]
+            (.log js/console "Ok" v))
+          (fn [err]
+            (.error js/console err)))
+----
+
+
 === Working with collections
 
 In some circumstances you will want wait a completion of few promises at same time,

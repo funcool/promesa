@@ -145,6 +145,12 @@
   ([p type callback]
    (p/-catch p type callback)))
 
+(defn branch
+  "A branching helper for promises."
+  [p callback errback]
+  (.then p callback errback))
+
+
 ;; Helpers
 
 (defn all

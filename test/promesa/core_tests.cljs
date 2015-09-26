@@ -10,6 +10,11 @@
   (p/promise (fn [resolve]
                (js/setTimeout #(resolve value) sleep))))
 
+(defn future-fail
+  [sleep value]
+  (p/promise (fn [_ reject]
+               (js/setTimeout #(reject value) sleep))))
+
 (t/deftest promise-from-value
   (let [p1 (p/promise 1)]
     (t/is (p/fulfilled? p1))
@@ -105,6 +110,24 @@
       (p/then p2 (fn [v]
                    (t/is (= v 5))
                    (done))))))
+
+(t/deftest branching-using-branch
+  (t/async done
+    (let [p1 (future 200 2)]
+      (p/branch p1
+                (fn [v]
+                  (t/is (= v 2))
+                  (done))
+                (fn [err]
+                  (throw err)))))
+  (t/async done
+    (let [p1 (future-fail 200 :oh-no)]
+      (p/branch p1
+                (fn [v]
+                  (throw v))
+                (fn [err]
+                  (t/is (= err :oh-no))
+                  (done))))))
 
 (t/deftest chaining-using->>=
   (t/async done
