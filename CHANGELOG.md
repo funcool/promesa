@@ -1,5 +1,11 @@
 # Changelog #
 
+## Version 0.5.1 ##
+
+Date: 2015-09-27
+
+- Add 'branch' combinator
+
 ## Version 0.5.0 ##
 
 Date: 2015-09-18

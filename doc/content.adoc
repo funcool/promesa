@@ -1,6 +1,6 @@
 = promesa - composable promise library for ClojureScript
 Andrey Antukh, <niwi@niwi.nz>
-0.5.0
+0.5.1
 :toc: left
 :!numbered:
 :idseparator: -
@@ -57,7 +57,7 @@ it as a dependency in your *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "0.5.0"]
+[funcool/promesa "0.5.1"]
 ----
 
 
