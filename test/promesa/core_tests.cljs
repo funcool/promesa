@@ -201,6 +201,11 @@
                    (t/is (= x 3))
                    (done))))))
 
+(t/deftest extract-from-rejected-promise
+  (let [p1 (p/rejected 42)]
+    (t/is (p/rejected? p1))
+    (t/is (= (m/extract p1) 42))))
+
 
 (set! *main-cli-fn* #(t/run-tests))
 

@@ -43,7 +43,7 @@
   mp/Extract
   (-extract [it]
     (if (.isRejected it)
-      (.cause it)
+      (.reason it)
       (.value it)))
 
   p/IPromise
