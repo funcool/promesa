@@ -241,3 +241,26 @@
     (-mbind [mn mv f]
       (then mv f))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Pretty printing
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- promise->map
+  [p]
+  (if (pending? p)
+    {:status :pending}
+    (let [v (m/extract p)]
+      (if (rejected? p)
+        {:status :rejected
+         :error v}
+        {:status :resolved
+         :value v}))))
+
+(defn- promise->str
+  [p]
+  (str "#<Promise " (pr-str (promise->map p)) ">"))
+
+(extend-type js/Promise
+  IPrintWithWriter
+  (-pr-writer [p writer _]
+    (-write writer (promise->str p))))
