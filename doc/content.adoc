@@ -225,8 +225,8 @@ Now, we will try to do the same example but using the `alet` macro:
 ;; => Stdout: 83
 ----
 
-We can observe that it returns the same result as in previous example,
-but takes almost the half of time to finish execute all the computations. This
+We can observe that the return value is identical to the previous example,
+but it takes almost half of time to finish execute all the computations. This
 is happens because `alet` is more smarter macro and calculates de dependencies
 between declared bindings and executes them in batches.
 
@@ -381,24 +381,22 @@ Let's see how we cam use similar syntactic sugar in ClojureScript:
 
 In this example we have used the `mlet` macro from the `cats` library.
 
-Behind the scenes, the _promise_ library implements and uses monadic abstractions. And
-in this case, the _Promise_ type implements a _Functor_ and _Monad_ abstractions.
+Behind the scenes, the _promise_ library implements and uses monadic abstractions.
+And in this case, the _Promise_ type implements a _Functor_ and _Monad_ abstractions.
 
-This part of the documentation, requires a minimal amount of knowledge about
-these concepts. However, it is not mandatory to read and understand this
-portion in order to make use of this library.
+This part of the documentation, requires a minimal amount of knowledge about these
+concepts. However, it is not mandatory to read and understand this portion in order
+to make use of this library.
 
-Previously we have seen the `mlet` macro which is very similar in functionality to the ES7
-`async` and `await` functions.
+Previously we have seen the `mlet` macro which is very similar in functionality to
+the ES7 `async` and `await` functions.
 
-The main difference with the ES7 syntax is that it is not bound only to promises. It is a
-generic and extensible abstraction that allows you to work with different types of logic
-allowing for composition of computations.
+The main difference with the ES7 syntax is that it is not bound only to promises.
+It is a generic and extensible abstraction that allows you to work with different
+types of logic allowing for composition of computations.
 
-Please, read the link:http://funcool.github.io/cats/latest/[cats documentation] to see
-other types and abstractions.
-
-
+Please, read the link:http://funcool.github.io/cats/latest/[cats documentation]
+to see other types and abstractions.
 
 
 === Raw access to bluebird api
@@ -426,6 +424,7 @@ To start using it, you just need to require it like any other ClojureScript ns:
 
 Unlike Clojure and other Clojure contrib libs, does not have many restrictions for
 contributions. Just open a issue or pull request.
+
 
 === Get the Code
 
