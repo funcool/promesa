@@ -23,7 +23,7 @@
 ;; THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (ns promesa.core
-  (:refer-clojure :exclude [delay spread some])
+  (:refer-clojure :exclude [delay spread promise])
   (:require [cats.core :as m]
             [cats.context :as mc]
             [cats.protocols :as mp]
@@ -38,25 +38,32 @@
               java.util.concurrent.TimeUnit
               java.util.concurrent.Future
               java.util.concurrent.Executor
+              java.util.concurrent.Executors
               java.util.concurrent.ForkJoinPool
               java.util.function.Function
               java.util.function.Supplier)))
 
 #?(:clj
-   (def ^{:doc "The main executor service for schedule promises."
-          :dynamic true :no-doc true}
-     *executor* (ForkJoinPool/commonPool)))
+   (do
+     (def ^:dynamic ^:no-doc
+       *executor* (ForkJoinPool/commonPool))
+     (def ^:dynamic ^:no-doc
+       *scheduler* (Executors/newScheduledThreadPool 1))))
 
-#?(:clj
-   (defn schedule
-     {:no-doc true}
-     ([func]
-      (schedule *executor* func))
-     ([^Executor executor ^Runnable func]
-      (.execute executor func))))
+(defn schedule
+  {:no-doc true}
+  [ms func]
+  #?(:cljs (js/setTimeout func ms)
+     :clj (.schedule *scheduler* func ms TimeUnit/MILLISECONDS)))
+
+(defn submit
+  {:no-doc true}
+  [func]
+  #?(:cljs (schedule 0 func)
+     :clj (.execute *executor* func)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Implementation
+;; Implementation detail
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (declare promise-context)
@@ -69,7 +76,7 @@
      mp/Extract
      (-extract [it]
        (if (.isRejected it)
-         (.cause it)
+         (.reason it)
          (.value it)))
 
      p/IFuture
@@ -86,9 +93,9 @@
      (-rejected? [it]
        (.isRejected it))
      (-pending? [it]
-       (.isPending it)))
+       (.isPending it))))
 
-   :clj
+#?(:clj
    (extend-type CompletionStage
      mp/Contextual
      (-get-context [_] promise-context)
@@ -104,38 +111,53 @@
 
      p/IFuture
      (-map [it cb]
-       (.thenApplyAsync cf (function cb) *executor*))
+       (.thenApply it (reify Function
+                        (apply [_ v]
+                          (let [result (cb v)]
+                            result)))))
+
      (-bind [it cb]
-       (.thenComposeAsync cf (function cb) *executor*))
+       (.thenCompose it (reify Function
+                          (apply [_ v]
+                            (let [result (cb v)]
+                              (if-not (instance? CompletionStage result)
+                                (let [p (CompletableFuture.)]
+                                  (.complete p result)
+                                  p)
+                                result))))))
+
      (-catch [it cb]
        (.exceptionally it (reify Function
-                            (apply [_ v] (f v)))))
-
+                            (apply [_ e]
+                              (if (instance? CompletionException e)
+                                (cb (.getCause e))
+                                (cb e))))))
      p/IState
      (-resolved? [it]
-       (and (not (.isCompletedExceptionally cs))
-            (not (.isCancelled cs))
-            (.isDone cs)))
+       (and (not (.isCompletedExceptionally it))
+            (not (.isCancelled it))
+            (.isDone it)))
+
      (-rejected? [it]
        (.isCompletedExceptionally it))
+
      (-pending? [it]
-       (and (not (.isCompletedExceptionally cs))
-            (not (.isCancelled cs))
-            (not (.isDone cs))))))
+       (and (not (.isCompletedExceptionally it))
+            (not (.isCancelled it))
+            (not (.isDone it))))))
 
 #?(:clj
    (extend-protocol p/IPromiseFactory
      clojure.lang.Fn
      (-promise [func]
-       (let [cf (CompletableFuture.)
-             resolve #(.completeExceptionally cf %)
-             reject #(.complete cf %)]
-         (schedule (fn []
-                     (try
-                       (func resolve reject)
-                       (catch Throwable e
-                         (reject e)))))
-         cf))
+       (let [p (CompletableFuture.)
+             reject #(.completeExceptionally p %)
+             resolve #(.complete p %)]
+         (submit #(try
+                    (func resolve reject)
+                    (catch Throwable e
+                      (reject e))))
+         p))
 
      Throwable
      (-promise [e]
@@ -150,13 +172,16 @@
      (-promise [v]
        (let [p (CompletableFuture.)]
          (.complete p v)
-         p)))
+         p))))
 
-   :cljs
+#?(:cljs
    (extend-protocol p/IPromiseFactory
      function
      (-promise [func]
        (js/Promise. func))
+
+     js/Promise
+     (-promise [p] p)
 
      js/Error
      (-promise [e]
@@ -164,8 +189,11 @@
 
      object
      (-promise [v]
-       (.resolve js/Promise v))))
+       (.resolve js/Promise v))
 
+     number
+     (-promise [v]
+       (.resolve js/Promise v))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public Api
@@ -184,128 +212,122 @@
   [v]
   #?(:cljs (.reject js/Promise v)
      :clj (let [p (CompletableFuture.)]
-            (.completeExceptionally p e)
+            (.completeExceptionally p v)
             p)))
 
 (defn promise
   "The promise constructor."
   [v]
-  (-promise v))
+  (p/-promise v))
 
 ;; Predicates
 
 (defn resolved?
   "Returns true if promise `p` is already fulfilled."
   [p]
-  (p/-resolved? p)))
+  (p/-resolved? p))
 
 (defn rejected?
   "Returns true if promise `p` is already rejected."
   [p]
-  (p/-rejected? p)))
+  (p/-rejected? p))
 
 (defn pending?
   "Returns true if promise `p` is stil pending."
   [p]
-  (p/-pending? p)))
+  (p/-pending? p))
 
 (defn done?
   "Returns true if promise `p` is already done."
   [p]
   (not (p/-pending? p)))
 
+(defn then
+  "A chain helper for promises."
+  [p callback]
+  (p/-map p callback))
 
-;; #?(:cljs
-;; (defn then
-;;   "A chain helper for promises."
-;;   [p callback]
-;;   (p/-then p callback)))
+(defn chain
+  "A variadic chain operation."
+  [p & funcs]
+  (reduce #(then %1 %2) p funcs))
 
-;; #?(:cljs
-;; (defn chain
-;;   "A variadic chain operation."
-;;   [p & funcs]
-;;   (reduce #(then %1 %2) p funcs)))
+(defn catch
+  "Catch all promise chain helper."
+  ([p callback]
+   (p/-catch p callback))
+  ([p type callback]
+   (p/-catch p (fn [e]
+                 (if (instance? type e)
+                   (callback e)
+                   (throw e))))))
 
-;; #?(:cljs
-;; (defn catch
-;;   "Catch all promise chain helper."
-;;   ([p callback]
-;;    (p/-catch p callback))
-;;   ([p type callback]
-;;    (p/-catch p type callback))))
+(defn branch
+  [p callback errback]
+  (-> p
+      (p/-map callback)
+      (p/-catch errback)))
 
-;; ;; Helpers
+(defn all
+  "Given an array of promises, return a promise
+  that is fulfilled  when all the items in the
+  array are fulfilled."
+  [promises]
+  #?(:cljs (then (.all js/Promise (clj->js promises))
+                 #(js->clj %))
+     :clj (let [xf (map p/-promise)
+                ps (into [] xf promises)]
+            (then (-> (into-array CompletableFuture ps)
+                      (CompletableFuture/allOf))
+                  (fn [_]
+                    (mapv mp/-extract ps))))))
 
-;; #?(:cljs
-;; (defn await
-;;   "A placeholder for async macro."
-;;   [& arguments]
-;;   (throw (ex-info "You are using await out of async macro." {}))))
+(defn any
+  "Given an array of promises, return a promise
+  that is fulfilled when first one item in the
+  array is fulfilled."
+  [promises]
+  #?(:cljs (.any js/Promise (clj->js promises))
+     :clj (->> (sequence (map p/-promise) promises)
+               (into-array CompletableFuture)
+               (CompletableFuture/anyOf))))
 
-;; #?(:cljs
-;; (defn all
-;;   "Given an array of promises, return a promise
-;;   that is fulfilled  when all the items in the
-;;   array are fulfilled."
-;;   [promises]
-;;   (m/sequence promises)))
-
-;; #?(:cljs
-;; (defn any
-;;   "Given an array of promises, return a promise
-;;   that is fulfilled when first one item in the
-;;   array is fulfilled."
-;;   [promises]
-;;   (.any js/Promise (clj->js promises))))
-
-;; #?(:cljs
-;; (defn some
-;;   "Given an array of promises, return a promise
-;;   that is fulfilled when `n` number of promises
-;;   is fulfilled."
-;;   [n promises]
-;;   (then (.some js/Promise (clj->js promises) n)
-;;         #(js->clj %))))
-
-
-;; #?(:cljs
-;; (defn promisify
-;;   "Given a nodejs like function that accepts a callback
-;;   as the last argument and return an other function
-;;   that returns a promise."
-;;   [callable]
-;;   (fn [& args]
-;;     (promise (fn [resolve]
-;;                (let [args (-> (vec args)
-;;                               (conj resolve))]
-;;                  (apply callable args)))))))
-
-;; #?(:cljs
-;; (defn timeout
-;;   "Returns a cancellable promise that will be fulfilled
-;;   with this promise's fulfillment value or rejection reason.
-;;   However, if this promise is not fulfilled or rejected
-;;   within `ms` milliseconds, the returned promise is cancelled
-;;   with a TimeoutError"
-;;   ([p t] (.timeout p t))
-;;   ([p t v] (.timeout p t v))))
-
-;; #?(:cljs
-;; (defn delay
-;;   "Given a timeout in miliseconds and optional
-;;   value, returns a promise that will fulfilled
-;;   with provided value (or nil) after the
-;;   time is reached."
-;;   ([t] (delay t nil))
-;;   ([t v]
-;;    (.delay js/Promise v t))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Monad Type
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn promisify
+  "Given a nodejs like function that accepts a callback
+  as the last argument and return an other function
+  that returns a promise."
+  [callable]
+  (fn [& args]
+    (promise (fn [resolve reject]
+               (let [args (-> (vec args)
+                              (conj resolve))]
+                 (try
+                   (apply callable args)
+                   (catch #?(:clj Exception :cljs js/Error) e
+                     (reject e))))))))
 
 #?(:cljs
+   (defn timeout
+     "Returns a cancellable promise that will be fulfilled
+     with this promise's fulfillment value or rejection reason.
+     However, if this promise is not fulfilled or rejected
+     within `ms` milliseconds, the returned promise is cancelled
+     with a TimeoutError"
+     ([p t] (.timeout p t))
+     ([p t v] (.timeout p t v))))
+
+(defn delay
+  "Given a timeout in miliseconds and optional
+  value, returns a promise that will fulfilled
+  with provided value (or nil) after the
+  time is reached."
+  ([t] (delay t nil))
+  ([t v]
+   #?(:cljs (.delay js/Promise v t)
+      :clj (let [p (CompletableFuture.)]
+             (schedule t #(.complete p v))
+             p))))
+
 (def ^{:no-doc true}
   promise-context
   (reify
@@ -314,7 +336,14 @@
 
     mp/Functor
     (-fmap [mn f mv]
-      (then mv f))
+      (p/-map mv f))
+
+    mp/Monad
+    (-mreturn [_ v]
+      (promise v))
+
+    (-mbind [mn mv f]
+      (p/-bind mv f))
 
     mp/Applicative
     (-pure [_ v]
@@ -327,15 +356,8 @@
 
     mp/Semigroup
     (-mappend [_ mv mv']
-      (p/-then (m/sequence [mv mv'])
-               (fn [[mvv mvv']]
-                 (let [ctx (mp/-get-context mvv)]
-                   (mp/-mappend ctx mvv mvv')))))
-
-    mp/Monad
-    (-mreturn [_ v]
-      (promise v))
-
-    (-mbind [mn mv f]
-      (then mv f)))))
+      (p/-map (m/sequence [mv mv'])
+              (fn [[mvv mvv']]
+                (let [ctx (mp/-get-context mvv)]
+                  (mp/-mappend ctx mvv mvv')))))))
 

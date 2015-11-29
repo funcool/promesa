@@ -19,12 +19,3 @@
 (defprotocol IPromiseFactory
   "A promise constructor abstraction."
   (-promise [_] "Create a promise instance."))
-
-;; (defprotocol IAwaitable
-;;   "Similar to IDeref but unwraps the exception. Intended to use
-;;   only for jvm promises."
-;;   (-await
-;;     [awaitable]
-;;     [awaitable ms]
-;;     [awaitable ms default]))
-
