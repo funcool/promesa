@@ -111,20 +111,22 @@
 
      p/IFuture
      (-map [it cb]
-       (.thenApply it (reify Function
-                        (apply [_ v]
-                          (let [result (cb v)]
-                            result)))))
+       (.thenApplyAsync it (reify Function
+                             (apply [_ v]
+                               (let [result (cb v)]
+                                 result)))
+                        *executor*))
 
      (-bind [it cb]
-       (.thenCompose it (reify Function
-                          (apply [_ v]
-                            (let [result (cb v)]
-                              (if-not (instance? CompletionStage result)
-                                (let [p (CompletableFuture.)]
-                                  (.complete p result)
-                                  p)
-                                result))))))
+       (.thenComposeAsync it (reify Function
+                               (apply [_ v]
+                                 (let [result (cb v)]
+                                   (if-not (instance? CompletionStage result)
+                                     (let [p (CompletableFuture.)]
+                                       (.complete p result)
+                                       p)
+                                     result))))
+                          *executor*))
 
      (-catch [it cb]
        (.exceptionally it (reify Function
