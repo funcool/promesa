@@ -27,6 +27,7 @@
   (:require [cats.core :as m]
             [cats.context :as mc]
             [cats.protocols :as mp]
+            [cats.util :as mutil]
             [promesa.protocols :as p]
             #?(:cljs [org.bluebird]))
   #?(:clj
@@ -73,6 +74,15 @@
      mp/Contextual
      (-get-context [_] promise-context)
 
+     mp/Printable
+     (-repr [it]
+       (str "#<Promise ["
+            (cond
+              (p/-pending? it) "pending"
+              (p/-rejected? it) "rejected"
+              :else "resolved")
+            "]>"))
+
      mp/Extract
      (-extract [it]
        (if (.isRejected it)
@@ -99,6 +109,15 @@
    (extend-type CompletionStage
      mp/Contextual
      (-get-context [_] promise-context)
+
+     mp/Printable
+     (-repr [it]
+       (str "#<Promise ["
+            (cond
+              (p/-pending? it) "pending"
+              (p/-rejected? it) "rejected"
+              :else "resolved")
+            "]>"))
 
      mp/Extract
      (-extract [it]
@@ -147,6 +166,9 @@
        (and (not (.isCompletedExceptionally it))
             (not (.isCancelled it))
             (not (.isDone it))))))
+
+#?(:cljs (mutil/make-printable js/Promise)
+   :clj (mutil/make-printable CompletionStage))
 
 #?(:clj
    (extend-protocol p/IPromiseFactory
