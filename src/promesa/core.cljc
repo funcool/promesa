@@ -323,7 +323,8 @@
   time is reached."
   ([t] (delay t nil))
   ([t v]
-   #?(:cljs (.delay js/Promise v t)
+   #?(:cljs (.then (js/Promise.delay t)
+                   (constantly v))
       :clj (let [p (CompletableFuture.)]
              (schedule t #(.complete p v))
              p))))
