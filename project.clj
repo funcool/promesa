@@ -1,4 +1,4 @@
-(defproject funcool/promesa "0.5.1"
+(defproject funcool/promesa "0.6.0-SNAPSHOT"
   :description "A promise library for ClojureScript"
   :url "https://github.com/funcool/promesa"
   :license {:name "BSD (2 Clause)"
@@ -12,7 +12,7 @@
   :test-paths ["test"]
   :jar-exclusions [#"\.swp|\.swo|user.clj"]
   :codeina {:sources ["src"]
-            :reader :clojurescript
+            :reader :clojure
             :target "doc/dist/latest/api"}
   :plugins [[funcool/codeina "0.3.0"]
             [lein-externs "0.1.3"]])
