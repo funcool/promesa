@@ -185,6 +185,19 @@
        @(p/then rp (fn [v]
                      (t/is (= v 3)))))))
 
+(t/deftest promise-as-bifunctor
+  #?(:cljs
+     (t/async done
+       (let [rp (m/bimap #(ex-info "Oh no" {}) inc (p/promise 2))]
+         (p/then rp (fn [v]
+                      (t/is (= v 3))
+                      (done)))))
+
+     :clj
+     (let [rp (m/bimap #(ex-info "Oh no" {}) inc (p/promise 2))]
+       @(p/then rp (fn [v]
+                     (t/is (= v 3)))))))
+
 (t/deftest promise-as-applicative
   #?(:cljs
      (t/async done
