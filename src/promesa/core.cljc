@@ -288,9 +288,7 @@
 
 (defn branch
   [p callback errback]
-  (-> p
-      (p/-map callback)
-      (p/-catch errback)))
+  (m/bimap errback callback p))
 
 (defn all
   "Given an array of promises, return a promise
@@ -362,6 +360,12 @@
     mp/Functor
     (-fmap [mn f mv]
       (p/-map mv f))
+
+    mp/Bifunctor
+    (-bimap [_ err succ mv]
+      (-> mv
+          (p/-map succ)
+          (p/-catch err)))
 
     mp/Monad
     (-mreturn [_ v]
