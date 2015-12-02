@@ -1,14 +1,15 @@
 (ns promesa.protocols)
 
-(defprotocol IFuture
+(defprotocol IPromise
   "A basic future abstraction."
   (-map [_ callback] "Chain a promise.")
   (-bind [_ callback] "Chain a promise.")
   (-catch [_ callback] "Catch a error in a promise."))
 
-(defprotocol IPromise
-  "A basic promise abstraction."
-  (-deliver [_ value] "Deliver a value into promise."))
+(defprotocol ICancellablePromise
+  "A cancellation abstraction for promises."
+  (-cancel [_] "Cancel promise.")
+  (-cancelled? [_] "Check if promise is cancelled."))
 
 (defprotocol IState
   "Additional state related abstraction."

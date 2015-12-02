@@ -91,7 +91,13 @@
          (.reason it)
          (.value it)))
 
-     p/IFuture
+     p/ICancellablePromise
+     (-cancel [it]
+       (.cancel it))
+     (-cancelled? [it]
+       (.isCancelled it))
+
+     p/IPromise
      (-map [it cb]
        (.then it cb))
      (-bind [it cb]
@@ -130,7 +136,13 @@
          (catch CompletionException e
            (.getCause e))))
 
-     p/IFuture
+     p/ICancellablePromise
+     (-cancel [it]
+       (.cancel it true))
+     (-cancelled? [it]
+       (.isCancelled it))
+
+     p/IPromise
      (-map [it cb]
        (.thenApplyAsync it (reify Function
                              (apply [_ v]
@@ -225,6 +237,8 @@
 ;; Public Api
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; Constructors
+
 (defn resolved
   "Return a resolved promise with provided value."
   [v]
@@ -273,6 +287,8 @@
   "Returns true if promise `p` is already done."
   [p]
   (not (p/-pending? p)))
+
+;; Chaining
 
 (defn then
   "A chain helper for promises."
@@ -330,6 +346,22 @@
      :clj (->> (sequence (map p/-promise) promises)
                (into-array CompletableFuture)
                (CompletableFuture/anyOf))))
+
+
+;; Cancellation
+
+(defn cancel!
+  "Cancel the promise."
+  [p]
+  (p/-cancel p)
+  p)
+
+(defn cancelled?
+  "Return true if `v` is a cancelled promise."
+  [v]
+  (p/-cancelled? v))
+
+;; Utils
 
 (defn promisify
   "Given a nodejs like function that accepts a callback
