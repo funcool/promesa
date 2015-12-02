@@ -5,7 +5,7 @@
             :url "http://opensource.org/licenses/BSD-2-Clause"}
   :dependencies [[org.clojure/clojure "1.7.0" :scope "provided"]
                  [org.clojure/clojurescript "1.7.170" :scope "provided"]
-                 [funcool/cats "1.2.0-SNAPSHOT"]]
+                 [funcool/cats "1.2.0"]]
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
   :source-paths ["src" "assets"]
