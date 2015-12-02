@@ -299,8 +299,8 @@
   executed independently if promise is
   resolved or rejected."
   [p callback]
-  #?(:clj (-> (p/then #(callback))
-              (p/catch #(callback)))
+  #?(:clj (-> (then #(callback))
+              (catch #(callback)))
      :cljs (.finally p callback)))
 
 (defn branch
