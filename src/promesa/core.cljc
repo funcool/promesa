@@ -294,6 +294,15 @@
                    (callback e)
                    (throw e))))))
 
+(defn finally
+  "Attach handler to promise that will be
+  executed independently if promise is
+  resolved or rejected."
+  [p callback]
+  #?(:clj (-> (p/then #(callback))
+              (p/catch #(callback)))
+     :cljs (.finally p callback)))
+
 (defn branch
   [p callback errback]
   (m/bimap errback callback p))
