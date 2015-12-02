@@ -44,10 +44,6 @@
               java.util.function.Function
               java.util.function.Supplier)))
 
-#?(:cljs
-   (when (= *target* "nodejs")
-     (set! js/Promise js/module.exports.Promise)))
-
 #?(:clj
    (do
      (def ^:dynamic ^:no-doc
