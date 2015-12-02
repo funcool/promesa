@@ -5,4 +5,4 @@
 (cljs.repl/repl
  (node/repl-env)
  :output-dir "out"
- :cache-analysis true)
+ :cache-analysis false)
