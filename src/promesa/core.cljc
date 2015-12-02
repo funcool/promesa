@@ -78,9 +78,9 @@
      (-repr [it]
        (str "#<Promise ["
             (cond
-              (p/-pending? it) "pending"
-              (p/-rejected? it) "rejected"
-              :else "resolved")
+              (p/-pending? it) "~"
+              (p/-rejected? it) (str "error=" (m/extract it))
+              :else (str "value=" (m/extract it)))
             "]>"))
 
      mp/Extract
@@ -114,9 +114,9 @@
      (-repr [it]
        (str "#<Promise ["
             (cond
-              (p/-pending? it) "pending"
-              (p/-rejected? it) "rejected"
-              :else "resolved")
+              (p/-pending? it) "~"
+              (p/-rejected? it) (str "error=" (m/extract it))
+              :else (str "value=" (m/extract it)))
             "]>"))
 
      mp/Extract
