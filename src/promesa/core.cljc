@@ -44,6 +44,8 @@
               java.util.function.Function
               java.util.function.Supplier)))
 
+#?(:cljs (js/Promise.config #js {:cancellation true :warnings false}))
+
 #?(:clj
    (do
      (def ^:dynamic ^:no-doc
