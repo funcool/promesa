@@ -45,11 +45,8 @@
               java.util.function.Supplier)))
 
 #?(:cljs
-   (if (= *target* "nodejs")
-     (if (undefined? js/module.exports.Promise)
-       (def Promise js/Promise)
-       (def Promise js/module.exports.Promise))
-     (def Promise (js/Promise.noConflict))))
+   (when (= *target* "nodejs")
+     (set! js/Promise js/module.exports.Promise)))
 
 #?(:clj
    (do
@@ -77,7 +74,7 @@
 (declare promise-context)
 
 #?(:cljs
-   (extend-type Promise
+   (extend-type js/Promise
      mp/Contextual
      (-get-context [_] promise-context)
 
@@ -209,22 +206,22 @@
    (extend-protocol p/IPromiseFactory
      function
      (-promise [func]
-       (Promise. func))
+       (js/Promise. func))
 
      js/Promise
      (-promise [p] p)
 
      js/Error
      (-promise [e]
-       (.reject Promise e))
+       (.reject js/Promise e))
 
      object
      (-promise [v]
-       (.resolve Promise v))
+       (.resolve js/Promise v))
 
      number
      (-promise [v]
-       (.resolve Promise v))))
+       (.resolve js/Promise v))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public Api
@@ -233,7 +230,7 @@
 (defn resolved
   "Return a resolved promise with provided value."
   [v]
-  #?(:cljs (.resolve Promise v)
+  #?(:cljs (.resolve js/Promise v)
      :clj (let [p (CompletableFuture.)]
             (.complete p v)
             p)))
@@ -241,7 +238,7 @@
 (defn rejected
   "Return a rejected promise with provided reason."
   [v]
-  #?(:cljs (.reject Promise v)
+  #?(:cljs (.reject js/Promise v)
      :clj (let [p (CompletableFuture.)]
             (.completeExceptionally p v)
             p)))
@@ -302,7 +299,7 @@
   that is fulfilled  when all the items in the
   array are fulfilled."
   [promises]
-  #?(:cljs (then (.all Promise (clj->js promises))
+  #?(:cljs (then (.all js/Promise (clj->js promises))
                  #(js->clj %))
      :clj (let [xf (map p/-promise)
                 ps (into [] xf promises)]
@@ -316,7 +313,7 @@
   that is fulfilled when first one item in the
   array is fulfilled."
   [promises]
-  #?(:cljs (.any Promise (clj->js promises))
+  #?(:cljs (.any js/Promise (clj->js promises))
      :clj (->> (sequence (map p/-promise) promises)
                (into-array CompletableFuture)
                (CompletableFuture/anyOf))))
@@ -352,7 +349,7 @@
   time is reached."
   ([t] (delay t nil))
   ([t v]
-   #?(:cljs (.then (Promise.delay t)
+   #?(:cljs (.then (js/Promise.delay t)
                    (constantly v))
       :clj (let [p (CompletableFuture.)]
              (schedule t #(.complete p v))

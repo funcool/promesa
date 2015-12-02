@@ -1,6 +1,4 @@
 var TopLevel = {
-  "exports": function() {},
-  "module": function() {},
   "all" : function () {},
   "any" : function () {},
   "cancel" : function () {},
