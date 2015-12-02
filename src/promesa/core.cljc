@@ -244,6 +244,12 @@
   [v]
   (p/-promise v))
 
+(defn promise?
+  "Return true if `v` is a promise instance."
+  [v]
+  #?(:clj (instance? CompletionStage v)
+     :cljs (instance? js/Promise v)))
+
 ;; Predicates
 
 (defn resolved?
