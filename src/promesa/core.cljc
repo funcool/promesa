@@ -191,10 +191,10 @@
        (let [p (CompletableFuture.)
              reject #(.completeExceptionally p %)
              resolve #(.complete p %)]
-         (submit #(try
-                    (func resolve reject)
-                    (catch Throwable e
-                      (reject e))))
+         (try
+           (func resolve reject)
+           (catch Throwable e
+             (reject e)))
          p))
 
      Throwable
