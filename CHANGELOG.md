@@ -1,10 +1,27 @@
 # Changelog #
 
+## Version 0.6.0 ##
+
+Date: 2015-12-03
+
+Important changes:
+
+- Add clojure support (only with JDK8).
+  Tha implies major code refactor. The public api should be mostly
+  backwad compatible but it is possible regressions.
+
+Other changes:
+
+- Update the cljs compiler version to 1.7.189
+- Update cats library to 1.2.0
+
+
 ## Version 0.5.1 ##
 
 Date: 2015-09-27
 
 - Add 'branch' combinator
+
 
 ## Version 0.5.0 ##
 

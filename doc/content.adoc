@@ -1,4 +1,4 @@
-= promesa - cross-platform promise library
+= promesa - promise library for clojure and clojurescript
 Andrey Antukh, <niwi@niwi.nz>
 0.6.0
 :toc: left
