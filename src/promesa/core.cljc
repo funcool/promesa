@@ -99,11 +99,11 @@
 
      p/IPromise
      (-map [it cb]
-       (.then it cb))
+       (.then it #(cb %)))
      (-bind [it cb]
-       (.then it cb))
+       (.then it #(cb %)))
      (-catch [it cb]
-       (.catch it cb))
+       (.catch it #(cb %)))
 
      p/IState
      (-resolved? [it]

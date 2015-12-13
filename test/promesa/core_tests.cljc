@@ -298,6 +298,43 @@
        @(p/then p1 (fn [x]
                      (t/is (= x 3)))))))
 
+(t/deftest then-with-ifn
+  (let [p (-> {:x ::value} p/promise (p/then :x))]
+    #?(:cljs
+       (t/async done
+         (p/then p (fn [x]
+                     (t/is (= x ::value))
+                     (done))))
+       :clj
+       (t/is (= @p ::value)))))
+
+(defmulti unwrap-caught identity)
+(defmethod unwrap-caught :default [x]
+  (-> x ex-data :x))
+
+(t/deftest catch-with-ifn
+  (let [p (-> (p/promise
+               (fn [_ reject] (reject (ex-info "foobar" {:x ::value}))))
+              (p/catch unwrap-caught))]
+    #?(:cljs
+       (t/async done
+         (p/then p (fn [x]
+                     (t/is (= x ::value))
+                     (done))))
+       :clj
+       (t/is (= @p ::value)))))
+
+(t/deftest bind-with-ifn
+  (let [p (-> (p/promise {:x ::value})
+              (m/>>= :x))]
+    #?(:cljs
+       (t/async done
+         (p/then p (fn [x]
+                     (t/is (= x ::value))
+                     (done))))
+       :clj
+       (t/is (= @p ::value)))))
+
 ;; (t/deftest extract-from-rejected-promise
 ;;   (let [p1 (p/rejected 42)]
 ;;     (t/is (p/rejected? p1))
