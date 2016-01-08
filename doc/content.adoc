@@ -1,6 +1,6 @@
 = promesa - promise library for clojure and clojurescript
 Andrey Antukh, <niwi@niwi.nz>
-0.6.0
+0.7.0
 :toc: left
 :!numbered:
 :idseparator: -
@@ -30,7 +30,7 @@ Just include that in your depencency vector on *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "0.6.0"]
+[funcool/promesa "0.7.0"]
 ----
 
 This package requires JDK8 if you are using it on the JVM platform and
@@ -372,7 +372,7 @@ You will need to have nodejs installed on your system.
 _promesa_ is licensed under BSD (2-Clause) license:
 
 ----
-Copyright (c) 2015 Andrey Antukh <niwi@niwi.nz>
+Copyright (c) 2015-2016 Andrey Antukh <niwi@niwi.nz>
 
 All rights reserved.
 
