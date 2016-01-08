@@ -1,18 +1,18 @@
 /* @preserve
  * The MIT License (MIT)
- * 
+ *
  * Copyright (c) 2013-2015 Petka Antonov
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
@@ -20,10 +20,10 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
- * 
+ *
  */
 /**
- * bluebird build version 3.0.5
+ * bluebird build version 3.1.1
  * Features enabled: core, race, call_get, generators, map, nodeify, promisify, props, reduce, settle, some, using, timers, filter, any, each
 */
 !function(e){if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.Promise=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof _dereq_=="function"&&_dereq_;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof _dereq_=="function"&&_dereq_;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
@@ -67,9 +67,12 @@ function Async() {
     this.drainQueues = function () {
         self._drainQueues();
     };
-    this._schedule =
-        schedule.isStatic ? schedule(this.drainQueues) : schedule;
+    this._schedule = schedule;
 }
+
+Async.prototype.enableTrampoline = function() {
+    this._trampolineEnabled = true;
+};
 
 Async.prototype.disableTrampolineIfNecessary = function() {
     if (util.hasDevTools) {
@@ -129,9 +132,6 @@ if (!util.hasDevTools) {
     Async.prototype.invoke = AsyncInvoke;
     Async.prototype.settlePromises = AsyncSettlePromises;
 } else {
-    if (schedule.isStatic) {
-        schedule = function(fn) { setTimeout(fn, 0); };
-    }
     Async.prototype.invokeLater = function (fn, receiver, arg) {
         if (this._trampolineEnabled) {
             AsyncInvokeLater.call(this, fn, receiver, arg);
@@ -626,7 +626,21 @@ function peekContext() {
 }
 Context.CapturedTrace = null;
 Context.create = createContext;
+Context.deactivateLongStackTraces = function() {};
 Context.activateLongStackTraces = function() {
+    var Promise_pushContext = Promise.prototype._pushContext;
+    var Promise_popContext = Promise.prototype._popContext;
+    var Promise_PeekContext = Promise._peekContext;
+    var Promise_peekContext = Promise.prototype._peekContext;
+    var Promise_promiseCreated = Promise.prototype._promiseCreated;
+    Context.deactivateLongStackTraces = function() {
+        Promise.prototype._pushContext = Promise_pushContext;
+        Promise.prototype._popContext = Promise_popContext;
+        Promise._peekContext = Promise_PeekContext;
+        Promise.prototype._peekContext = Promise_peekContext;
+        Promise.prototype._promiseCreated = Promise_promiseCreated;
+        longStackTraces = false;
+    };
     longStackTraces = true;
     Promise.prototype._pushContext = Context.prototype._pushContext;
     Promise.prototype._popContext = Context.prototype._popContext;
@@ -659,19 +673,24 @@ var debugging = !!(util.env("BLUEBIRD_DEBUG") != 0 &&
                         (true ||
                          util.env("BLUEBIRD_DEBUG") ||
                          util.env("NODE_ENV") === "development"));
+
 var warnings = !!(util.env("BLUEBIRD_WARNINGS") != 0 &&
     (debugging || util.env("BLUEBIRD_WARNINGS")));
+
 var longStackTraces = !!(util.env("BLUEBIRD_LONG_STACK_TRACES") != 0 &&
     (debugging || util.env("BLUEBIRD_LONG_STACK_TRACES")));
+
+var wForgottenReturn = util.env("BLUEBIRD_W_FORGOTTEN_RETURN") != 0 &&
+    (warnings || !!util.env("BLUEBIRD_W_FORGOTTEN_RETURN"));
 
 Promise.prototype.suppressUnhandledRejections = function() {
     var target = this._target();
     target._bitField = ((target._bitField & (~1048576)) |
-                      2097152);
+                      524288);
 };
 
 Promise.prototype._ensurePossibleRejectionHandled = function () {
-    if ((this._bitField & 2097152) !== 0) return;
+    if ((this._bitField & 524288) !== 0) return;
     this._setRejectionIsUnhandled();
     async.invokeLater(this._notifyUnhandledRejection, this, undefined);
 };
@@ -679,6 +698,14 @@ Promise.prototype._ensurePossibleRejectionHandled = function () {
 Promise.prototype._notifyUnhandledRejectionIsHandled = function () {
     fireRejectionEvent("rejectionHandled",
                                   unhandledRejectionHandled, undefined, this);
+};
+
+Promise.prototype._setReturnedNonUndefined = function() {
+    this._bitField = this._bitField | 268435456;
+};
+
+Promise.prototype._returnedNonUndefined = function() {
+    return (this._bitField & 268435456) !== 0;
 };
 
 Promise.prototype._notifyUnhandledRejection = function () {
@@ -736,12 +763,25 @@ Promise.onUnhandledRejectionHandled = function (fn) {
                                  : undefined;
 };
 
+var disableLongStackTraces = function() {};
 Promise.longStackTraces = function () {
     if (async.haveItemsQueued() && !config.longStackTraces) {
         throw new Error("cannot enable long stack traces after promises have been created\u000a\u000a    See http://goo.gl/MqrFmX\u000a");
     }
     if (!config.longStackTraces && longStackTracesIsSupported()) {
+        var Promise_captureStackTrace = Promise.prototype._captureStackTrace;
+        var Promise_attachExtraTrace = Promise.prototype._attachExtraTrace;
         config.longStackTraces = true;
+        disableLongStackTraces = function() {
+            if (async.haveItemsQueued() && !config.longStackTraces) {
+                throw new Error("cannot enable long stack traces after promises have been created\u000a\u000a    See http://goo.gl/MqrFmX\u000a");
+            }
+            Promise.prototype._captureStackTrace = Promise_captureStackTrace;
+            Promise.prototype._attachExtraTrace = Promise_attachExtraTrace;
+            Context.deactivateLongStackTraces();
+            async.enableTrampoline();
+            config.longStackTraces = false;
+        };
         Promise.prototype._captureStackTrace = longStackTracesCaptureStackTrace;
         Promise.prototype._attachExtraTrace = longStackTracesAttachExtraTrace;
         Context.activateLongStackTraces();
@@ -755,11 +795,23 @@ Promise.hasLongStackTraces = function () {
 
 Promise.config = function(opts) {
     opts = Object(opts);
-    if ("longStackTraces" in opts && opts.longStackTraces) {
-        Promise.longStackTraces();
+    if ("longStackTraces" in opts) {
+        if (opts.longStackTraces) {
+            Promise.longStackTraces();
+        } else if (!opts.longStackTraces && Promise.hasLongStackTraces()) {
+            disableLongStackTraces();
+        }
     }
     if ("warnings" in opts) {
-        config.warnings = !!opts.warnings;
+        var warningsOption = opts.warnings;
+        config.warnings = !!warningsOption;
+        wForgottenReturn = config.warnings;
+
+        if (util.isObject(warningsOption)) {
+            if ("wForgottenReturn" in warningsOption) {
+                wForgottenReturn = !!warningsOption.wForgottenReturn;
+            }
+        }
     }
     if ("cancellation" in opts && opts.cancellation && !config.cancellation) {
         if (async.haveItemsQueued()) {
@@ -898,13 +950,15 @@ function longStackTracesAttachExtraTrace(error, ignoreSelf) {
     }
 }
 
-function checkForgottenReturns(returnValue, promiseCreated, name, promise) {
-    if (returnValue === undefined &&
-        promiseCreated !== null &&
-        config.longStackTraces &&
-        config.warnings) {
+function checkForgottenReturns(returnValue, promiseCreated, name, promise,
+                               parent) {
+    if (returnValue === undefined && promiseCreated !== null &&
+        wForgottenReturn) {
+        if (parent !== undefined && parent._returnedNonUndefined()) return;
+
+        if (name) name = name + " ";
         var msg = "a promise was created in a " + name +
-            " handler but was not returned from it";
+            "handler but was not returned from it";
         promise._warn(msg, true, promiseCreated);
     }
 }
@@ -1334,38 +1388,27 @@ var fireGlobalEvent = (function() {
             }
         };
     } else {
-        var customEventWorks = false;
-        var anyEventWorks = true;
-        try {
-            var ev = new self.CustomEvent("test");
-            customEventWorks = ev instanceof CustomEvent;
-        } catch (e) {}
-        if (!customEventWorks) {
-            try {
-                var event = document.createEvent("CustomEvent");
-                event.initCustomEvent("testingtheevent", false, true, {});
-                self.dispatchEvent(event);
-            } catch (e) {
-                anyEventWorks = false;
-            }
-        }
-        if (anyEventWorks) {
-            fireDomEvent = function(type, detail) {
-                var event;
-                if (customEventWorks) {
-                    event = new self.CustomEvent(type, {
-                        detail: detail,
-                        bubbles: false,
-                        cancelable: true
-                    });
-                } else if (self.dispatchEvent) {
-                    event = document.createEvent("CustomEvent");
-                    event.initCustomEvent(type, false, true, detail);
-                }
+        var globalObject = typeof self !== "undefined" ? self :
+                     typeof window !== "undefined" ? window :
+                     typeof global !== "undefined" ? global :
+                     this !== undefined ? this : null;
 
-                return event ? !self.dispatchEvent(event) : false;
+        if (!globalObject) {
+            return function() {
+                return false;
             };
         }
+
+        try {
+            var event = document.createEvent("CustomEvent");
+            event.initCustomEvent("testingtheevent", false, true, {});
+            globalObject.dispatchEvent(event);
+            fireDomEvent = function(type, detail) {
+                var event = document.createEvent("CustomEvent");
+                event.initCustomEvent(type, false, true, detail);
+                return !globalObject.dispatchEvent(event);
+            };
+        } catch (e) {}
 
         var toWindowMethodNameMap = {};
         toWindowMethodNameMap["unhandledRejection"] = ("on" +
@@ -1375,12 +1418,12 @@ var fireGlobalEvent = (function() {
 
         return function(name, reason, promise) {
             var methodName = toWindowMethodNameMap[name];
-            var method = self[methodName];
+            var method = globalObject[methodName];
             if (!method) return false;
             if (name === "rejectionHandled") {
-                method.call(self, promise);
+                method.call(globalObject, promise);
             } else {
-                method.call(self, reason, promise);
+                method.call(globalObject, reason, promise);
             }
             return true;
         };
@@ -1770,6 +1813,7 @@ function finallyHandler(reasonOrValue) {
             ? handler.call(promise._boundValue())
             : handler.call(promise._boundValue(), reasonOrValue);
         if (ret !== undefined) {
+            promise._setReturnedNonUndefined();
             var maybePromise = tryConvertToPromise(ret, promise);
             if (maybePromise instanceof Promise) {
                 if (this.cancelPromise != null) {
@@ -1874,7 +1918,7 @@ function PromiseSpawn(generatorFunction, receiver, yieldHandler, stack) {
 util.inherits(PromiseSpawn, Proxyable);
 
 PromiseSpawn.prototype._isResolved = function() {
-    return this.promise === null;
+    return this._promise === null;
 };
 
 PromiseSpawn.prototype._cleanup = function() {
@@ -2695,6 +2739,7 @@ Promise.cast = function (obj) {
     var ret = tryConvertToPromise(obj);
     if (!(ret instanceof Promise)) {
         ret = new Promise(INTERNAL);
+        ret._captureStackTrace();
         ret._setFulfilled();
         ret._rejectionHandler0 = obj;
     }
@@ -3006,7 +3051,7 @@ Promise.prototype._settlePromiseFromHandler = function (
         var err = x === promise ? makeSelfResolutionError() : x.e;
         promise._rejectCallback(err, false);
     } else {
-        debug.checkForgottenReturns(x, promiseCreated, "",  promise);
+        debug.checkForgottenReturns(x, promiseCreated, "",  promise, this);
         promise._resolveCallback(x);
     }
 };
@@ -3237,28 +3282,28 @@ _dereq_('./promisify.js')(Promise, INTERNAL);
 _dereq_('./any.js')(Promise);
 _dereq_('./each.js')(Promise, INTERNAL);
 _dereq_('./filter.js')(Promise, INTERNAL);
-                                                         
-    util.toFastProperties(Promise);                                          
-    util.toFastProperties(Promise.prototype);                                
-    function fillTypes(value) {                                              
-        var p = new Promise(INTERNAL);                                       
-        p._fulfillmentHandler0 = value;                                      
-        p._rejectionHandler0 = value;                                        
-        p._promise0 = value;                                                 
-        p._receiver0 = value;                                                
-    }                                                                        
-    // Complete slack tracking, opt out of field-type tracking and           
-    // stabilize map                                                         
-    fillTypes({a: 1});                                                       
-    fillTypes({b: 2});                                                       
-    fillTypes({c: 3});                                                       
-    fillTypes(1);                                                            
-    fillTypes(function(){});                                                 
-    fillTypes(undefined);                                                    
-    fillTypes(false);                                                        
-    fillTypes(new Promise(INTERNAL));                                        
-    debug.setBounds(Async.firstLineError, util.lastLineError);               
-    return Promise;                                                          
+
+    util.toFastProperties(Promise);
+    util.toFastProperties(Promise.prototype);
+    function fillTypes(value) {
+        var p = new Promise(INTERNAL);
+        p._fulfillmentHandler0 = value;
+        p._rejectionHandler0 = value;
+        p._promise0 = value;
+        p._receiver0 = value;
+    }
+    // Complete slack tracking, opt out of field-type tracking and
+    // stabilize map
+    fillTypes({a: 1});
+    fillTypes({b: 2});
+    fillTypes({c: 3});
+    fillTypes(1);
+    fillTypes(function(){});
+    fillTypes(undefined);
+    fillTypes(false);
+    fillTypes(new Promise(INTERNAL));
+    debug.setBounds(Async.firstLineError, util.lastLineError);
+    return Promise;
 
 };
 
@@ -4208,13 +4253,32 @@ if (util.isNode && typeof MutationObserver === "undefined") {
           !(typeof window !== "undefined" &&
             window.navigator &&
             window.navigator.standalone)) {
-    schedule = function(fn) {
+    schedule = (function() {
         var div = document.createElement("div");
-        var observer = new MutationObserver(fn);
-        observer.observe(div, {attributes: true});
-        return function() { div.classList.toggle("foo"); };
-    };
-    schedule.isStatic = true;
+        var opts = {attributes: true};
+        var toggleScheduled = false;
+        var div2 = document.createElement("div");
+        var o2 = new MutationObserver(function() {
+            div.classList.toggle("foo");
+          toggleScheduled = false;
+        });
+        o2.observe(div2, opts);
+
+        var scheduleToggle = function() {
+            if (toggleScheduled) return;
+          toggleScheduled = true;
+          div2.classList.toggle("foo");
+        };
+
+        return function schedule(fn) {
+          var o = new MutationObserver(function() {
+            o.disconnect();
+            fn();
+          });
+          o.observe(div, opts);
+          scheduleToggle();
+        };
+    })();
 } else if (typeof setImmediate !== "undefined") {
     schedule = function (fn) {
         setImmediate(fn);
@@ -4611,7 +4675,7 @@ module.exports = function(Promise, INTERNAL) {
 var util = _dereq_("./util");
 var TimeoutError = Promise.TimeoutError;
 
-var afterTimeout = function (promise, message) {
+var afterTimeout = function (promise, message, parent) {
     if (!promise.isPending()) return;
     var err;
     if (typeof message !== "string") {
@@ -4626,6 +4690,7 @@ var afterTimeout = function (promise, message) {
     util.markAsOriginatingFromRejection(err);
     promise._attachExtraTrace(err);
     promise._reject(err);
+    parent.cancel();
 };
 
 var afterValue = function(value) { return delay(+this).thenReturn(value); };
@@ -4662,9 +4727,10 @@ function failureClear(reason) {
 
 Promise.prototype.timeout = function (ms, message) {
     ms = +ms;
-    var ret = this.then();
+    var parent = this.then();
+    var ret = parent.then();
     var handle = setTimeout(function timeoutTimeout() {
-        afterTimeout(ret, message);
+        afterTimeout(ret, message, parent);
     }, ms);
     return ret._then(successClear, failureClear, undefined, handle, undefined);
 };
