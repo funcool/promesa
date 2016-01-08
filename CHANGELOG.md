@@ -1,5 +1,14 @@
 # Changelog #
 
+## Version 0.7.0 ##
+
+Date: 2016-01-08
+
+- Update bluebird to 3.1.1 (cljs).
+- Add better externs (with type annotations) (cljs).
+- Update cats dependency to 1.2.1.
+
+
 ## Version 0.6.0 ##
 
 Date: 2015-12-03
