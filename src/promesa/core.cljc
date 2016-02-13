@@ -69,28 +69,8 @@
 ;; Implementation detail
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(declare promise-context)
-
 #?(:cljs
    (extend-type js/Promise
-     mp/Contextual
-     (-get-context [_] promise-context)
-
-     mp/Printable
-     (-repr [it]
-       (str "#<Promise ["
-            (cond
-              (p/-pending? it) "~"
-              (p/-rejected? it) (str "error=" (m/extract it))
-              :else (str "value=" (m/extract it)))
-            "]>"))
-
-     mp/Extract
-     (-extract [it]
-       (if (.isRejected it)
-         (.reason it)
-         (.value it)))
-
      p/ICancellablePromise
      (-cancel [it]
        (.cancel it))
@@ -115,27 +95,6 @@
 
 #?(:clj
    (extend-type CompletionStage
-     mp/Contextual
-     (-get-context [_] promise-context)
-
-     mp/Printable
-     (-repr [it]
-       (str "#<Promise ["
-            (cond
-              (p/-pending? it) "~"
-              (p/-rejected? it) (str "error=" (m/extract it))
-              :else (str "value=" (m/extract it)))
-            "]>"))
-
-     mp/Extract
-     (-extract [it]
-       (try
-         (.getNow it nil)
-         (catch ExecutionException e
-           (.getCause e))
-         (catch CompletionException e
-           (.getCause e))))
-
      p/ICancellablePromise
      (-cancel [it]
        (.cancel it true))
@@ -180,9 +139,6 @@
        (and (not (.isCompletedExceptionally it))
             (not (.isCancelled it))
             (not (.isDone it))))))
-
-#?(:cljs (mutil/make-printable js/Promise)
-   :clj (mutil/make-printable CompletionStage))
 
 #?(:clj
    (extend-protocol p/IPromiseFactory
@@ -319,10 +275,6 @@
               (catch #(callback)))
      :cljs (.finally p callback)))
 
-(defn branch
-  [p callback errback]
-  (m/bimap errback callback p))
-
 (defn all
   "Given an array of promises, return a promise
   that is fulfilled  when all the items in the
@@ -335,7 +287,7 @@
             (then (-> (into-array CompletableFuture ps)
                       (CompletableFuture/allOf))
                   (fn [_]
-                    (mapv mp/-extract ps))))))
+                    (mapv p/-extract ps))))))
 
 (defn any
   "Given an array of promises, return a promise
@@ -346,7 +298,6 @@
      :clj (->> (sequence (map p/-promise) promises)
                (into-array CompletableFuture)
                (CompletableFuture/anyOf))))
-
 
 ;; Cancellation
 
