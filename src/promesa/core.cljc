@@ -23,7 +23,7 @@
 ;; THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (ns promesa.core
-  (:refer-clojure :exclude [delay spread promise])
+  (:refer-clojure :exclude [delay spread promise await])
   (:require [cats.core :as m]
             [cats.context :as mc]
             [cats.protocols :as mp]
@@ -380,42 +380,21 @@
              (schedule t #(.complete p v))
              p))))
 
-(def ^{:no-doc true}
-  promise-context
-  (reify
-    mp/Context
-    (-get-level [_] mc/+level-default+)
+(defn await
+  [& args]
+  (throw (ex-info "Should be only used in alet macro." {})))
 
-    mp/Functor
-    (-fmap [mn f mv]
-      (p/-map mv f))
+#?(:clj
+   (defmacro alet
+     [bindings & body]
+     (->> (reverse (partition 2 bindings))
+          (reduce (fn [acc [l r]]
+                    (if (and (coll? r) (symbol? (first r)))
+                      (let [mark (name (first r))]
+                        (if (= mark "await")
+                          `(bind ~(second r) (fn [~l] ~acc))
+                          `(let [~l ~r] ~acc)))
+                      `(let [~l ~r] ~acc)))
+                  `(promise (do ~@body))))))
 
-    mp/Bifunctor
-    (-bimap [_ err succ mv]
-      (-> mv
-          (p/-map succ)
-          (p/-catch err)))
-
-    mp/Monad
-    (-mreturn [_ v]
-      (promise v))
-
-    (-mbind [mn mv f]
-      (p/-bind mv f))
-
-    mp/Applicative
-    (-pure [_ v]
-      (promise v))
-
-    (-fapply [_ pf pv]
-      (then (all [pf pv])
-            (fn [[f v]]
-              (f v))))
-
-    mp/Semigroup
-    (-mappend [_ mv mv']
-      (p/-map (m/sequence [mv mv'])
-              (fn [[mvv mvv']]
-                (let [ctx (mp/-get-context mvv)]
-                  (mp/-mappend ctx mvv mvv')))))))
 
