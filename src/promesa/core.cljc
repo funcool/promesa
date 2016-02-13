@@ -24,11 +24,7 @@
 
 (ns promesa.core
   (:refer-clojure :exclude [delay spread promise await])
-  (:require [cats.core :as m]
-            [cats.context :as mc]
-            [cats.protocols :as mp]
-            [cats.util :as mutil]
-            [promesa.protocols :as p]
+  (:require [promesa.protocols :as p]
             #?(:cljs [org.bluebird]))
   #?(:clj
      (:import java.util.concurrent.CompletableFuture

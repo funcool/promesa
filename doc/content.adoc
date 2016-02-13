@@ -1,6 +1,6 @@
 = promesa - promise library for clojure and clojurescript
 Andrey Antukh, <niwi@niwi.nz>
-0.8.0
+0.8.1
 :toc: left
 :!numbered:
 :idseparator: -
@@ -30,7 +30,7 @@ Just include that in your depencency vector on *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "0.8.0"]
+[funcool/promesa "0.8.1"]
 ----
 
 This package requires JDK8 if you are using it on the JVM platform and

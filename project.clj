@@ -1,4 +1,4 @@
-(defproject funcool/promesa "0.8.0"
+(defproject funcool/promesa "0.8.1"
   :description "A promise library for ClojureScript"
   :url "https://github.com/funcool/promesa"
   :license {:name "BSD (2 Clause)"
