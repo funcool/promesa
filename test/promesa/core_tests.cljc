@@ -2,7 +2,12 @@
   (:require #?(:cljs [cljs.test :as t]
                :clj [clojure.test :as t])
             [cats.core :as m]
-            [promesa.core :as p]))
+            [promesa.monad :as pm]
+            [promesa.core :as p :include-macros true]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Helpers
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn future-ok
   [sleep value]
@@ -14,16 +19,20 @@
   (p/promise (fn [_ reject]
                (p/schedule sleep #(reject value)))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Core Interface Tests
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (t/deftest promise-from-value
   (let [p1 (p/promise 1)]
     (t/is (p/done? p1))
-    (t/is (= (m/extract p1) 1))))
+    (t/is (= (p/extract p1) 1))))
 
 (t/deftest promise-from-factory
   (let [p1 (p/promise (fn [resolve _] (resolve 1)))]
     #?(:clj (deref p1))
     (t/is (p/done? p1))
-    (t/is (= (m/extract p1) 1))))
+    (t/is (= (p/extract p1) 1))))
 
 (t/deftest promise-async-factory
   #?(:cljs
@@ -52,7 +61,7 @@
         p1 (p/rejected e1)
         p2 (p/catch p1 (constantly nil))]
     (t/is (p/rejected? p1))
-    (t/is (= e1 (m/extract p1)))))
+    (t/is (= e1 (p/extract p1)))))
 
 (t/deftest promise-from-promise
   (let [p1 (p/promise 1)
@@ -159,6 +168,91 @@
            p2 (p/branch p1 (constantly nil) (constantly 1))]
        (t/is (= @p2 1)))))
 
+(t/deftest promisify
+  #?(:cljs
+     (t/async done
+       (let [func1 (fn [x cb] (cb (inc x)))
+             func2 (p/promisify func1)
+             p1 (func2 2)]
+         (p/then p1 (fn [x]
+                      (t/is (= x 3))
+                      (done)))))
+     :clj
+     (let [func1 (fn [x cb] (cb (inc x)))
+           func2 (p/promisify func1)
+           p1 (func2 2)]
+       @(p/then p1 (fn [x]
+                     (t/is (= x 3)))))))
+
+(t/deftest then-with-ifn
+  (let [p (-> {:x ::value} p/promise (p/then :x))]
+    #?(:cljs
+       (t/async done
+         (p/then p (fn [x]
+                     (t/is (= x ::value))
+                     (done))))
+       :clj
+       (t/is (= @p ::value)))))
+
+(defmulti unwrap-caught identity)
+(defmethod unwrap-caught :default [x]
+  (-> x ex-data :x))
+
+(t/deftest catch-with-ifn
+  (let [p (-> (p/promise
+               (fn [_ reject] (reject (ex-info "foobar" {:x ::value}))))
+              (p/catch unwrap-caught))]
+    #?(:cljs
+       (t/async done
+         (p/then p (fn [x]
+                     (t/is (= x ::value))
+                     (done))))
+       :clj
+       (t/is (= @p ::value)))))
+
+
+#?(:clj
+   (t/deftest async-let
+     (let [result (p/alet [a (p/await (future-ok 100 1))
+                           b 2
+                           c 3
+                           d (p/await (future-ok 200 4))]
+                    (+ a b c d))]
+       (t/is (= @result 10)))))
+
+#?(:cljs
+   (t/deftest async-let
+     (t/async done
+       (let [result (p/alet [a (p/await (future-ok 100 1))
+                             b 2
+                             c 3
+                             d (p/await (future-ok 200 4))]
+                      (+ a b c d))]
+         (p/then result (fn [result]
+                          (t/is (= result 10))
+                          (done)))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Cats Integration Tests
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(t/deftest bind-with-ifn
+  (let [p (-> (p/promise {:x ::value})
+              (m/>>= :x))]
+    #?(:cljs
+       (t/async done
+         (p/then p (fn [x]
+                     (t/is (= x ::value))
+                     (done))))
+       :clj
+       (t/is (= @p ::value)))))
+
+#?(:cljs
+   (t/deftest extract-from-rejected-promise
+     (let [p1 (p/rejected 42)]
+       (t/is (p/rejected? p1))
+       (t/is (= (p/extract p1) 42)))))
+
 (t/deftest chaining-using-bind
   #?(:cljs
      (t/async done
@@ -225,17 +319,17 @@
 (t/deftest first-monad-law-left-identity
   #?(:cljs
      (t/async done
-       (let [p1 (m/pure p/promise-context 4)
-             p2 (m/pure p/promise-context 4)
-             vl  (m/>>= p2 #(m/pure p/promise-context %))]
+       (let [p1 (m/pure pm/promise-context 4)
+             p2 (m/pure pm/promise-context 4)
+             vl  (m/>>= p2 #(m/pure pm/promise-context %))]
          (p/then (p/all [p1 vl])
                  (fn [[v1 v2]]
                    (t/is (= v1 v2))
                    (done)))))
      :clj
-     (let [p1 (m/pure p/promise-context 4)
-           p2 (m/pure p/promise-context 4)
-           vl  (m/>>= p2 #(m/pure p/promise-context %))]
+     (let [p1 (m/pure pm/promise-context 4)
+           p2 (m/pure pm/promise-context 4)
+           vl  (m/>>= p2 #(m/pure pm/promise-context %))]
        @(p/then (p/all [p1 vl])
                 (fn [[v1 v2]]
                   (t/is (= v1 v2)))))))
@@ -282,63 +376,10 @@
            [v1 v2] @(p/all [rs1 rs2])]
        (t/is (= v1 v2)))))
 
-(t/deftest promisify
-  #?(:cljs
-     (t/async done
-       (let [func1 (fn [x cb] (cb (inc x)))
-             func2 (p/promisify func1)
-             p1 (func2 2)]
-         (p/then p1 (fn [x]
-                      (t/is (= x 3))
-                      (done)))))
-     :clj
-     (let [func1 (fn [x cb] (cb (inc x)))
-           func2 (p/promisify func1)
-           p1 (func2 2)]
-       @(p/then p1 (fn [x]
-                     (t/is (= x 3)))))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Entry Point
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(t/deftest then-with-ifn
-  (let [p (-> {:x ::value} p/promise (p/then :x))]
-    #?(:cljs
-       (t/async done
-         (p/then p (fn [x]
-                     (t/is (= x ::value))
-                     (done))))
-       :clj
-       (t/is (= @p ::value)))))
-
-(defmulti unwrap-caught identity)
-(defmethod unwrap-caught :default [x]
-  (-> x ex-data :x))
-
-(t/deftest catch-with-ifn
-  (let [p (-> (p/promise
-               (fn [_ reject] (reject (ex-info "foobar" {:x ::value}))))
-              (p/catch unwrap-caught))]
-    #?(:cljs
-       (t/async done
-         (p/then p (fn [x]
-                     (t/is (= x ::value))
-                     (done))))
-       :clj
-       (t/is (= @p ::value)))))
-
-(t/deftest bind-with-ifn
-  (let [p (-> (p/promise {:x ::value})
-              (m/>>= :x))]
-    #?(:cljs
-       (t/async done
-         (p/then p (fn [x]
-                     (t/is (= x ::value))
-                     (done))))
-       :clj
-       (t/is (= @p ::value)))))
-
-;; (t/deftest extract-from-rejected-promise
-;;   (let [p1 (p/rejected 42)]
-;;     (t/is (p/rejected? p1))
-;;     (t/is (= (m/extract p1) 42))))
 
 #?(:cljs (enable-console-print!))
 #?(:cljs (set! *main-cli-fn* #(t/run-tests)))
