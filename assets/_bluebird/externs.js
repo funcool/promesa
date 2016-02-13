@@ -8,6 +8,7 @@ var Promise = function() {};
  * @return {null}
  */
 Promise.prototype.config = function() {};
+
 /**
  * @this {Promise}
  * @return {null}
