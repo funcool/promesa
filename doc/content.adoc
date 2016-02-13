@@ -1,6 +1,6 @@
 = promesa - promise library for clojure and clojurescript
 Andrey Antukh, <niwi@niwi.nz>
-0.7.0
+0.8.0
 :toc: left
 :!numbered:
 :idseparator: -
@@ -30,7 +30,7 @@ Just include that in your depencency vector on *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "0.7.0"]
+[funcool/promesa "0.8.0"]
 ----
 
 This package requires JDK8 if you are using it on the JVM platform and
@@ -114,41 +114,25 @@ The same example can be written in this shorter way:
 [source, clojure]
 ----
 (def pr (-> (p/promise 1)
-            (p/then inc inc inc))
+            (p/chain inc inc inc))
 (p/then pr (fn [v]
              (println v)))
 
 ;; => Stdout: 4
 ----
 
-This library also plays in the link:https://github.com/funcool/cats[cats] library
-protocols so you can use the *Functor* interface for apply a function to a promise
-value:
-
-[source, clojure]
-----
-(require '[cats.core :as m])
-
-(-> (m/fmap inc (p/promise 10))
-    (p/then (fn [v]
-              (println v))))
-
-;; => Stdout: 11
-----
-
 
 === Advanced chaining
 
 Until now, we have seen a very simple promise compositions that does not depends
-on previous results. The `cats.core/mlet` and `cats.core/alet`  macro allows us
-build more complex and more powerfull promise compositions.
+on previous results. The `alet` macro allows us build more complex and more
+powerfull promise compositions using ES7 async/await like syntax.
 
 For demostration purposes, imagine that you have this function that emulates async
 operation and return a promise:
 
 [source, clojure]
 ----
-(require '[cats.core :as m])
 (require '[promesa.core :as p])
 
 (defn sleep-promise
@@ -157,54 +141,31 @@ operation and return a promise:
                (p/schedule wait #(resolve wait)))))
 ----
 
-Let's see an example using `mlet` macro:
+Let's see an example using `alet` (async let) macro:
 
 [source, clojure]
 ----
 (def pr
-  (m/mlet [x (sleep-promise 42)
-           y (sleep-promise 41)]
-    (+ x y)))
+  (p/alet [x (p/await (sleep-promise 42))
+           y (p/await (sleep-promise 41))
+           z 2]
+    (+ x y z)))
 
 (p/then pr (fn [v]
              (println v)))
 
-;; This will take aprox: 83-85 msecs
-;; => Stdout: 83
+;; => Stdout: 85
 ----
 
-The `mlet` bindings are executed sequentially, waiting in each step for promise
-resolution. If an error occurs in some step, the entire composition will be
-short-circuited, returing exceptionally resolved promise. This is very similar
-to the up coming link:http://jakearchibald.com/2014/es7-async-functions/[ES7 async/await], but built in a generic way and as a library and not as language feature.
+The `alet` macro behaves identical to the `let` with the exception that it
+always return a promise and allows mark async operations with `await` placeholder
+making it looks like synchronous opetation.
 
-The main disadvantage of `mlet` is that it's evaluation model is strictly
-secuential. It is ok for some use cases, when the sequential order is mandatory.
+If an error occurs at any step the entire composition will be short-circuited,
+returning exceptionally resolved promise.
 
-But, if the strictly secuential model is not mandatory, `alet` macro can be used
-as drop-in-replacement for `mlet` that automatically exploits the concurrency:
-
-[source, clojure]
-----
-(def pr
-  (m/alet [x (sleep-promise 42)
-           y (sleep-promise 41)]
-    (+ x y)))
-
-(p/then pr (fn [v]
-             (println v)))
-
-;; This will take aprox: 41-45 msecs
-;; => Stdout: 83
-----
-
-You can observe that the return value is identical to the previous example,
-but it takes almost half of time to finish. That is because `alet` is more
-smarter macro. It calculates the dependencies between declared bindings and
-executes them in batches.
-
-You can read more about that
-link:http://funcool.github.io/cats/latest/#syntax-sugar[here].
+If you are not familiar with `async`/`await` syntax, you can read more
+about it link:http://jakearchibald.com/2014/es7-async-functions/[here].
 
 
 === Error handling
