@@ -1,5 +1,15 @@
 # Changelog #
 
+## Version 0.8.0 ##
+
+Date: 2016-02-13
+
+- BREAKING CHANGE: Cats is no longer requred dependency.
+  If you want use it you need import the `promesa.monad` ns.
+- Update bluebird to 3.3.0 (cljs).
+- Add bultin support for `async/await` like syntax.
+
+
 ## Version 0.7.0 ##
 
 Date: 2016-01-08
