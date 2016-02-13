@@ -5,7 +5,11 @@
             [cats.protocols :as mp]
             [cats.util :as mutil]
             [promesa.core :as pc]
-            [promesa.protocols :as p]))
+            [promesa.protocols :as p])
+  #?(:clj
+     (:import java.util.concurrent.CompletionStage
+              java.util.concurrent.ExecutionException
+              java.util.concurrent.CompletionException)))
 
 (declare promise-context)
 
