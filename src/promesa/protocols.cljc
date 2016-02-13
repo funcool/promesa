@@ -36,7 +36,8 @@
   (-cancelled? [_] "Check if promise is cancelled."))
 
 (defprotocol IState
-  "Additional state related abstraction."
+  "Additional state/introspection abstraction."
+  (-extract [_] "Extract the current value.")
   (-resolved? [_] "Returns true if a promise is resolved.")
   (-rejected? [_] "Returns true if a promise is rejected.")
   (-pending? [_] "Retutns true if a promise is pending."))

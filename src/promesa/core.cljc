@@ -86,6 +86,10 @@
        (.catch it #(cb %)))
 
      p/IState
+     (-extract [it]
+       (if (.isRejected it)
+         (.reason it)
+         (.value it)))
      (-resolved? [it]
        (.isFulfilled it))
      (-rejected? [it]
@@ -126,7 +130,16 @@
                               (if (instance? CompletionException e)
                                 (cb (.getCause e))
                                 (cb e))))))
+
      p/IState
+     (-extract [it]
+       (try
+         (.getNow it nil)
+         (catch ExecutionException e
+           (.getCause e))
+         (catch CompletionException e
+           (.getCause e))))
+
      (-resolved? [it]
        (and (not (.isCompletedExceptionally it))
             (not (.isCancelled it))
@@ -239,6 +252,11 @@
   [p]
   (p/-pending? p))
 
+(defn extract
+  "Returns the current promise value."
+  [p]
+  (p/-extract p))
+
 (defn done?
   "Returns true if promise `p` is already done."
   [p]
@@ -251,10 +269,21 @@
   [p callback]
   (p/-map p callback))
 
+(defn bind
+  "A chain helper for promises."
+  [p callback]
+  (p/-bind p callback))
+
 (defn chain
   "A variadic chain operation."
   [p & funcs]
   (reduce #(then %1 %2) p funcs))
+
+(defn branch
+  [p success failure]
+  (-> p
+      (p/-map success)
+      (p/-catch failure)))
 
 (defn catch
   "Catch all promise chain helper."
