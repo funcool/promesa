@@ -394,3 +394,25 @@
                   `(promise (do ~@body))))))
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Pretty printing
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn promise->str
+  [p]
+  (str "#<Promise["
+       (cond
+         (pending? p) "~"
+         (rejected? p) (str "error=" (extract p))
+         :else (str "value=" (extract p)))
+       "]>"))
+
+#?(:clj
+   (defmethod print-method java.util.concurrent.CompletableFuture
+     [p ^java.io.Writer writer]
+     (.write writer (promise->str p)))
+   :cljs
+   (extend-type js/Promise
+     IPrintWithWriter
+     (-pr-writer [p writer opts]
+       (.write writer (promise->str p)))))
