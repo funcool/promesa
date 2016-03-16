@@ -33,6 +33,11 @@
     (t/is (p/done? p1))
     (t/is (= (p/extract p1) true))))
 
+(t/deftest promise-from-string-value
+  (let [p1 (p/promise "hello")]
+    (t/is (p/done? p1))
+    (t/is (= (p/extract p1) "hello"))))
+
 (t/deftest promise-from-factory
   (let [p1 (p/promise (fn [resolve _] (resolve 1)))]
     #?(:clj (deref p1))

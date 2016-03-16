@@ -200,6 +200,10 @@
 
      boolean
      (-promise [v]
+       (.resolve js/Promise v))
+
+     string
+     (-promise [v]
        (.resolve js/Promise v))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
