@@ -175,7 +175,12 @@
      (-promise [v]
        (let [p (CompletableFuture.)]
          (.complete p v)
-         p))))
+         p))
+
+     nil
+     (-promise [v]
+       (doto (CompletableFuture.)
+         (.complete v)))))
 
 #?(:cljs
    (extend-protocol p/IPromiseFactory
@@ -203,6 +208,10 @@
        (.resolve js/Promise v))
 
      string
+     (-promise [v]
+       (.resolve js/Promise v))
+
+     nil
      (-promise [v]
        (.resolve js/Promise v))))
 
