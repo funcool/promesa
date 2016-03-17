@@ -8,6 +8,7 @@ Date: 2016-03-17
 - Add `map` function.
 - Add `mapcat` function.
 - Update bluebird to 3.3.4.
+- Remove wrapping logic from -bind impl.
 
 
 ## Version 0.8.1 ##
