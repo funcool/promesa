@@ -142,6 +142,63 @@
            p3 (p/then p2 inc)]
        (t/is @p3 4))))
 
+(t/deftest chaining-using-map
+  #?(:cljs
+     (t/async done
+       (let [p1 (future-ok 200 2)
+             p2 (p/map inc p1)
+             p3 (p/map inc p2)]
+         (p/then p3 (fn [v]
+                      (t/is (= v 4))
+                      (done)))))
+     :clj
+     (let [p1 (future-ok 200 2)
+           p2 (p/map inc p1)
+           p3 (p/map inc p2)]
+       (t/is @p3 4))))
+
+(t/deftest chaining-using-mapcat
+  #?(:cljs
+     (t/async done
+       (let [p1 (future-ok 200 2)
+             inc #(p/resolved (inc %))
+             p2 (p/mapcat inc p1)
+             p3 (p/mapcat inc p2)]
+         (p/then p3 (fn [v]
+                      (t/is (= v 4))
+                      (done)))))
+     :clj
+     (let [p1 (future-ok 200 2)
+           inc #(p/resolved (inc %))
+           p2 (p/mapcat inc p1)
+           p3 (p/mapcat inc p2)]
+       (t/is @p3 4))))
+
+(t/deftest canclel-scheduled-task
+  #?(:cljs
+     (t/async done
+       (let [value (volatile! nil)
+             c1 (p/schedule 1000 #(vreset! value 1))
+             c2 (p/schedule 1000 #(vreset! value 2))]
+         (p/cancel! c1)
+         (p/schedule 1200
+                     (fn []
+                       (t/is (= @value 2))
+                       (t/is (realized? c2))
+                       (t/is (not (realized? c1)))
+                       (t/is (p/cancelled? c1))
+                       (done)))))
+     :clj
+     (let [value (volatile! nil)
+           c1 (p/schedule 1000 #(vreset! value 1))
+           c2 (p/schedule 1000 #(vreset! value 2))]
+       (p/cancel! c1)
+       @(p/schedule 1200 (constantly nil))
+       (t/is (realized? c2))
+       (t/is (not (realized? c1)))
+       (t/is (p/cancelled? c1))
+       (t/is (= @value 2)))))
+
 (t/deftest chaining-using-chain
   #?(:cljs
      (t/async done
