@@ -1,5 +1,15 @@
 # Changelog #
 
+## Version 1.0.0 ##
+
+Date: 2016-03-17
+
+- Add scheduler abstraction.
+- Add `map` function.
+- Add `mapcat` function.
+- Update bluebird to 3.3.4.
+
+
 ## Version 0.8.1 ##
 
 Date: 2016-02-13
