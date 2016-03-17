@@ -1,4 +1,4 @@
-(defproject funcool/promesa "0.8.1"
+(defproject funcool/promesa "1.0.0"
   :description "A promise library for ClojureScript"
   :url "https://github.com/funcool/promesa"
   :license {:name "BSD (2 Clause)"
@@ -15,5 +15,4 @@
             :reader :clojure
             :target "doc/dist/latest/api"}
   :plugins [[funcool/codeina "0.3.0"]
-            [lein-ancient "0.6.7" :exclusions [org.clojure/tools.reader]]
-            [lein-externs "0.1.3"]])
+            [lein-ancient "0.6.7" :exclusions [org.clojure/tools.reader]]])
