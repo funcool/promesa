@@ -24,8 +24,7 @@
 
 (ns promesa.core
   (:refer-clojure :exclude [delay spread promise await map mapcat])
-  (:require [promesa.protocols :as p]
-            #?(:cljs [org.bluebird]))
+  #?(:cljs(:require [org.bluebird]))
   #?(:clj
      (:import java.util.concurrent.CompletableFuture
               java.util.concurrent.CompletionStage
