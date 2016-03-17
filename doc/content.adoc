@@ -1,6 +1,5 @@
 = promesa - promise library for clojure and clojurescript
 Andrey Antukh, <niwi@niwi.nz>
-0.8.1
 :toc: left
 :!numbered:
 :idseparator: -
