@@ -16,7 +16,7 @@ Date: 2016-02-13
 
 - Remove cats imports from core ns that causes
   import exception.
-  
+
 
 ## Version 0.8.0 ##
 
