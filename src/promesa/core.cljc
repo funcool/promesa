@@ -411,13 +411,22 @@
 
 (defn catch
   "Catch all promise chain helper."
-  ([p callback]
-   (-catch p callback))
-  ([p type callback]
+  ([p f]
+   (-catch p f))
+  ([p type f]
    (-catch p (fn [e]
                  (if (instance? type e)
-                   (callback e)
+                   (f e)
                    (throw e))))))
+
+(defn error
+  "Same as `catch` but with parameters inverted."
+  ([f p] (catch p f))
+  ([f type p] (catch p type f)))
+
+(def err
+  "A short alias for `error` function."
+  error)
 
 (defn finally
   "Attach handler to promise that will be
