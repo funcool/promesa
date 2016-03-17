@@ -37,29 +37,110 @@
               java.util.concurrent.Executor
               java.util.concurrent.Executors
               java.util.concurrent.ForkJoinPool
+              java.util.concurrent.ScheduledExecutorService
               java.util.function.Function
               java.util.function.Supplier)))
 
-#?(:cljs (js/Promise.config #js {:cancellation true :warnings false}))
+#?(:cljs
+   (def ^:const Promise (js/Promise.noConflict)))
+
+#?(:cljs
+   (.config Promise #js {:cancellation true
+                         :warnings false}))
+#?(:clj
+   (def ^:no-doc ^:redef +executor+
+     (ForkJoinPool/commonPool)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Scheduler
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defprotocol ICancellable
+  "A cancellation abstraction."
+  (-cancel [_])
+  (-cancelled? [_]))
+
+(defprotocol IScheduler
+  (-schedule [_ ms func]))
+
+#?(:cljs
+   (defn- scheduled-task
+     [cur done?]
+     (let [cancelled (volatile! false)]
+       (reify
+         cljs.core/IPending
+         (-realized? [_] @done?)
+
+         ICancellable
+         (-cancelled? [_] @cancelled)
+         (-cancel [_]
+           (when-not @cancelled
+             (vreset! cancelled true)
+             (js/clearTimeout cur))))))
+
+   :clj
+   (defn- scheduled-task
+     [^Future fut]
+     (reify
+       clojure.lang.IDeref
+       (deref [_]
+         (.get fut))
+
+       clojure.lang.IBlockingDeref
+       (deref [_ ms default]
+         (try
+           (.get fut ms TimeUnit/MILLISECONDS)
+           (catch TimeoutException e
+             default)))
+
+       clojure.lang.IPending
+       (isRealized [_] (and (.isDone fut)
+                            (not (.isCancelled fut))))
+
+       ICancellable
+       (-cancelled? [_]
+         (.isCancelled fut))
+       (-cancel [_]
+         (when-not (.isCancelled fut)
+           (.cancel fut true))))))
 
 #?(:clj
-   (do
-     (def ^:dynamic ^:no-doc
-       *executor* (ForkJoinPool/commonPool))
-     (def ^:dynamic ^:no-doc
-       *scheduler* (Executors/newScheduledThreadPool 1))))
+   (extend-type ScheduledExecutorService
+     IScheduler
+     (-schedule [this ms func]
+       (let [fut (.schedule this func ms TimeUnit/MILLISECONDS)]
+         (scheduled-task fut)))))
+
+#?(:cljs
+   (defn- scheduler
+     []
+     (reify IScheduler
+       (-schedule [_ ms func]
+         (let [done? (volatile! false)
+               task (fn []
+                      (try
+                        (func)
+                        (finally
+                          (vreset! done? true))))
+               cur (js/setTimeout task ms)]
+           (scheduled-task cur done?)))))
+   :clj
+   (defn- scheduler
+     []
+     (Executors/newScheduledThreadPool 1)))
+
+(def ^:no-doc ^:redef +scheduler+
+  "A default scheduler instance."
+  (scheduler))
 
 (defn schedule
-  {:no-doc true}
-  [ms func]
-  #?(:cljs (js/setTimeout func ms)
-     :clj (.schedule *scheduler* func ms TimeUnit/MILLISECONDS)))
+  "Schedule a callable to be executed after the `ms` delay
+  is reached.
 
-(defn submit
-  {:no-doc true}
-  [func]
-  #?(:cljs (schedule 0 func)
-     :clj (.execute *executor* func)))
+  In JVM it uses a scheduled executor service and in JS
+  it uses the `setTimeout` function."
+  [ms func]
+  (-schedule +scheduler+ ms func))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementation detail
