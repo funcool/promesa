@@ -1,5 +1,14 @@
 # Changelog #
 
+## Version 1.1.0 ##
+
+Date: 2016-03-18
+
+- Add `err` and `error` alias as `catch` analougous function
+  that has the parameters inverted in the same way as `map`
+  and `mapcat`.
+
+
 ## Version 1.0.0 ##
 
 Date: 2016-03-17
