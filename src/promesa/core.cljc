@@ -190,6 +190,7 @@
      (-pending? [it]
        (.isPending it))))
 
+
 #?(:clj
    (extend-type CompletionStage
      ICancellable
@@ -202,19 +203,13 @@
      (-map [it cb]
        (.thenApplyAsync it (reify Function
                              (apply [_ v]
-                               (let [result (cb v)]
-                                 result)))
+                               (cb v)))
                         +executor+))
 
      (-bind [it cb]
        (.thenComposeAsync it (reify Function
                                (apply [_ v]
-                                 (let [result (cb v)]
-                                   (if-not (instance? CompletionStage result)
-                                     (let [p (CompletableFuture.)]
-                                       (.complete p result)
-                                       p)
-                                     result))))
+                                 (cb v)))
                           +executor+))
 
      (-catch [it cb]

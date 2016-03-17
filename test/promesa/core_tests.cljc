@@ -308,17 +308,6 @@
 ;; Cats Integration Tests
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(t/deftest bind-with-ifn
-  (let [p (-> (p/promise {:x ::value})
-              (m/>>= :x))]
-    #?(:cljs
-       (t/async done
-         (p/then p (fn [x]
-                     (t/is (= x ::value))
-                     (done))))
-       :clj
-       (t/is (= @p ::value)))))
-
 #?(:cljs
    (t/deftest extract-from-rejected-promise
      (let [p1 (p/rejected 42)]
@@ -329,12 +318,14 @@
   #?(:cljs
      (t/async done
        (let [p1 (future-ok 200 2)
+             inc #(p/resolved (inc %))
              p2 (m/>>= p1 inc inc inc)]
          (p/then p2 (fn [v]
                       (t/is (= v 5))
                       (done)))))
      :clj
      (let [p1 (future-ok 200 2)
+           inc #(p/resolved (inc %))
            p2 (m/>>= p1 inc inc inc)]
        (t/is (= @p2 5)))))
 
