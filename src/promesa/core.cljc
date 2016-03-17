@@ -23,7 +23,7 @@
 ;; THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (ns promesa.core
-  (:refer-clojure :exclude [delay spread promise await])
+  (:refer-clojure :exclude [delay spread promise await map mapcat])
   (:require [promesa.protocols :as p]
             #?(:cljs [org.bluebird]))
   #?(:clj
