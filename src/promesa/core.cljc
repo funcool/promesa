@@ -143,18 +143,35 @@
   (-schedule +scheduler+ ms func))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Implementation detail
+;; Promise
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defprotocol IPromise
+  "A basic future abstraction."
+  (-map [_ callback] "Chain a promise.")
+  (-bind [_ callback] "Chain a promise.")
+  (-catch [_ callback] "Catch a error in a promise."))
+
+(defprotocol IState
+  "Additional state/introspection abstraction."
+  (-extract [_] "Extract the current value.")
+  (-resolved? [_] "Returns true if a promise is resolved.")
+  (-rejected? [_] "Returns true if a promise is rejected.")
+  (-pending? [_] "Retutns true if a promise is pending."))
+
+(defprotocol IPromiseFactory
+  "A promise constructor abstraction."
+  (-promise [_] "Create a promise instance."))
+
 #?(:cljs
-   (extend-type js/Promise
-     p/ICancellablePromise
+   (extend-type Promise
+     ICancellable
      (-cancel [it]
        (.cancel it))
      (-cancelled? [it]
        (.isCancelled it))
 
-     p/IPromise
+     IPromise
      (-map [it cb]
        (.then it #(cb %)))
      (-bind [it cb]
@@ -162,7 +179,7 @@
      (-catch [it cb]
        (.catch it #(cb %)))
 
-     p/IState
+     IState
      (-extract [it]
        (if (.isRejected it)
          (.reason it)
@@ -176,19 +193,19 @@
 
 #?(:clj
    (extend-type CompletionStage
-     p/ICancellablePromise
+     ICancellable
      (-cancel [it]
        (.cancel it true))
      (-cancelled? [it]
        (.isCancelled it))
 
-     p/IPromise
+     IPromise
      (-map [it cb]
        (.thenApplyAsync it (reify Function
                              (apply [_ v]
                                (let [result (cb v)]
                                  result)))
-                        *executor*))
+                        +executor+))
 
      (-bind [it cb]
        (.thenComposeAsync it (reify Function
@@ -199,7 +216,7 @@
                                        (.complete p result)
                                        p)
                                      result))))
-                          *executor*))
+                          +executor+))
 
      (-catch [it cb]
        (.exceptionally it (reify Function
@@ -208,7 +225,7 @@
                                 (cb (.getCause e))
                                 (cb e))))))
 
-     p/IState
+     IState
      (-extract [it]
        (try
          (.getNow it nil)
@@ -231,7 +248,7 @@
             (not (.isDone it))))))
 
 #?(:clj
-   (extend-protocol p/IPromiseFactory
+   (extend-protocol IPromiseFactory
      clojure.lang.Fn
      (-promise [func]
        (let [p (CompletableFuture.)
@@ -264,37 +281,37 @@
          (.complete v)))))
 
 #?(:cljs
-   (extend-protocol p/IPromiseFactory
+   (extend-protocol IPromiseFactory
      function
      (-promise [func]
-       (js/Promise. func))
+       (Promise. func))
 
-     js/Promise
+     Promise
      (-promise [p] p)
 
      js/Error
      (-promise [e]
-       (.reject js/Promise e))
+       (.reject Promise e))
 
      object
      (-promise [v]
-       (.resolve js/Promise v))
+       (.resolve Promise v))
 
      number
      (-promise [v]
-       (.resolve js/Promise v))
+       (.resolve Promise v))
 
      boolean
      (-promise [v]
-       (.resolve js/Promise v))
+       (.resolve Promise v))
 
      string
      (-promise [v]
-       (.resolve js/Promise v))
+       (.resolve Promise v))
 
      nil
      (-promise [v]
-       (.resolve js/Promise v))))
+       (.resolve Promise v))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public Api
@@ -305,7 +322,7 @@
 (defn resolved
   "Return a resolved promise with provided value."
   [v]
-  #?(:cljs (.resolve js/Promise v)
+  #?(:cljs (.resolve Promise v)
      :clj (let [p (CompletableFuture.)]
             (.complete p v)
             p)))
@@ -313,7 +330,7 @@
 (defn rejected
   "Return a rejected promise with provided reason."
   [v]
-  #?(:cljs (.reject js/Promise v)
+  #?(:cljs (.reject Promise v)
      :clj (let [p (CompletableFuture.)]
             (.completeExceptionally p v)
             p)))
@@ -321,70 +338,89 @@
 (defn promise
   "The promise constructor."
   [v]
-  (p/-promise v))
+  (-promise v))
 
 (defn promise?
   "Return true if `v` is a promise instance."
   [v]
   #?(:clj (instance? CompletionStage v)
-     :cljs (instance? js/Promise v)))
+     :cljs (instance? Promise v)))
 
 ;; Predicates
 
 (defn resolved?
   "Returns true if promise `p` is already fulfilled."
   [p]
-  (p/-resolved? p))
+  (-resolved? p))
 
 (defn rejected?
   "Returns true if promise `p` is already rejected."
   [p]
-  (p/-rejected? p))
+  (-rejected? p))
 
 (defn pending?
   "Returns true if promise `p` is stil pending."
   [p]
-  (p/-pending? p))
+  (-pending? p))
 
 (defn extract
   "Returns the current promise value."
   [p]
-  (p/-extract p))
+  (-extract p))
 
 (defn done?
   "Returns true if promise `p` is already done."
   [p]
-  (not (p/-pending? p)))
+  (not (-pending? p)))
 
 ;; Chaining
 
+(defn map
+  "Apply a function to the promise value and
+  return a new promise with the result."
+  [f p]
+  (-map p f))
+
+(defn mapcat
+  "Same as `map` but removes one level of
+  promise neesting. Useful when the map function
+  returns a promise instead of value.
+
+  In JS environment this function is analogous
+  to `map` because the promise abstraction overloads
+  the `map` operator."
+  [f p]
+  (-bind p f))
+
 (defn then
-  "A chain helper for promises."
-  [p callback]
-  (p/-map p callback))
+  "Same as `map` but with parameters inverted
+  for convenience and for familiarity with
+  javascript's promises `.then` operator."
+  [p f]
+  (-map p f))
 
 (defn bind
   "A chain helper for promises."
   [p callback]
-  (p/-bind p callback))
+  (-bind p callback))
 
 (defn chain
-  "A variadic chain operation."
+  "Like then but accepts multiple parameters."
   [p & funcs]
   (reduce #(then %1 %2) p funcs))
 
 (defn branch
   [p success failure]
   (-> p
-      (p/-map success)
-      (p/-catch failure)))
+      (-map success)
+      (-catch failure)))
 
 (defn catch
   "Catch all promise chain helper."
   ([p callback]
-   (p/-catch p callback))
+   (-catch p callback))
   ([p type callback]
-   (p/-catch p (fn [e]
+   (-catch p (fn [e]
                  (if (instance? type e)
                    (callback e)
                    (throw e))))))
@@ -403,22 +439,22 @@
   that is fulfilled  when all the items in the
   array are fulfilled."
   [promises]
-  #?(:cljs (then (.all js/Promise (clj->js promises))
+  #?(:cljs (then (.all Promise (clj->js promises))
                  #(js->clj %))
-     :clj (let [xf (map p/-promise)
+     :clj (let [xf (clojure.core/map -promise)
                 ps (into [] xf promises)]
             (then (-> (into-array CompletableFuture ps)
                       (CompletableFuture/allOf))
                   (fn [_]
-                    (mapv p/-extract ps))))))
+                    (mapv -extract ps))))))
 
 (defn any
   "Given an array of promises, return a promise
   that is fulfilled when first one item in the
   array is fulfilled."
   [promises]
-  #?(:cljs (.any js/Promise (clj->js promises))
-     :clj (->> (sequence (map p/-promise) promises)
+  #?(:cljs (.any Promise (clj->js promises))
+     :clj (->> (sequence (clojure.core/map -promise) promises)
                (into-array CompletableFuture)
                (CompletableFuture/anyOf))))
 
@@ -427,13 +463,13 @@
 (defn cancel!
   "Cancel the promise."
   [p]
-  (p/-cancel p)
+  (-cancel p)
   p)
 
 (defn cancelled?
   "Return true if `v` is a cancelled promise."
   [v]
-  (p/-cancelled? v))
+  (-cancelled? v))
 
 ;; Utils
 
@@ -448,7 +484,7 @@
                               (conj resolve))]
                  (try
                    (apply callable args)
-                   (catch #?(:clj Exception :cljs js/Error) e
+                   (catch #?(:clj Throwable :cljs js/Error) e
                      (reject e))))))))
 
 #?(:cljs
@@ -468,7 +504,7 @@
   time is reached."
   ([t] (delay t nil))
   ([t v]
-   #?(:cljs (.then (js/Promise.delay t)
+   #?(:cljs (.then (.delay Promise t)
                    (constantly v))
       :clj (let [p (CompletableFuture.)]
              (schedule t #(.complete p v))
@@ -506,11 +542,11 @@
        "]>"))
 
 #?(:clj
-   (defmethod print-method java.util.concurrent.CompletableFuture
+   (defmethod print-method java.util.concurrent.CompletionStage
      [p ^java.io.Writer writer]
      (.write writer (promise->str p)))
    :cljs
-   (extend-type js/Promise
+   (extend-type Promise
      IPrintWithWriter
      (-pr-writer [p writer opts]
        (.write writer (promise->str p)))))
