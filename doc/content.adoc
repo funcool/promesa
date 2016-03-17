@@ -29,7 +29,7 @@ Just include that in your depencency vector on *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "1.0.0"]
+[funcool/promesa "1.1.0"]
 ----
 
 This package requires JDK8 if you are using it on the JVM platform and
@@ -203,6 +203,16 @@ The `catch` function adds a new handler to the promise chain that will be called
 when any of the previous promises in the chain are rejected or an exception is
 raised. The `catch` function also returns a promise that will be resolved or
 rejected depending on that will happen inside the catch hanlder.
+
+If you prefer `map` like parameters order, it there `err` function (and `error`
+alias) that works in same way as `catch` but has the parameters like `map`:
+
+[source, clojure]
+----
+(->> (p/promise (ex-info "error" nil))
+     (p/error (fn [error]
+                (.log js/console error))))
+----
 
 [NOTE]
 ====
