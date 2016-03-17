@@ -30,7 +30,7 @@ Just include that in your depencency vector on *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "0.8.1"]
+[funcool/promesa "1.0.0"]
 ----
 
 This package requires JDK8 if you are using it on the JVM platform and
@@ -42,22 +42,22 @@ all enviroments that *bluebird* library supports on the JS platform.
 === Introduction
 
 The promise is the abstraction that represents the result of an asynchronous
-operation that will be eventually available.
+operation that has the notion of error.
 
-It can be on this states:
+This is a list of possible states of one promise:
 
 - `resolved`: means that the promise contains a value.
 - `rejected`: means thet the promise contains an error.
 - `pending`: means that the promise does not have value.
 
+The promise can be considered *done* when is resolved or rejected.
+
 
 === Creating a promise
 
-It there several different ways to create a promise in _promesa_ library. You can
-create it already resolved with initial value or already rejected with an exception.
+It there several different ways to create a promise instance:
 
-Let start creating a promise from a plain value:
-
+.Example creating already resolved promise instances from plain values.
 [source, clojure]
 ----
 (require '[promesa.core :as p])
@@ -75,62 +75,85 @@ Also, it accepts a factory callback that receives two callable parameters:
 `resolve` and `reject`. So you can use one or other to resolve or reject the promise
 respectively.
 
+.Example creating promise instance using a factory.
 [source, clojure]
 ----
-;; Create a promise from callback
 (p/promise (fn [resolve reject]
-             ;; Do things, maybe async...
              (resolve 1)))
 ----
 
 [NOTE]
 ====
-On JVM platform the function is executed asynchronously in an other thread and
-in JS platform is determined by *bluebird* default behavior.
+In both platforms the promise factory function is executed synchrously and
+making it blocking or not blocking is user responsability.
 ====
 
 
-=== Simple chaining
+=== Promise Chaining
 
-It there different ways to compose/chain computations using promises. We will start
-with the basic: lineal way of chaining computations.
-
-That can be done using `then` functions exposed in `promesa.core` namespace:
+The most common way to apply a function to a promise value (or in other word chain
+its execution) is using the well known `map` function:
 
 [source, clojure]
 ----
-(def pr (-> (p/promise 1)
-            (p/then inc)
-            (p/then inc)
-            (p/then inc)))
+(def result (->> (p/promise 1)
+                 (p/map inc)))
 
-(p/then pr (fn [v]
-             (println v)))
-;; => Stdout: 4
+@result     ; only on the jvm
+;; => 2
 ----
 
-The same example can be written in this shorter way:
+For people more coming from js world, it there are also `then` function that
+works in the same way as `map` but with parameters inverted:
 
 [source, clojure]
 ----
-(def pr (-> (p/promise 1)
-            (p/chain inc inc inc))
-(p/then pr (fn [v]
-             (println v)))
+(def result (-> (p/promise 1)
+                (p/then inc)))
 
-;; => Stdout: 4
+@result     ; only on the jvm
+;; => 2
 ----
 
+If you want to apply multiple functions, instead of using multiple times `then` or 
+`map`, you can just use `chain`:
 
-=== Advanced chaining
+[source, clojure]
+----
+(def result (-> (p/promise 1)
+                (p/chain inc inc inc))
 
-Until now, we have seen a very simple promise compositions that does not depends
-on previous results. The `alet` macro allows us build more complex and more
-powerfull promise compositions using ES7 async/await like syntax.
+@result     ; only on the jvm
+;; => 4
+----
 
-For demostration purposes, imagine that you have this function that emulates async
-operation and return a promise:
+It there also `mapcat` function that allows remove one neesting level of promises,
+and is pretty useful if the function that you want to apply to promise also return
+a promise instance instead of value:
 
+[source, clojure]
+----
+(def incp #(p/resolved (inc %)))
+
+(def result (->> (p/promise 1)
+                 (p/mapcat incp)))
+
+@result     ; only on the jvm
+;; => 2
+----
+
+The `mapcat` function is only useful in the JVM platform. In JS platform the `map`
+function already flattens the result magically (because the underlying
+implementation does that).
+
+
+=== Async/Await Syntax
+
+The _promesa_ library comes with convenient sugar syntax that allows you create
+a compositions that looks like synchronous code with very clojure familiar
+`let` syntax:
+
+.Example using async/await syntax.
 [source, clojure]
 ----
 (require '[promesa.core :as p])
@@ -139,22 +162,15 @@ operation and return a promise:
   [wait]
   (p/promise (fn [resolve reject]
                (p/schedule wait #(resolve wait)))))
-----
 
-Let's see an example using `alet` (async let) macro:
-
-[source, clojure]
-----
-(def pr
+(def result
   (p/alet [x (p/await (sleep-promise 42))
            y (p/await (sleep-promise 41))
            z 2]
     (+ x y z)))
 
-(p/then pr (fn [v]
-             (println v)))
-
-;; => Stdout: 85
+@result     ; only on the jvm
+;; => 85
 ----
 
 The `alet` macro behaves identical to the `let` with the exception that it
@@ -223,7 +239,7 @@ all of them are resolved. This can be done using the `all` combinator:
 ----
 (let [p (p/all [(do-some-io)
                 (do-some-other-io)])]
-  (p/then p (fn [[result1 result2]
+  (p/then p (fn [[result1 result2]]
               (do-something-with-results result1 result2))))
 ----
 
@@ -237,21 +253,6 @@ first resolved promise. For this case, you can use the `any` combinator:
                 (p/delay 120 3)])]
   (p/then p (fn [x]
               (.log js/console "The first one finished: " x))))
-----
-
-Later, for more advanced use cases, _promesa_ is an algebraic structure that
-implements the associative binary operation usually called `mappend`:
-
-[source, clojure]
-----
-(require '[cats.core :as m])
-
-(def pr (m/mappend (p/promise {:a 1})
-                   (p/promise {:b 2})))
-(p/then pr (fn [v]
-             (println v)))
-
-;; => Stdout: {:a 1 :b 2}
 ----
 
 
@@ -283,6 +284,31 @@ to the `timeout` function:
 
 In case the async task is slow, in the example more that 200ms, the promise will be
 rejected with timeout error and successfully captured with the `catch` handler.
+
+
+=== Scheduling Tasks
+
+Additionally to the promise abstraction, this library also comes with lightweight
+abstraction for scheduling task to be executed at some time in future:
+
+.Example using a `schedule` function.
+[source, clojure]
+----
+(p/schedule 1000 (fn []
+                   (println "hello world")))
+----
+
+This example shows you how you can schedule a function call to be executed 1 second
+in the future. It works in the same way for both plaforms (clj and cljs).
+
+The tasks can be cancelled using its return value:
+
+[source, clojure]
+----
+(def task (p/schedule 1000 #(do-stuff)))
+
+(p/cancel! task)
+----
 
 
 == Developers Guide
