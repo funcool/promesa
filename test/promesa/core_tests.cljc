@@ -23,6 +23,9 @@
 ;; Core Interface Tests
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(t/deftest print-promise
+  (t/is (string? (pr-str (p/promise nil)))))
+
 (t/deftest promise-from-value
   (let [p1 (p/promise 1)]
     (t/is (p/done? p1))

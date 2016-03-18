@@ -552,4 +552,4 @@
    (extend-type Promise
      IPrintWithWriter
      (-pr-writer [p writer opts]
-       (.write writer (promise->str p)))))
+       (-write writer (promise->str p)))))
