@@ -97,3 +97,9 @@ Promise.reject = function() {};
  * @return {Promise}
  */
 Promise.delay = function() {};
+
+/**
+ * @this {null}
+ * @return {Promise}
+ */
+Promise.noConflict = function() {};
