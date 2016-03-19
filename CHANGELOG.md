@@ -1,5 +1,14 @@
 # Changelog #
 
+## Version 1.1.1 ##
+
+Date: 2016-03-19
+
+- Fix wrong call on IPrintWriter impl.
+- Add noConflict to externs.
+- Update cljs compiler to 1.8.34.
+
+
 ## Version 1.1.0 ##
 
 Date: 2016-03-18
