@@ -477,9 +477,9 @@
 ;; Utils
 
 (defn promisify
-  "Given a nodejs like function that accepts a callback
-  as the last argument and return an other function
-  that returns a promise."
+  "Given a function that accepts a callback as the last argument return other
+  function that returns a promise. Callback is expected to take single
+  parameter (result of a computation)."
   [callable]
   (fn [& args]
     (promise (fn [resolve reject]
