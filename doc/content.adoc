@@ -172,6 +172,11 @@ a compositions that looks like synchronous code with very clojure familiar
 ;; => 85
 ----
 
+[NOTE]
+====
+ClojureScript usage: if you're getting "Should be only used in alet macro." error, perhaps you forgot to add `:include-macros true` to the `require`.
+====
+
 The `alet` macro behaves identical to the `let` with the exception that it
 always return a promise and allows mark async operations with `await` placeholder
 making it looks like synchronous opetation.
