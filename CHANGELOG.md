@@ -1,5 +1,14 @@
 # Changelog #
 
+## Version 1.2.0 ##
+
+Date: 2016-05-20
+
+- Add more bluebird externs.
+- Docstrings improvements.
+- Update bluebird to 3.3.5
+
+
 ## Version 1.1.1 ##
 
 Date: 2016-03-19
