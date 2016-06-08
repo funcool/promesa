@@ -78,7 +78,7 @@
    (extend-type ScheduledExecutorService
      pt/IScheduler
      (-schedule [this ms func]
-       (let [fut (.schedule this func ms TimeUnit/MILLISECONDS)]
+       (let [fut (.schedule this ^Runnable func ^long ms TimeUnit/MILLISECONDS)]
          (scheduled-task fut)))))
 
 #?(:cljs

@@ -78,10 +78,10 @@
      (-rejected? [it]
        (.isRejected it))
      (-pending? [it]
-       (.isPending it)))
+       (.isPending it))))
 
-   :clj
-   (extend-type CompletionStage
+#?(:clj
+   (extend-type CompletableFuture
      pt/ICancellable
      (-cancel [it]
        (.cancel it true))
@@ -90,23 +90,20 @@
 
      pt/IPromise
      (-map [it cb]
-       (.thenApplyAsync it (reify Function
-                             (apply [_ v]
-                               (cb v)))
-                        +executor+))
+       (let [func (reify Function (apply [_ v] (cb v)))]
+         (.thenApplyAsync it ^Function func ^Executor +executor+)))
 
      (-bind [it cb]
-       (.thenComposeAsync it (reify Function
-                               (apply [_ v]
-                                 (cb v)))
-                          +executor+))
+       (let [func (reify Function (apply [_ v] (cb v)))]
+         (.thenComposeAsync it ^Function func ^Executor +executor+)))
 
      (-catch [it cb]
-       (.exceptionally it (reify Function
-                            (apply [_ e]
-                              (if (instance? CompletionException e)
-                                (cb (.getCause e))
-                                (cb e))))))
+       (let [func (reify Function
+                    (apply [_ e]
+                      (if (instance? CompletionException e)
+                        (cb (.getCause ^Exception e))
+                        (cb e))))]
+         (.exceptionally it ^Function func)))
 
      pt/IState
      (-extract [it]
@@ -221,7 +218,7 @@
 #?(:clj
    (defmethod print-method java.util.concurrent.CompletionStage
      [p ^java.io.Writer writer]
-     (.write writer (promise->str p)))
+     (.write writer ^String (promise->str p)))
    :cljs
    (extend-type Promise
      IPrintWithWriter
