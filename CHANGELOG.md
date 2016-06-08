@@ -1,5 +1,12 @@
 # Changelog #
 
+## Version 1.3.1 ##
+
+Date: 2016-06-08
+
+- Remove reflection warnings.
+
+
 ## Version 1.3.0 ##
 
 Date: 2016-06-08
@@ -9,6 +16,7 @@ Date: 2016-06-08
 - Fix bug in `finally` combinator function.
 - Add `do*` promise constructor (analogous to `Promise.attempt`).
 - Remove `promise.monad` namespace.
+
 
 ## Version 1.2.0 ##
 
