@@ -1,5 +1,15 @@
 # Changelog #
 
+## Version 1.3.0 ##
+
+Date: 2016-06-08
+
+- Update bluebird to 3.4.0
+- Improve internal impl (now splitted in few namespaces).
+- Fix bug in `finally` combinator function.
+- Add `do*` promise constructor (analogous to `Promise.attempt`).
+
+
 ## Version 1.2.0 ##
 
 Date: 2016-05-20
