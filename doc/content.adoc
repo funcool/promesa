@@ -13,9 +13,9 @@ Andrey Antukh, <niwi@niwi.nz>
 
 A promise library for Clojure and ClojureScript.
 
-On the JVM platform is built on top of *completable futures* (requires jdk8)
-and on JS platform is built on top of
-https://github.com/petkaantonov/bluebird/[bluebird] promise library.
+On the JVM platform is built on top of *completable futures* (requires jdk8) and on
+JS platform is built on top of https://github.com/petkaantonov/bluebird/[bluebird]
+promise library.
 
 
 === Project Maturity
@@ -29,11 +29,11 @@ Just include that in your depencency vector on *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "1.2.0"]
+[funcool/promesa "1.3.0"]
 ----
 
-This package requires JDK8 if you are using it on the JVM platform and
-all enviroments that *bluebird* library supports on the JS platform.
+This package requires JDK8 if you are using it on the JVM platform and all
+enviroments that *bluebird* library supports on the JS platform.
 
 
 == User guide
@@ -70,8 +70,8 @@ If a `promise` function receives a plain value, it returns a resolved promise wi
 the provided plain value. If it receives an instance of `Error`, it returns a
 rejected promise.
 
-Also, it accepts a factory callback that receives two callable parameters:
-`resolve` and `reject`. So you can use one or other to resolve or reject the promise
+Also, it accepts a factory callback that receives two callable parameters: `resolve`
+and `reject`. So you can use one or other to resolve or reject the promise
 respectively.
 
 .Example creating promise instance using a factory.
@@ -80,6 +80,26 @@ respectively.
 (p/promise (fn [resolve reject]
              (resolve 1)))
 ----
+
+An other way to create a promise is using a `do*` macro that works similar to the
+factory callback with the excepion that for resolve the promise instead of calling
+the `resolve` callback we just need to return the value:
+
+[source, clojure]
+----
+(p/do*
+  (let [a (rand-int 10)
+        b (rand-int 10)]
+    (+ a b)))
+----
+
+In `do*` blocks works similarly to the clojure `do` block, so you can put any
+expressions but only the last one will be returned and that expression can be a
+plain value or an other promise.
+
+If an exception is raised inside the `do*` block, it will return the rejected
+promise instead of reraising the exception on the stack.
+
 
 [NOTE]
 ====
@@ -102,8 +122,8 @@ its execution) is using the well known `map` function:
 ;; => 2
 ----
 
-For people more coming from js world, it there are also `then` function that
-works in the same way as `map` but with parameters inverted:
+For people more coming from js world, it there are also `then` function that works
+in the same way as `map` but with parameters inverted:
 
 [source, clojure]
 ----
@@ -114,7 +134,7 @@ works in the same way as `map` but with parameters inverted:
 ;; => 2
 ----
 
-If you want to apply multiple functions, instead of using multiple times `then` or 
+If you want to apply multiple functions, instead of using multiple times `then` or
 `map`, you can just use `chain`:
 
 [source, clojure]
@@ -127,8 +147,8 @@ If you want to apply multiple functions, instead of using multiple times `then` 
 ----
 
 It there also `mapcat` function that allows remove one neesting level of promises,
-and is pretty useful if the function that you want to apply to promise also return
-a promise instance instead of value:
+and is pretty useful if the function that you want to apply to promise also return a
+promise instance instead of value:
 
 [source, clojure]
 ----
@@ -148,9 +168,9 @@ implementation does that).
 
 === Async/Await Syntax
 
-The _promesa_ library comes with convenient sugar syntax that allows you create
-a compositions that looks like synchronous code with very clojure familiar
-`let` syntax:
+The _promesa_ library comes with convenient sugar syntax that allows you create a
+compositions that looks like synchronous code with very clojure familiar `let`
+syntax:
 
 .Example using async/await syntax.
 [source, clojure]
@@ -174,26 +194,27 @@ a compositions that looks like synchronous code with very clojure familiar
 
 [NOTE]
 ====
-ClojureScript usage: if you're getting "Should be only used in alet macro." error, perhaps you forgot to add `:include-macros true` to the `require`.
+ClojureScript usage: if you're getting "Should be only used in alet macro." error,
+perhaps you forgot to add `:include-macros true` to the `require`.
 ====
 
-The `alet` macro behaves identical to the `let` with the exception that it
-always return a promise and allows mark async operations with `await` placeholder
-making it looks like synchronous opetation.
+The `alet` macro behaves identical to the `let` with the exception that it always
+return a promise and allows mark async operations with `await` placeholder making it
+looks like synchronous opetation.
 
 If an error occurs at any step the entire composition will be short-circuited,
 returning exceptionally resolved promise.
 
-If you are not familiar with `async`/`await` syntax, you can read more
-about it link:http://jakearchibald.com/2014/es7-async-functions/[here].
+If you are not familiar with `async`/`await` syntax, you can read more about it
+link:http://jakearchibald.com/2014/es7-async-functions/[here].
 
 
 === Error handling
 
-One of the advantages of using promise abstraction is that it natively has
-a notion of error, so you don't need reinvent it. If some of the computations
-of the composed promise chain/pipeline raises an exception, that one is
-automatically propagated to the last promise making the effect of short-circuiting.
+One of the advantages of using promise abstraction is that it natively has a notion
+of error, so you don't need reinvent it. If some of the computations of the composed
+promise chain/pipeline raises an exception, that one is automatically propagated to
+the last promise making the effect of short-circuiting.
 
 Let see an example:
 
@@ -246,8 +267,8 @@ the `branch` function:
 In some circumstances you will want wait a completion of few promises at same time,
 and _promesa_ also provides helpers for that.
 
-Imagine that you have a collection of promises and you want to wait until
-all of them are resolved. This can be done using the `all` combinator:
+Imagine that you have a collection of promises and you want to wait until all of
+them are resolved. This can be done using the `all` combinator:
 
 [source, clojure]
 ----
@@ -257,8 +278,8 @@ all of them are resolved. This can be done using the `all` combinator:
               (do-something-with-results result1 result2))))
 ----
 
-It there are also circumstances where you only want arbitrary select of the
-first resolved promise. For this case, you can use the `any` combinator:
+It there are also circumstances where you only want arbitrary select of the first
+resolved promise. For this case, you can use the `any` combinator:
 
 [source, clojure]
 ----
