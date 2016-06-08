@@ -305,6 +305,24 @@
                           (t/is (= result 10))
                           (done)))))))
 
+
+(t/deftest do-expression
+  #?(:cljs
+     (t/async done
+       (let [error (ex-info "foo" {})
+             result (p/do* (throw error))]
+         (p/catch result (fn [e]
+                           (t/is (= e error))
+                           (done)))))
+     :clj
+     (let [error (ex-info "foo" {})
+           result (p/do* (throw error))
+           result @(p/catch result (fn [e]
+                                     (assert (= e error))
+                                     nil))]
+       (t/is (= nil result)))))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Entry Point
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -249,27 +249,23 @@
              (schedule t #(.complete p v))
              p))))
 
-;; #?(:cljs
-;;    (defn attempt*
-;;      [callback]
-;;      (promise (fn [resolve] (resolve (callback)))))
-;;    :clj
-;;    (defn attempt*
-;;      [callback]
-;;      (promise (fn [resolve]
-;;                 (let [result (callback)]
-;;                   (if (promise? result)
-;;                     (then result resolve)
-;;                     (resolve result)))))))
+(defn attempt
+  "A helper for start promise chain without worry about
+  synchronous or asynchronous exceptions. Returns a promise
+  resolved with the return value of the callback."
+  [callback]
+  #?(:cljs (promise (fn [resolve] (resolve (callback))))
+     :clj  (promise (fn [resolve reject]
+                      (let [result (callback)]
+                        (if (promise? result)
+                          (then result resolve)
+                          (resolve result)))))))
 
-;; #?(:clj
-;;    (defmacro attempt
-;;      "A sugar syntax that allows start a promise chain without
-;;      special handling for synchronous errors. Syncrhonous errors
-;;      will should be handled in the same way as asynchronous, using
-;;      `catch` or `error` combinators."
-;;      [& body]
-;;      `(attempt* #(do ~@body))))
+#?(:clj
+   (defmacro do*
+     "A sugar syntax on top of `attempt`."
+     [& body]
+     `(attempt #(do ~@body))))
 
 (defn await
   [& args]
