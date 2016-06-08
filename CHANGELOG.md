@@ -8,7 +8,7 @@ Date: 2016-06-08
 - Improve internal impl (now splitted in few namespaces).
 - Fix bug in `finally` combinator function.
 - Add `do*` promise constructor (analogous to `Promise.attempt`).
-
+- Remove `promise.monad` namespace.
 
 ## Version 1.2.0 ##
 
