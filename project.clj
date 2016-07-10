@@ -1,4 +1,4 @@
-(defproject funcool/promesa "1.3.1"
+(defproject funcool/promesa "1.4.0"
   :description "A promise library for ClojureScript"
   :url "https://github.com/funcool/promesa"
   :license {:name "BSD (2 Clause)"
@@ -10,8 +10,12 @@
   :source-paths ["src" "assets"]
   :test-paths ["test"]
   :jar-exclusions [#"\.swp|\.swo|user.clj"]
-  :codeina {:sources ["src"]
-            :reader :clojure
-            :target "doc/dist/latest/api"}
-  :plugins [[funcool/codeina "0.3.0"]
-            [lein-ancient "0.6.7" :exclusions [org.clojure/tools.reader]]])
+
+  :profiles
+  {:dev
+   {:source-paths ["dev"]
+    :codeina {:sources ["src"]
+              :reader :clojure
+              :target "doc/dist/latest/api"}
+    :plugins [[funcool/codeina "0.4.0"]
+              [lein-ancient "0.6.10" :exclusions [org.clojure/tools.reader]]]}})
