@@ -13,7 +13,8 @@
 
   :profiles
   {:dev
-   {:source-paths ["dev"]
+   {:dependencies [[com.cognitect/transit-cljs "0.8.239"]]
+    :source-paths ["dev/src"]
     :codeina {:sources ["src"]
               :reader :clojure
               :target "doc/dist/latest/api"}

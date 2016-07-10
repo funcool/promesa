@@ -12,4 +12,5 @@ pom.xml.asc
 /out
 /repl
 /node_modules
+/dev/dist
 /dist
