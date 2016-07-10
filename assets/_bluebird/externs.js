@@ -4,6 +4,11 @@
 var Promise = function() {};
 
 /**
+ * @constructor
+ */
+var P = Promise;
+
+/**
  * @this {Promise}
  * @return {null}
  */
