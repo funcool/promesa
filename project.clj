@@ -4,7 +4,7 @@
   :license {:name "BSD (2 Clause)"
             :url "http://opensource.org/licenses/BSD-2-Clause"}
   :dependencies [[org.clojure/clojure "1.8.0" :scope "provided"]
-                 [org.clojure/clojurescript "1.9.36" :scope "provided"]]
+                 [org.clojure/clojurescript "1.9.216" :scope "provided"]]
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
   :source-paths ["src" "assets"]
@@ -18,5 +18,5 @@
     :codeina {:sources ["src"]
               :reader :clojure
               :target "doc/dist/latest/api"}
-    :plugins [[funcool/codeina "0.4.0"]
+    :plugins [[funcool/codeina "0.5.0"]
               [lein-ancient "0.6.10" :exclusions [org.clojure/tools.reader]]]}})
