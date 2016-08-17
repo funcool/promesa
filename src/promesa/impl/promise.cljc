@@ -90,16 +90,26 @@
 
      pt/IPromise
      (-map [it cb]
-       (let [func (reify Function (apply [_ v] (cb v)))]
+       (let [binds (clojure.lang.Var/getThreadBindingFrame)
+             func (reify Function
+                    (apply [_ v]
+                      (clojure.lang.Var/resetThreadBindingFrame binds)
+                      (cb v)))]
          (.thenApplyAsync it ^Function func ^Executor +executor+)))
 
      (-bind [it cb]
-       (let [func (reify Function (apply [_ v] (cb v)))]
+       (let [binds (clojure.lang.Var/getThreadBindingFrame)
+             func (reify Function
+                    (apply [_ v]
+                      (clojure.lang.Var/resetThreadBindingFrame binds)
+                      (cb v)))]
          (.thenComposeAsync it ^Function func ^Executor +executor+)))
 
      (-catch [it cb]
-       (let [func (reify Function
+       (let [binds (clojure.lang.Var/getThreadBindingFrame)
+             func (reify Function
                     (apply [_ e]
+                      (clojure.lang.Var/resetThreadBindingFrame binds)
                       (if (instance? CompletionException e)
                         (cb (.getCause ^Exception e))
                         (cb e))))]
