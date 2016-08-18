@@ -1,13 +1,20 @@
 # Changelog #
 
+## Version 1.5.0 ##
+
+Date: 2016-08-18
+
+- Make promise aware of clojure dynamic binding context (clj only).
+
+
 ## Version 1.4.0 ##
 
-Date: 2015-07-10
+Date: 2016-07-10
 
 - Update bluebird to 3.4.1
 - Add missing Promise alias on externs (that fixes unexpected
   exceptions on advanced compilation modes).
-  
+
 
 ## Version 1.3.1 ##
 
