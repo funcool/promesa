@@ -175,7 +175,7 @@
            p3 (p/mapcat inc p2)]
        (t/is (= @p3 4)))))
 
-(t/deftest canclel-scheduled-task
+(t/deftest cancel-scheduled-task
   #?(:cljs
      (t/async done
        (let [value (volatile! nil)
