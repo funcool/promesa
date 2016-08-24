@@ -141,7 +141,7 @@
      (let [p1 (future-ok 200 2)
            p2 (p/then p1 inc)
            p3 (p/then p2 inc)]
-       (t/is @p3 4))))
+       (t/is (= @p3 4)))))
 
 (t/deftest chaining-using-map
   #?(:cljs
@@ -156,7 +156,7 @@
      (let [p1 (future-ok 200 2)
            p2 (p/map inc p1)
            p3 (p/map inc p2)]
-       (t/is @p3 4))))
+       (t/is (= @p3 4)))))
 
 (t/deftest chaining-using-mapcat
   #?(:cljs
@@ -173,9 +173,9 @@
            inc #(p/resolved (inc %))
            p2 (p/mapcat inc p1)
            p3 (p/mapcat inc p2)]
-       (t/is @p3 4))))
+       (t/is (= @p3 4)))))
 
-(t/deftest canclel-scheduled-task
+(t/deftest cancel-scheduled-task
   #?(:cljs
      (t/async done
        (let [value (volatile! nil)
