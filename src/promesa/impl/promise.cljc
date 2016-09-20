@@ -45,7 +45,6 @@
    (.config Promise #js {:cancellation true
                          :warnings false}))
 
-;; TODO: move to executors
 #?(:clj
    (def ^:redef +executor+
      (ForkJoinPool/commonPool)))
