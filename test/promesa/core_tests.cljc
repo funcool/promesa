@@ -1,11 +1,11 @@
 (ns promesa.core-tests
   (:require #?(:cljs [cljs.test :as t]
                :clj [clojure.test :as t])
-            [promesa.core :as p :include-macros true]))
+            #?(:clj [promesa.async :refer [async]]
+               :cljs [promesa.async-cljs :refer-macros [async]])
+            [promesa.core :as p]))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Helpers
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; --- Helpers
 
 (defn future-ok
   [sleep value]
@@ -17,9 +17,7 @@
   (p/promise (fn [_ reject]
                (p/schedule sleep #(reject value)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Core Interface Tests
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; --- Core Interface Tests
 
 (t/deftest print-promise
   (t/is (string? (pr-str (p/promise nil)))))
@@ -283,6 +281,7 @@
        :clj
        (t/is (= @p ::value)))))
 
+;; --- alet (async let) tests
 
 #?(:clj
    (t/deftest async-let
@@ -305,6 +304,7 @@
                           (t/is (= result 10))
                           (done)))))))
 
+;; --- Do Expression tests
 
 (t/deftest do-expression
   #?(:cljs
@@ -323,10 +323,28 @@
        (t/is (= nil result)))))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Entry Point
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; --- `async` macro tests
 
+(t/deftest async-macro
+  (letfn [(do-stuff [i]
+            (async
+              (loop [sum 0
+                     c 0]
+                (if (< c i)
+                  (do
+                    (p/await (p/delay 10))
+                    (recur (+ sum i) (inc c)))
+                  sum))))]
+    #?(:cljs
+       (t/async done
+         (p/then (do-stuff 10)
+                 (fn [result]
+                   (t/is (= 100 result))
+                   (done))))
+       :clj
+       (t/is (= 100 @(do-stuff 10))))))
+
+;; --- Entry Point
 
 #?(:cljs (enable-console-print!))
 #?(:cljs (set! *main-cli-fn* #(t/run-tests)))
