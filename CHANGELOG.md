@@ -2,12 +2,13 @@
 
 ## Version 1.6.0 ##
 
-Date: unreleased
+Date: 2016-11-02
 
 - Add `async` macro that uses `core.async` machinary in order to build `go`
   like macro and allow to have fully async/await syntax.
 - Update bluebird to 3.4.6 (cljs underlying promise impl library).
 - Add support experimental support for native promises and other thenables.
+- Remove usage of `clj->js` and `js->clj` functions.
 
 
 ## Version 1.5.0 ##
