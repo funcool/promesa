@@ -64,11 +64,19 @@
        (t/is (= @p1 1)))))
 
 (t/deftest promise-from-exception
-  (let [e (ex-info "foo" {})
-        p1 (p/promise e)]
-    (t/is (p/rejected? p1))
-    (p/catch p1 (fn [x]
-                  (t/is (= x e))))))
+  #?(:clj
+     (let [e (ex-info "foo" {})
+           p1 (p/promise e)]
+       (t/is (p/rejected? p1))
+       (t/is (= e @@(p/catch p1 (fn [x] (reduced x))))))
+     :cljs
+     (t/async done
+     (let [e (ex-info "foo" {})
+           p1 (p/promise e)]
+       (t/is (p/rejected? p1))
+       (p/catch p1 (fn [x]
+                     (t/is (= e x))
+                     (done)))))))
 
 (t/deftest promise-rejected
   (let [e1 (ex-info "foobar" {})
@@ -324,6 +332,18 @@
 
 
 ;; --- `async` macro tests
+
+(defn my-func
+  [i]
+  (async
+    (loop [sum 0
+           c 0]
+      (if (< c i)
+        (do
+          (p/await (p/delay 10))
+          (recur (+ sum i) (inc c)))
+        sum))))
+
 
 (t/deftest async-macro
   (letfn [(do-stuff [i]
