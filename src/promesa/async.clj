@@ -24,7 +24,7 @@
 
 (ns promesa.async
   "core.async like facilities for dealing with asynchronous
-  callback hell with promises."
+  callback hell with promises (experimental)."
   (:require [promesa.core :as p]
             [promesa.impl.promise :as ps]
             [promesa.impl.proto :as pt]

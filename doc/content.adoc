@@ -29,7 +29,7 @@ Just include that in your depencency vector on *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "1.5.0"]
+[funcool/promesa "1.6.0"]
 ----
 
 This package requires JDK8 if you are using it on the JVM platform and all
@@ -248,9 +248,10 @@ version of macro in `promesa.async-cljs` namespace.
 ----
 ====
 
-
 If you are not familiar with `async`/`await` syntax, you can read more about it
 link:http://jakearchibald.com/2014/es7-async-functions/[here].
+
+WARNING: experimental
 
 
 === Error handling

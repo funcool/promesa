@@ -24,7 +24,7 @@
 
 (ns promesa.async-cljs
   "core.async like facilities for dealing with asynchronous
-  callback hell with promises.
+  callback hell with promises (experimental).
 
   This is a clojurescript version of the macros."
   #?(:cljs
