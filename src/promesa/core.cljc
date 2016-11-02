@@ -181,22 +181,20 @@
   that is fulfilled  when all the items in the
   array are fulfilled."
   [promises]
-  #?(:cljs (then (.all Promise (clj->js promises))
-                 #(js->clj %))
-     :clj (let [xf (clojure.core/map pt/-promise)
-                ps (into [] xf promises)]
-            (then (-> (into-array CompletableFuture ps)
-                      (CompletableFuture/allOf))
+  #?(:cljs (then (.all Promise (into-array promises)) vec)
+     :clj (let [promises (clojure.core/map pt/-promise promises)]
+            (then (->> (into-array CompletableFuture promises)
+                       (CompletableFuture/allOf))
                   (fn [_]
-                    (mapv pt/-extract ps))))))
+                    (mapv pt/-extract promises))))))
 
 (defn any
   "Given an array of promises, return a promise
   that is fulfilled when first one item in the
   array is fulfilled."
   [promises]
-  #?(:cljs (.any Promise (clj->js promises))
-     :clj (->> (sequence (clojure.core/map pt/-promise) promises)
+  #?(:cljs (.any Promise (into-array promises))
+     :clj (->> (clojure.core/map pt/-promise promises)
                (into-array CompletableFuture)
                (CompletableFuture/anyOf))))
 
