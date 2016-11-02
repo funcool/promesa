@@ -79,6 +79,18 @@
      (-pending? [it]
        (.isPending it))))
 
+(declare resolved)
+
+#?(:cljs
+   (extend-type default
+     pt/IPromise
+     (-map [it cb]
+       (pt/-map (resolved it) cb))
+     (-bind [it cb]
+       (pt/-bind (resolved it) cb))
+     (-catch [it cb]
+       (pt/-catch (resolved it) cb))))
+
 #?(:clj
    (extend-type CompletableFuture
      pt/ICancellable
