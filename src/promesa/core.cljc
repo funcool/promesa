@@ -148,11 +148,14 @@
   "Catch all promise chain helper."
   ([p f]
    (pt/-catch p f))
-  ([p type f]
-   (pt/-catch p (fn [e]
-                 (if (instance? type e)
-                   (f e)
-                   (pm/rejected e))))))
+  ([p pred-or-type f]
+   (let [accept? (if (ifn? pred-or-type)
+                   pred-or-type
+                   #(instance? pred-or-type %))]
+     (pt/-catch p (fn [e]
+                    (if (accept? e)
+                      (f e)
+                      (pm/rejected e)))))))
 
 (defn error
   "Same as `catch` but with parameters inverted."
