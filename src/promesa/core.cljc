@@ -172,8 +172,8 @@
   resolved or rejected."
   [p callback]
   #?(:clj (-> p
-              (then #(callback))
-              (catch #(callback)))
+              (then (fn [_] (callback)))
+              (catch (fn [_] (callback))))
      :cljs (.finally p callback)))
 
 (defn all
