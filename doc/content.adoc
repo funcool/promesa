@@ -25,7 +25,7 @@ Since _promesa_ is a young project there may be some API breakage.
 
 === Install
 
-Just include that in your depencency vector on *_project.clj_*:
+Just include that in your dependency vector on *_project.clj_*:
 
 [source,clojure]
 ----
@@ -33,7 +33,7 @@ Just include that in your depencency vector on *_project.clj_*:
 ----
 
 This package requires JDK8 if you are using it on the JVM platform and all
-enviroments that *bluebird* library supports on the JS platform.
+environments that *bluebird* library supports on the JS platform.
 
 
 == User guide
@@ -46,7 +46,7 @@ operation that has the notion of error.
 This is a list of possible states of one promise:
 
 - `resolved`: means that the promise contains a value.
-- `rejected`: means thet the promise contains an error.
+- `rejected`: means that the promise contains an error.
 - `pending`: means that the promise does not have value.
 
 The promise can be considered *done* when is resolved or rejected.
@@ -82,7 +82,7 @@ respectively.
 ----
 
 An other way to create a promise is using a `do*` macro that works similar to the
-factory callback with the excepion that for resolve the promise instead of calling
+factory callback with the exception that for resolve the promise instead of calling
 the `resolve` callback we just need to return the value:
 
 [source, clojure]
@@ -98,13 +98,13 @@ expressions but only the last one will be returned and that expression can be a
 plain value or an other promise.
 
 If an exception is raised inside the `do*` block, it will return the rejected
-promise instead of reraising the exception on the stack.
+promise instead of re-raising the exception on the stack.
 
 
 [NOTE]
 ====
-In both platforms the promise factory function is executed synchrously and
-making it blocking or not blocking is user responsability.
+In both platforms the promise factory function is executed synchronously and
+making it blocking or not blocking is user responsibility.
 ====
 
 
@@ -146,7 +146,7 @@ If you want to apply multiple functions, instead of using multiple times `then` 
 ;; => 4
 ----
 
-It there also `mapcat` function that allows remove one neesting level of promises,
+It there also `mapcat` function that allows remove one nesting level of promises,
 and is pretty useful if the function that you want to apply to promise also return a
 promise instance instead of value:
 
@@ -195,7 +195,7 @@ syntax:
 
 The `alet` macro behaves identical to the `let` with the exception that it always
 return a promise and allows mark async operations with `await` placeholder making it
-looks like synchronous opetation.
+looks like synchronous operation.
 
 If an error occurs at any step the entire composition will be short-circuited,
 returning exceptionally resolved promise.
@@ -226,7 +226,7 @@ As expected, it returns a promise which will be resolved with result of the body
 when completed.
 
 If you are familiar with *core.async* `go` macro, `async` macro works
-in the same way (in fact, it uses core.async machinary to archive
+in the same way (in fact, it uses core.async machinery to archive
 that).
 
 [NOTE]
