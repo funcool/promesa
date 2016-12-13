@@ -22,7 +22,7 @@
 ;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ;; THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-(ns promesa.impl.proto
+(ns promesa.protocols
   "A generic promise abstraction and related protocols.")
 
 (defprotocol IPromise

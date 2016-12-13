@@ -30,8 +30,7 @@
   #?(:cljs
      (:require-macros [cljs.core.async.impl.ioc-macros :as ioc]))
   (:require [promesa.core :as p]
-            [promesa.impl.promise :as ps]
-            [promesa.impl.proto :as pt]
+            [promesa.protocols :as pt]
             #?(:clj [cljs.core.async.impl.ioc-macros :as ioc])
             #?@(:cljs [[cljs.core.async.impl.dispatch :as dispatch]
                        [cljs.core.async.impl.ioc-helpers :as ioc-helpers]])))

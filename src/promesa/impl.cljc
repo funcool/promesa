@@ -22,9 +22,10 @@
 ;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ;; THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-(ns promesa.impl.promise
-  (:require #?(:cljs [org.bluebird])
-            [promesa.impl.proto :as pt])
+(ns promesa.impl
+  "Implementation of promise protocols."
+  (:require [promesa.protocols :as pt]
+            #?(:cljs [org.bluebird]))
   #?(:clj (:import java.util.concurrent.CompletableFuture
                    java.util.concurrent.CompletionStage
                    java.util.concurrent.TimeoutException
@@ -38,27 +39,17 @@
 
 ;; --- Global Constants
 
-#?(:cljs
-   (def ^:const Promise (js/Promise.noConflict)))
-
-#?(:cljs
-   (.config Promise #js {:cancellation true
-                         :warnings false}))
-
 #?(:clj
    (def ^:redef +executor+
      (ForkJoinPool/commonPool)))
+
+#?(:cljs
+   (def ^:const Promise (js/Promise.noConflict)))
 
 ;; --- Promise Impl
 
 #?(:cljs
    (extend-type Promise
-     pt/ICancellable
-     (-cancel [it]
-       (.cancel it))
-     (-cancelled? [it]
-       (.isCancelled it))
-
      pt/IPromise
      (-map [it cb]
        (.then it #(cb %)))
@@ -70,8 +61,8 @@
      pt/IState
      (-extract [it]
        (if (.isRejected it)
-         (.reason it)
-         (.value it)))
+         (.getCause it)
+         (.getValue it)))
      (-resolved? [it]
        (.isFulfilled it))
      (-rejected? [it]

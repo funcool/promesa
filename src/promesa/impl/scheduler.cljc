@@ -25,7 +25,7 @@
 (ns promesa.impl.scheduler
   "Scheduler helpers implementation. This is private api
   and should not used directly."
-  (:require [promesa.impl.proto :as pt])
+  (:require [promesa.protocols :as pt])
   #?(:clj
      (:import java.util.concurrent.ScheduledExecutorService
               java.util.concurrent.Executors
