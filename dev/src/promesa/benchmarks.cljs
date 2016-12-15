@@ -43,6 +43,19 @@
     (.then pm (fn [result]
                     (js/console.timeEnd "es6")))))
 
+(defn benchmark-zousan-promise
+  [ops]
+  (let [items (vec (range 1 ops))
+        _     (js/console.time "zousan")
+        pm    (reduce (fn [acc item]
+                        (.then acc (fn [n]
+                                     (.then (.all js/Zousan (into-array (range n)))
+                                            (constantly item)))))
+                      (js/Zousan.resolve 0)
+                      items)]
+    (.then pm (fn [result]
+                    (js/console.timeEnd "zousan")))))
+
 (defn benchmark-goog-promise
   [ops]
   (let [items (vec (range 1 ops))
@@ -68,6 +81,9 @@
        (p/mapcat (fn [_]
                    (println "lib=es6 number=500")
                    (benchmark-es6-promise 500)))
+       (p/mapcat (fn [_]
+                   (println "lib=zousan number=500")
+                   (benchmark-zousan-promise 500)))
        (p/mapcat (fn [_]
                    (println "lib=goog number=500")
                    (benchmark-goog-promise 500)))
