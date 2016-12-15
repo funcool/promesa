@@ -26,8 +26,8 @@
   "core.async like facilities for dealing with asynchronous
   callback hell with promises (experimental)."
   (:require [promesa.core :as p]
-            [promesa.impl.promise :as ps]
-            [promesa.impl.proto :as pt]
+            [promesa.impl :as impl]
+            [promesa.protocols :as pt]
             [clojure.core.async.impl.ioc-macros :as ioc]))
 
 (def ^:const PROMISE-IDX ioc/USER-START-IDX)
@@ -62,7 +62,7 @@
   {:no-doc true
    :internal true}
   [f]
-  (.execute ps/+executor+ ^Runnable f))
+  (.execute impl/+executor+ ^Runnable f))
 
 
 (defmacro async

@@ -1,5 +1,12 @@
 # Changelog #
 
+## Version 1.7.0 ##
+
+Date: 2016-12-14
+
+- Fix clojure `finally` implementation.
+
+
 ## Version 1.6.0 ##
 
 Date: 2016-11-02

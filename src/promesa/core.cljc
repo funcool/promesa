@@ -24,8 +24,8 @@
 
 (ns promesa.core
   (:refer-clojure :exclude [delay spread promise await map mapcat])
-  (:require [promesa.impl.promise :as pm]
-            [promesa.impl.proto :as pt]
+  (:require [promesa.protocols :as pt]
+            [promesa.impl :as impl]
             [promesa.impl.scheduler :as ps])
   #?(:clj
      (:import java.util.concurrent.CompletableFuture
@@ -33,14 +33,12 @@
 
 ;; --- Global Constants
 
-#?(:cljs (def ^:const Promise pm/Promise))
-
 #?(:clj
    (defn set-executor!
      "Replace the default executor instance with
      your own instance."
      [executor]
-     (alter-var-root #'pm/+executor+ (constantly executor))))
+     (alter-var-root #'impl/+executor+ (constantly executor))))
 
 ;; --- Scheduling helpers
 
@@ -58,12 +56,12 @@
 (defn resolved
   "Return a resolved promise with provided value."
   [v]
-  (pm/resolved v))
+  (impl/resolved v))
 
 (defn rejected
   "Return a rejected promise with provided reason."
   [v]
-  (pm/rejected v))
+  (impl/rejected v))
 
 (defn promise
   "The promise constructor."
@@ -155,7 +153,7 @@
      (pt/-catch p (fn [e]
                     (if (accept? e)
                       (f e)
-                      (pm/rejected e)))))))
+                      (impl/rejected e)))))))
 
 (defn error
   "Same as `catch` but with parameters inverted."
