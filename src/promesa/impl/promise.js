@@ -10,8 +10,6 @@
  */
 
 goog.provide("promesa.impl.promise");
-goog.provide("promesa.impl.promise.Promise");
-
 goog.require("promesa.impl.soon");
 
 goog.scope(function() {

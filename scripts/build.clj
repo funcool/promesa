@@ -4,10 +4,10 @@
 
 (let [start (System/nanoTime)]
   (b/build
-   (b/inputs "test" "src" "assets")
+   (b/inputs "test" "src")
    {:main 'promesa.core-tests
     :output-to "out/tests.js"
-    :output-dir "out"
+    :output-dir "out/tests"
     :target :nodejs
     :pretty-print true
     :optimizations :advanced

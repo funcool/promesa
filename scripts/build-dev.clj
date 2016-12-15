@@ -6,11 +6,11 @@
    :output-dir "dev/dist/main"
    :optimizations :advanced
    :language-in  :ecmascript5
-    :language-out :ecmascript5
+   :language-out :ecmascript5
    :verbose true})
 
 (def inputs
-  (b/inputs "dev/src" "src" "assets"))
+  (b/inputs "dev/src" "src"))
 
 (println "Building ...")
 
