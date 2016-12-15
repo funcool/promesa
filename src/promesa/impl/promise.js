@@ -11,11 +11,14 @@
 
 goog.provide("promesa.impl.promise");
 goog.provide("promesa.impl.promise.Promise");
+
 goog.require("promesa.impl.soon");
 
 goog.scope(function() {
   var soon = promesa.impl.soon;
   var module = promesa.impl.promise;
+
+  var _seed = {};
 
   var _undefined;
   var STATE_PENDING;
@@ -44,12 +47,23 @@ goog.scope(function() {
     }
   }
 
+  /**
+   * @constructor
+   */
   function Promise(func) {
     if (func) {
-      func(this.resolve.bind(this), this.reject.bind(this));
+      try {
+        func(this.resolve.bind(this), this.reject.bind(this));
+      } catch(e) {
+        this.reject(e);
+      }
     }
   }
 
+  /**
+   * @this {Promise}
+   * @return {undefined}
+   */
   Promise.prototype.resolve = function(value) {
     if (this.state !== STATE_PENDING) {
       return;
@@ -71,11 +85,10 @@ goog.scope(function() {
                     function(rr) { if(first) { first=false; that.reject(rr); } });
           return;
         }
+      } catch(e) {
+          if(first) this.reject(e);
+          return;
       }
-    }
-    catch(e) {
-      if(first) this.reject(e);
-      return;
     }
 
     this.state = STATE_FULFILLED;
@@ -89,7 +102,11 @@ goog.scope(function() {
     }
   };
 
-  Promise.prototype.reject = function() {
+  /**
+   * @this {Promise}
+   * @return {undefined}
+   */
+  Promise.prototype.reject = function(reason) {
     if(this.state !== STATE_PENDING) {
       return;
     }
@@ -111,8 +128,12 @@ goog.scope(function() {
     }
   };
 
-  then: function(onF,onR) {
-    var p = new Zousan();
+  /**
+   * @this {Promise}
+   * @return {Promise}
+   */
+  Promise.prototype.then = function(onF,onR) {
+    var p = new Promise();
     var client = {y:onF, n:onR, p:p};
 
     if(this.state === STATE_PENDING) {
@@ -132,56 +153,93 @@ goog.scope(function() {
           rejectClient(client, a);
         }
       });
-    }
+    };
 
     return p;
   };
 
+  /**
+   * @this {Promise}
+   * @return {Promise}
+   */
   Promise.prototype.catch = function(cfn) {
     return this.then(null, cfn);
   };
 
+  /**
+   * @this {Promise}
+   * @return {Promise}
+   */
   Promise.prototype.finally = function(cfn) {
     return this.then(cfn, cfn);
   };
 
+  /**
+   * @this {Promise}
+   * @return {boolean}
+   */
   Promise.prototype.isRejected = function() {
     return this.state === STATE_REJECTED;
   };
 
+  /**
+   * @this {Promise}
+   * @return {boolean}
+   */
   Promise.prototype.isFulfilled = function() {
     return this.state === STATE_FULFILLED;
   };
 
+  /**
+   * @this {Promise}
+   * @return {boolean}
+   */
   Promise.prototype.isPending = function() {
     return this.state === STATE_PENDING;
   };
 
+  /**
+   * @this {Promise}
+   * @return {any}
+   */
   Promise.prototype.getValue = function() {
     if (this.state === STATE_FULFILLED) {
       return this.v;
     }
   };
 
+  /**
+   * @this {Promise}
+   * @return {any}
+   */
   Promise.prototype.getCause = function() {
     if (this.state === STATE_REJECTED) {
       return this.v;
     }
   };
 
-  Promise.resolve = function(v) {
+  /**
+   * @return {Promise}
+   */
+  module.resolve = function(v) {
     var z = new Promise();
     z.resolve(v);
     return z;
   };
 
-  Promise.reject = function(v) {
+  /**
+   * @return {Promise}
+   */
+  module.reject = function(v) {
     var z = new Promise();
     z.reject(v);
     return z;
   };
 
-  Promise.all = function(pa) {
+  /**
+   * @return {Promise}
+   */
+  module.all = function(pa) {
     var results = [];
     var rc = 0;
     var retP = new Promise(); // results and resolved count
@@ -210,13 +268,54 @@ goog.scope(function() {
     }
 
     return retP;
-  }
+  };
 
-  module.Promise = Promise;
+  /**
+   * @return {Promise}
+   */
+  module.any = function(pa) {
+    var result = _seed;
+    var retp = new Promise();
+
+    function rp(p, i) {
+      if(!p || typeof p.then !== "function") {
+        p = module.resolve(p);
+      }
+
+      p.then(function(yv) {
+        if (result === _seed) {
+          result = yv;
+          retp.resolve(result);
+        }
+      }, function(nv) {
+        if (result === _seed) {
+          result = nv;
+          retp.reject(nv);
+        }
+      });
+    }
+
+    for(var x=0; x<pa.length; x++) {
+      rp(pa[x],x);
+    }
+
+    // For zero length arrays, resolve immediately
+    if(!pa.length) {
+      retP.resolve(result);
+    }
+
+    return retp;
+  };
+
+  /**
+   * @return {Promise}
+   */
   module.promise = function(v) {
     return new Promise(v);
   };
-}
+
+  module.Promise = Promise;
+});
 
 
 

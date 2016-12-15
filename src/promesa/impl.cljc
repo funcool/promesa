@@ -25,9 +25,8 @@
 (ns promesa.impl
   "Implementation of promise protocols."
   (:require [promesa.protocols :as pt]
-            #?(:cljs [promesa.impl.promise :as ps]))
-  #?( ;;:cljs (:import promesa.impl.promise.Promise)
-     :clj (:import java.util.concurrent.CompletableFuture
+            #?(:cljs [promesa.impl.promise :as pm]))
+  #?(:clj (:import java.util.concurrent.CompletableFuture
                    java.util.concurrent.CompletionStage
                    java.util.concurrent.TimeoutException
                    java.util.concurrent.ExecutionException
@@ -47,7 +46,7 @@
 ;; --- Promise Impl
 
 #?(:cljs
-   (extend-type ps/Promise
+   (extend-type pm/Promise
      pt/IPromise
      (-map [it cb]
        (.then it #(cb %)))
@@ -141,14 +140,14 @@
 
 (defn resolved
   [v]
-  #?(:cljs (.resolve Promise v))
+  #?(:cljs (pm/resolve v)
      :clj (let [p (CompletableFuture.)]
             (.complete p v)
             p)))
 
 (defn rejected
   [v]
-  #?(:cljs (.reject Promise v)
+  #?(:cljs (pm/reject v)
      :clj (let [p (CompletableFuture.)]
             (.completeExceptionally p v)
             p)))
@@ -185,9 +184,9 @@
    (extend-protocol pt/IPromiseFactory
      function
      (-promise [func]
-       (Promise. func))
+       (pm/Promise. func))
 
-     Promise
+     pm/Promise
      (-promise [p] p)
 
      js/Error
@@ -230,7 +229,7 @@
      [p ^java.io.Writer writer]
      (.write writer ^String (promise->str p)))
    :cljs
-   (extend-type Promise
+   (extend-type pm/Promise
      IPrintWithWriter
      (-pr-writer [p writer opts]
        (-write writer (promise->str p)))))

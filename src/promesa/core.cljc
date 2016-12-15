@@ -26,7 +26,8 @@
   (:refer-clojure :exclude [delay spread promise await map mapcat])
   (:require [promesa.protocols :as pt]
             [promesa.impl :as impl]
-            [promesa.impl.scheduler :as ps])
+            [promesa.impl.scheduler :as ps]
+            #?(:cljs [promesa.impl.promise :as pm]))
   #?(:clj
      (:import java.util.concurrent.CompletableFuture
               java.util.concurrent.CompletionStage)))
@@ -72,7 +73,7 @@
   "Return true if `v` is a promise instance."
   [v]
   #?(:clj (instance? CompletionStage v)
-     :cljs (instance? Promise v)))
+     :cljs (instance? pm/Promise v)))
 
 ;; Predicates
 
@@ -179,7 +180,7 @@
   that is fulfilled  when all the items in the
   array are fulfilled."
   [promises]
-  #?(:cljs (then (.all Promise (into-array promises)) vec)
+  #?(:cljs (then (pm/all (into-array promises)) vec)
      :clj (let [promises (clojure.core/map pt/-promise promises)]
             (then (->> (into-array CompletableFuture promises)
                        (CompletableFuture/allOf))
@@ -191,7 +192,7 @@
   that is fulfilled when first one item in the
   array is fulfilled."
   [promises]
-  #?(:cljs (.any Promise (into-array promises))
+  #?(:cljs (pm/any (into-array promises))
      :clj (->> (clojure.core/map pt/-promise promises)
                (into-array CompletableFuture)
                (CompletableFuture/anyOf))))
@@ -242,11 +243,13 @@
   time is reached."
   ([t] (delay t nil))
   ([t v]
-   #?(:cljs (.then (.delay Promise t)
-                   (constantly v))
-      :clj (let [p (CompletableFuture.)]
-             (schedule t #(.complete p v))
-             p))))
+   #?(:cljs (let [p (pm/Promise.)]
+              (schedule t #(.resolve p v))
+              p)
+
+      :clj  (let [p (CompletableFuture.)]
+              (schedule t #(.complete p v))
+              p))))
 
 (defn attempt
   "A helper for start promise chain without worry about
