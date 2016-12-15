@@ -390,6 +390,37 @@ The tasks can be cancelled using its return value:
 (p/cancel! task)
 ----
 
+== FAQ
+
+=== Why bluebird instead of es6 promise?
+
+Because it is the state of the art and the most performant promise implementation.
+
+Let see some home made benchmarks:
+
+[source, text]
+----
+lib=promesa number=500
+promesa: 25.144ms
+
+lib=promesa-raw number=500
+promesa-raw: 15.646ms
+
+lib=es6 number=500
+es6: 2426.458ms
+
+lib=zousan number=500
+zousan: 114.634ms
+
+lib=goog number=500
+goog: 239.821ms
+----
+
+
+The `promesa-raw` lib refers to the raw usage of *bluebird* library
+and as you can observe, `promesa` has some overhead. But it is nothing
+important if you compare it with the rest of libraries.
+
 
 == Developers Guide
 
