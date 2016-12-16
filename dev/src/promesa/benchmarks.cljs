@@ -10,7 +10,7 @@
         _     (js/console.time "promesa")
         pm    (reduce (fn [acc item]
                         (p/then acc (fn [n]
-                                      (p/then (p/all (mapv p/promise (range n)))
+                                      (p/then (p/all (range n))
                                               (constantly item)))))
                       (p/resolved 0)
                       items)]
