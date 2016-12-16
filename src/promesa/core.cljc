@@ -181,7 +181,7 @@
   that is fulfilled  when all the items in the
   array are fulfilled."
   [promises]
-  #?(:cljs (then (.all Promise (into-array promises)) vec)
+  #?(:cljs (.all Promise (into-array promises))
      :clj (let [promises (clojure.core/map pt/-promise promises)]
             (then (->> (into-array CompletableFuture promises)
                        (CompletableFuture/allOf))
