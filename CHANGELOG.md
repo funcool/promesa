@@ -1,5 +1,13 @@
 # Changelog #
 
+## Version 1.7.0 ##
+
+Date: 2016-12-18
+
+- Fix clojure `finally` implementation.
+- Minor internal refactor. Public api should be fully backward compatible.
+
+
 ## Version 1.6.0 ##
 
 Date: 2016-11-02
