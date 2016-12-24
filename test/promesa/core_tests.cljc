@@ -3,19 +3,9 @@
                :clj [clojure.test :as t])
             #?(:clj [promesa.async :refer [async]]
                :cljs [promesa.async-cljs :refer-macros [async]])
+            #?(:cljs [promesa.issue-36 :refer [async-let-issue-36]])
+            [promesa.test-helpers :refer [future-ok future-fail]]
             [promesa.core :as p]))
-
-;; --- Helpers
-
-(defn future-ok
-  [sleep value]
-  (p/promise (fn [resolve reject]
-               (p/schedule sleep #(resolve value)))))
-
-(defn future-fail
-  [sleep value]
-  (p/promise (fn [_ reject]
-               (p/schedule sleep #(reject value)))))
 
 ;; --- Core Interface Tests
 
@@ -312,6 +302,16 @@
                           (t/is (= result 10))
                           (done)))))))
 
+#?(:clj
+   (t/deftest async-let-await-binding
+     ;; Test for https://github.com/funcool/promesa/issues/36
+     (let [result (p/alet [x (agent {})
+                           _ (send-off x #(assoc % :done true))
+                           _ (clojure.core/await x)
+                           z (p/await (p/promise @x))]
+                          z)]
+       (t/is (= @result {:done true})))))
+
 ;; ;; --- Do Expression tests
 
 ;; (t/deftest do-expression
@@ -367,7 +367,9 @@
 ;; --- Entry Point
 
 #?(:cljs (enable-console-print!))
-#?(:cljs (set! *main-cli-fn* #(t/run-tests)))
+#?(:cljs (set! *main-cli-fn* #(t/run-tests
+                               *ns*
+                               'promesa.issue-36)))
 #?(:cljs
    (defmethod t/report [:cljs.test/default :end-run-tests]
      [m]

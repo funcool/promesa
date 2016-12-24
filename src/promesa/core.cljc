@@ -225,7 +225,7 @@
                  (try
                    (apply callable args)
                    (catch #?(:clj Throwable :cljs js/Error) e
-                     (reject e))))))))
+                       (reject e))))))))
 
 #?(:cljs
    (defn timeout
@@ -281,13 +281,12 @@
      syntax and make the let expression look like synchronous where
      async operations are performed."
      [bindings & body]
-     (->> (reverse (partition 2 bindings))
-          (reduce (fn [acc [l r]]
-                    (if (and (coll? r) (symbol? (first r)))
-                      (let [mark (name (first r))]
-                        (if (= mark "await")
-                          `(bind ~(second r) (fn [~l] ~acc))
-                          `(let [~l ~r] ~acc)))
-                      `(let [~l ~r] ~acc)))
-                  `(promise (do ~@body))))))
-
+     (let [await# `await]
+       (->> (reverse (partition 2 bindings))
+            (reduce (fn [acc [l r]]
+                      (if (and (coll? r) (symbol? (first r)))
+                        `(if (= ~await# ~(first r))
+                           (bind ~(second r) (fn [~l] ~acc))
+                           (let [~l ~r] ~acc))
+                        `(let [~l ~r] ~acc)))
+                    `(promise (do ~@body)))))))
