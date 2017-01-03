@@ -127,11 +127,19 @@
   (pt/-bind p f))
 
 (defn then
-  "Same as `map` but with parameters inverted
+  "Similar to `map` but with parameters inverted
   for convenience and for familiarity with
-  javascript's promises `.then` operator."
+  javascript's promises `.then` operator.
+
+  Unlike Clojure's `map`, will resolve any promises
+  returned  by `f`."
   [p f]
-  (pt/-map p f))
+  #?(:cljs (pt/-map p f)
+     :clj  (pt/-bind p (fn promise-wrap [in]
+                         (let [out (f in)]
+                           (if (promise? out)
+                             out
+                             (promise out)))))))
 
 (defn chain
   "Like then but accepts multiple parameters."

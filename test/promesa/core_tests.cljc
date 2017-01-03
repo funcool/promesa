@@ -139,6 +139,17 @@
            p3 (p/then p2 inc)]
        (t/is (= @p3 4)))))
 
+(t/deftest then-promise
+  (let [p (-> (p/resolved 5)
+              (p/then (comp p/resolved inc))
+              (p/then (comp p/resolved inc)))]
+    #?(:clj (t/is (= @p 7))
+       :cljs
+       (t/async done
+         (p/then p (fn [v]
+                     (t/is (= v 7))
+                     (done)))))))
+
 (t/deftest chaining-using-map
   #?(:cljs
      (t/async done
