@@ -146,9 +146,9 @@ If you want to apply multiple functions, instead of using multiple times `then` 
 ;; => 4
 ----
 
-It there also `mapcat` function that allows remove one nesting level of promises,
+It there also `mapcat` function that allows removing one nesting level of promises,
 and is pretty useful if the function that you want to apply to promise also return a
-promise instance instead of value:
+promise instance instead of a value:
 
 [source, clojure]
 ----
