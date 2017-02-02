@@ -182,7 +182,7 @@
   #?(:clj (-> p
               (then (fn [_] (callback)))
               (catch (fn [_] (callback))))
-     :cljs (.finally p callback)))
+     :cljs (.lastly p callback)))
 
 (defn all
   "Given an array of promises, return a promise

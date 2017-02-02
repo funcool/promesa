@@ -324,3 +324,15 @@ Promise.fromCallback = function() {};
  * @return {Function}
  */
 Promise.fromNode = function() {};
+
+/**
+ * @this {Promise}
+ * @return {Promise}
+ */
+Promise.prototype.lastly = function() {};
+
+/**
+ * @this {Promise}
+ * @return {Promise}
+ */
+Promise.prototype.caught = function() {};

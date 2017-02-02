@@ -56,7 +56,7 @@
      (-bind [it cb]
        (.then it #(cb %)))
      (-catch [it cb]
-       (.catch it #(cb %)))
+       (.caught it #(cb %)))
 
      pt/IState
      (-extract [it]
