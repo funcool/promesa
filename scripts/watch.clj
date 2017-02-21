@@ -1,12 +1,14 @@
 (require '[cljs.build.api :as b])
 
-(b/watch (b/inputs "assets" "test" "src")
+(def options
   {:main 'promesa.core-tests
-   :target :nodejs
    :output-to "out/tests.js"
    :output-dir "out/tests"
-   :pretty-print true
-   :optimizations :none
    :language-in  :ecmascript5
    :language-out :ecmascript5
+   :target :nodejs
+   :optimizations :none
+   :pretty-print true
    :verbose true})
+
+(b/watch (b/inputs "test" "src") options)
