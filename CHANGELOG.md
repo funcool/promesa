@@ -1,5 +1,17 @@
 # Changelog #
 
+## Version 1.8.0 ##
+
+Date: 2017-02-21
+
+- Update bluebird to 3.4.7
+- Fix wrong impl of sync introspection (on cljs).
+- Fix wrong impl of delay function (on cljs).
+- Fix behavior difference of `then` function on clj in respect to cljs.
+- Avoid compiler warnings caused by .finally/.catch
+- Add safer await detection on `async` macro (on cljs).
+
+
 ## Version 1.7.0 ##
 
 Date: 2016-12-18
