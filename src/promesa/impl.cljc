@@ -61,8 +61,8 @@
      pt/IState
      (-extract [it]
        (if (.isRejected it)
-         (.getCause it)
-         (.getValue it)))
+         (.reason it)
+         (.value it)))
      (-resolved? [it]
        (.isFulfilled it))
      (-rejected? [it]
