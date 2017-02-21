@@ -379,7 +379,7 @@
 
 #?(:cljs (enable-console-print!))
 #?(:cljs (set! *main-cli-fn* #(t/run-tests
-                               *ns*
+                               'promesa.core-tests
                                'promesa.issue-36)))
 #?(:cljs
    (defmethod t/report [:cljs.test/default :end-run-tests]
