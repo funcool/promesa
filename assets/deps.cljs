@@ -1,5 +1,5 @@
 {:foreign-libs
- [{:file "_bluebird/bluebird.js"
-   :file-min "_bluebird/bluebird.min.js"
+ [{:file "bluebird/bluebird.js"
+   :file-min "bluebird/bluebird.min.js"
    :provides ["org.bluebird"]}]
- :externs ["_bluebird/externs.js"]}
+ :externs ["bluebird/externs.js"]}
