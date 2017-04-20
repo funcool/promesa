@@ -1,5 +1,13 @@
 # Changelog #
 
+## Version 1.8.1 ##
+
+Date: 2017-04-20
+
+- Remove `_` character from internal assets directory. That fixes incompatibilities
+  with cordova/android build tools.
+
+
 ## Version 1.8.0 ##
 
 Date: 2017-02-21

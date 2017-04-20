@@ -29,7 +29,7 @@ Just include that in your dependency vector on *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "1.8.0"]
+[funcool/promesa "1.8.1"]
 ----
 
 This package requires JDK8 if you are using it on the JVM platform and all
