@@ -13,8 +13,8 @@ Andrey Antukh, <niwi@niwi.nz>
 
 A promise library for Clojure and ClojureScript.
 
-On the JVM platform is built on top of *completable futures* (requires jdk8) and on
-JS platform is built on top of https://github.com/petkaantonov/bluebird/[bluebird]
+On the JVM paltform _promesa_ is built on top of *completable futures* (requires jdk8). On
+JS engines it is built on top of the https://github.com/petkaantonov/bluebird/[bluebird]
 promise library.
 
 
@@ -25,36 +25,36 @@ Since _promesa_ is a young project there may be some API breakage.
 
 === Install
 
-Just include that in your dependency vector on *_project.clj_*:
+Just include the following lines in your dependency vector on *_project.clj_*:
 
 [source,clojure]
 ----
 [funcool/promesa "1.8.1"]
 ----
 
-This package requires JDK8 if you are using it on the JVM platform and all
-environments that *bluebird* library supports on the JS platform.
+This package requires JDK8 if you are using it on the JVM and all
+environments that the *bluebird* library supports on JS engines.
 
 
 == User guide
 
 === Introduction
 
-The promise is the abstraction that represents the result of an asynchronous
+A promise is an abstraction that represents the result of an asynchronous
 operation that has the notion of error.
 
-This is a list of possible states of one promise:
+This is a list of all possible states for a promise:
 
 - `resolved`: means that the promise contains a value.
 - `rejected`: means that the promise contains an error.
 - `pending`: means that the promise does not have value.
 
-The promise can be considered *done* when is resolved or rejected.
+The promise can be considered *done* when it is resolved or rejected.
 
 
 === Creating a promise
 
-It there several different ways to create a promise instance:
+There are several different ways to create a promise instance:
 
 .Example creating already resolved promise instances from plain values.
 [source, clojure]
@@ -81,8 +81,8 @@ respectively.
              (resolve 1)))
 ----
 
-An other way to create a promise is using a `do*` macro that works similar to the
-factory callback with the exception that for resolve the promise instead of calling
+An other way to create a promise is using the `do*` macro which works similar to the
+factory callback with the exception that to resolve the promise instead of calling
 the `resolve` callback we just need to return the value:
 
 [source, clojure]
@@ -93,8 +93,8 @@ the `resolve` callback we just need to return the value:
     (+ a b)))
 ----
 
-In `do*` blocks works similarly to the clojure `do` block, so you can put any
-expressions but only the last one will be returned and that expression can be a
+`do*` blocks work similarly to clojure's `do` block, so you can put any
+expression but only the last one will be returned and that expression can be a
 plain value or an other promise.
 
 If an exception is raised inside the `do*` block, it will return the rejected
@@ -104,13 +104,13 @@ promise instead of re-raising the exception on the stack.
 [NOTE]
 ====
 In both platforms the promise factory function is executed synchronously and
-making it blocking or not blocking is user responsibility.
+making it blocking or not blocking is the user's responsibility.
 ====
 
 
 === Promise Chaining
 
-The most common way to apply a function to a promise value (or in other word chain
+The most common way to apply a function to a promise (or in other words, to chain
 its execution) is using the well known `map` function:
 
 [source, clojure]
@@ -122,8 +122,8 @@ its execution) is using the well known `map` function:
 ;; => 2
 ----
 
-For people more coming from js world, it there are also `then` function that works
-in the same way as `map` but with parameters inverted:
+For people coming from the JS world, there is also the `then` function that works
+in the same way as `map` but with the parameters inverted:
 
 [source, clojure]
 ----
@@ -134,8 +134,8 @@ in the same way as `map` but with parameters inverted:
 ;; => 2
 ----
 
-If you want to apply multiple functions, instead of using multiple times `then` or
-`map`, you can just use `chain`:
+If you want to apply multiple functions instead of using multiple `then` or
+`map`s, you can use the `chain` function:
 
 [source, clojure]
 ----
@@ -146,9 +146,9 @@ If you want to apply multiple functions, instead of using multiple times `then` 
 ;; => 4
 ----
 
-It there also `mapcat` function that allows removing one nesting level of promises,
-and is pretty useful if the function that you want to apply to promise also return a
-promise instance instead of a value:
+There is also the `mapcat` function that removes one level of nesting when dealing 
+with multiple promises. It is specially useful if the function that you want to
+apply to also returns a promise instead of a value:
 
 [source, clojure]
 ----
@@ -161,17 +161,17 @@ promise instance instead of a value:
 ;; => 2
 ----
 
-The `mapcat` function is only useful in the JVM platform. In JS platform the `map`
-function already flattens the result magically (because the underlying
-implementation does that).
+*Important*: The `mapcat` function is only useful in the JVM platform. In JS engines, the `map`
+function already flattens the result magically (because the underlying implementation
+does that).
 
 
 === Async/Await Syntax
 
 ==== `alet` macro (async let)
 
-The _promesa_ library comes with convenient sugar syntax that allows you create a
-compositions that looks like synchronous code with very clojure familiar `let`
+The _promesa_ library comes with convenient syntax-sugar that allows you to create a
+compositions that looks like synchronous code while using the clojure's familiar `let`
 syntax:
 
 [source, clojure]
@@ -194,8 +194,8 @@ syntax:
 ----
 
 The `alet` macro behaves identical to the `let` with the exception that it always
-return a promise and allows mark async operations with `await` placeholder making it
-looks like synchronous operation.
+return a promise and allows you to mark async operations with the `await` 
+placeholder making it looks like a synchronous operation.
 
 If an error occurs at any step the entire composition will be short-circuited,
 returning exceptionally resolved promise.
@@ -203,7 +203,7 @@ returning exceptionally resolved promise.
 
 ==== `async` macro (general purpose)
 
-In contrast to the `alet` macro, `async` macro is more general purpose
+In contrast to the `alet` macro, the `async` macro is more general purpose
 and enables the usage of `await` in any place (not only on the let
 bindings). Let see an example:
 
