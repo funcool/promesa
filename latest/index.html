@@ -133,8 +133,8 @@
 <p>A promise library for Clojure and ClojureScript.</p>
 </div>
 <div class="paragraph">
-<p>On the JVM platform is built on top of <strong>completable futures</strong> (requires jdk8) and on
-JS platform is built on top of <a href="https://github.com/petkaantonov/bluebird/">bluebird</a>
+<p>On the JVM paltform <em>promesa</em> is built on top of <strong>completable futures</strong> (requires jdk8). On
+JS engines it is built on top of the <a href="https://github.com/petkaantonov/bluebird/">bluebird</a>
 promise library.</p>
 </div>
 <div class="sect2">
@@ -146,7 +146,7 @@ promise library.</p>
 <div class="sect2">
 <h3 id="install"><a class="link" href="#install">Install</a></h3>
 <div class="paragraph">
-<p>Just include that in your dependency vector on <strong><em>project.clj</em></strong>:</p>
+<p>Just include the following lines in your dependency vector on <strong><em>project.clj</em></strong>:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -154,8 +154,8 @@ promise library.</p>
 </div>
 </div>
 <div class="paragraph">
-<p>This package requires JDK8 if you are using it on the JVM platform and all
-environments that <strong>bluebird</strong> library supports on the JS platform.</p>
+<p>This package requires JDK8 if you are using it on the JVM and all
+environments that the <strong>bluebird</strong> library supports on JS engines.</p>
 </div>
 </div>
 </div>
@@ -166,11 +166,11 @@ environments that <strong>bluebird</strong> library supports on the JS platform.
 <div class="sect2">
 <h3 id="introduction-2"><a class="link" href="#introduction-2">Introduction</a></h3>
 <div class="paragraph">
-<p>The promise is the abstraction that represents the result of an asynchronous
+<p>A promise is an abstraction that represents the result of an asynchronous
 operation that has the notion of error.</p>
 </div>
 <div class="paragraph">
-<p>This is a list of possible states of one promise:</p>
+<p>This is a list of all possible states for a promise:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -186,13 +186,13 @@ operation that has the notion of error.</p>
 </ul>
 </div>
 <div class="paragraph">
-<p>The promise can be considered <strong>done</strong> when is resolved or rejected.</p>
+<p>The promise can be considered <strong>done</strong> when it is resolved or rejected.</p>
 </div>
 </div>
 <div class="sect2">
 <h3 id="creating-a-promise"><a class="link" href="#creating-a-promise">Creating a promise</a></h3>
 <div class="paragraph">
-<p>It there several different ways to create a promise instance:</p>
+<p>There are several different ways to create a promise instance:</p>
 </div>
 <div class="listingblock">
 <div class="title">Example creating already resolved promise instances from plain values.</div>
@@ -222,8 +222,8 @@ respectively.</p>
 </div>
 </div>
 <div class="paragraph">
-<p>An other way to create a promise is using a <code>do*</code> macro that works similar to the
-factory callback with the exception that for resolve the promise instead of calling
+<p>An other way to create a promise is using the <code>do*</code> macro which works similar to the
+factory callback with the exception that to resolve the promise instead of calling
 the <code>resolve</code> callback we just need to return the value:</p>
 </div>
 <div class="listingblock">
@@ -235,8 +235,8 @@ the <code>resolve</code> callback we just need to return the value:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>In <code>do*</code> blocks works similarly to the clojure <code>do</code> block, so you can put any
-expressions but only the last one will be returned and that expression can be a
+<p><code>do*</code> blocks work similarly to clojure&#8217;s <code>do</code> block, so you can put any
+expression but only the last one will be returned and that expression can be a
 plain value or an other promise.</p>
 </div>
 <div class="paragraph">
@@ -252,7 +252,7 @@ promise instead of re-raising the exception on the stack.</p>
 <td class="content">
 <div class="paragraph">
 <p>In both platforms the promise factory function is executed synchronously and
-making it blocking or not blocking is user responsibility.</p>
+making it blocking or not blocking is the user&#8217;s responsibility.</p>
 </div>
 </td>
 </tr>
@@ -262,7 +262,7 @@ making it blocking or not blocking is user responsibility.</p>
 <div class="sect2">
 <h3 id="promise-chaining"><a class="link" href="#promise-chaining">Promise Chaining</a></h3>
 <div class="paragraph">
-<p>The most common way to apply a function to a promise value (or in other word chain
+<p>The most common way to apply a function to a promise (or in other words, to chain
 its execution) is using the well known <code>map</code> function:</p>
 </div>
 <div class="listingblock">
@@ -275,8 +275,8 @@ its execution) is using the well known <code>map</code> function:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>For people more coming from js world, it there are also <code>then</code> function that works
-in the same way as <code>map</code> but with parameters inverted:</p>
+<p>For people coming from the JS world, there is also the <code>then</code> function that works
+in the same way as <code>map</code> but with the parameters inverted:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -288,8 +288,8 @@ in the same way as <code>map</code> but with parameters inverted:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>If you want to apply multiple functions, instead of using multiple times <code>then</code> or
-<code>map</code>, you can just use <code>chain</code>:</p>
+<p>If you want to apply multiple functions instead of using multiple <code>then</code> or
+<code>map`s, you can use the `chain</code> function:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -301,9 +301,9 @@ in the same way as <code>map</code> but with parameters inverted:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>It there also <code>mapcat</code> function that allows removing one nesting level of promises,
-and is pretty useful if the function that you want to apply to promise also return a
-promise instance instead of a value:</p>
+<p>There is also the <code>mapcat</code> function that removes one level of nesting when dealing
+with multiple promises. It is specially useful if the function that you want to
+apply to also returns a promise instead of a value:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -317,9 +317,9 @@ promise instance instead of a value:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>The <code>mapcat</code> function is only useful in the JVM platform. In JS platform the <code>map</code>
-function already flattens the result magically (because the underlying
-implementation does that).</p>
+<p><strong>Important</strong>: The <code>mapcat</code> function is only useful in the JVM platform. In JS engines, the <code>map</code>
+function already flattens the result magically (because the underlying implementation
+does that).</p>
 </div>
 </div>
 <div class="sect2">
@@ -327,8 +327,8 @@ implementation does that).</p>
 <div class="sect3">
 <h4 id="code-alet-code-macro-async-let"><a class="link" href="#code-alet-code-macro-async-let"><code>alet</code> macro (async let)</a></h4>
 <div class="paragraph">
-<p>The <em>promesa</em> library comes with convenient sugar syntax that allows you create a
-compositions that looks like synchronous code with very clojure familiar <code>let</code>
+<p>The <em>promesa</em> library comes with convenient syntax-sugar that allows you to create a
+compositions that looks like synchronous code while using the clojure&#8217;s familiar <code>let</code>
 syntax:</p>
 </div>
 <div class="listingblock">
@@ -352,8 +352,8 @@ syntax:</p>
 </div>
 <div class="paragraph">
 <p>The <code>alet</code> macro behaves identical to the <code>let</code> with the exception that it always
-return a promise and allows mark async operations with <code>await</code> placeholder making it
-looks like synchronous operation.</p>
+return a promise and allows you to mark async operations with the <code>await</code>
+placeholder making it looks like a synchronous operation.</p>
 </div>
 <div class="paragraph">
 <p>If an error occurs at any step the entire composition will be short-circuited,
@@ -363,7 +363,7 @@ returning exceptionally resolved promise.</p>
 <div class="sect3">
 <h4 id="code-async-code-macro-general-purpose"><a class="link" href="#code-async-code-macro-general-purpose"><code>async</code> macro (general purpose)</a></h4>
 <div class="paragraph">
-<p>In contrast to the <code>alet</code> macro, <code>async</code> macro is more general purpose
+<p>In contrast to the <code>alet</code> macro, the <code>async</code> macro is more general purpose
 and enables the usage of <code>await</code> in any place (not only on the let
 bindings). Let see an example:</p>
 </div>
@@ -726,7 +726,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-04-20 15:47:14 CEST
+Last updated 2017-05-28 19:52:09 CEST
 </div>
 </div>
 </body>
