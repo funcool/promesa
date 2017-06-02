@@ -187,9 +187,23 @@
 (defn all
   "Given an array of promises, return a promise
   that is fulfilled  when all the items in the
-  array are fulfilled."
+  array are fulfilled.
+
+  Example:
+
+  (-> (all [(promise :first-promise)
+            (promise :second-promise)]
+      (then (fn [[first-result second-result]]))
+       (println (str first-result \", \" second-result)
+
+  Will print out
+  :first-promise, :second-promise.
+
+  If at least one of the promises is rejected, the resulting promise will be
+  rejected."
   [promises]
-  #?(:cljs (.all Promise (into-array promises))
+  #?(:cljs (-> (.all Promise (into-array promises))
+               (then vec))
      :clj (let [promises (clojure.core/map pt/-promise promises)]
             (then (->> (into-array CompletableFuture promises)
                        (CompletableFuture/allOf))
