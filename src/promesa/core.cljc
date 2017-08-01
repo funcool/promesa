@@ -305,7 +305,9 @@
      (let [await# `await]
        (->> (reverse (partition 2 bindings))
             (reduce (fn [acc [l r]]
-                      (if (and (coll? r) (symbol? (first r)))
+                      (if (and (coll? r)
+                               (symbol? (first r))
+                               (not= "." (subs (name (first r)) 0 1)))
                         `(if (= ~await# ~(first r))
                            (bind ~(second r) (fn [~l] ~acc))
                            (let [~l ~r] ~acc))

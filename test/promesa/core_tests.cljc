@@ -307,7 +307,8 @@
        (let [result (p/alet [a (p/await (future-ok 50 1))
                              b 2
                              c 3
-                             d (p/await (future-ok 100 4))]
+                             d (p/await (future-ok 100 4))
+                             e (.toString c)]
                       (+ a b c d))]
          (p/then result (fn [result]
                           (t/is (= result 10))
