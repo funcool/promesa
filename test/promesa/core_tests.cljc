@@ -345,14 +345,14 @@
 ;; ;; --- `async` macro tests
 
 (defn my-func
-  [i]
+  [ixx]
   (async
     (loop [sum 0
            c 0]
-      (if (< c i)
+      (if (< c ixx)
         (do
           (p/await (p/delay 10))
-          (recur (+ sum i) (inc c)))
+          (recur (+ sum ixx) (inc c)))
         sum))))
 
 

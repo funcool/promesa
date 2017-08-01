@@ -76,16 +76,18 @@
   Returns a promise which will be resolved with the result of the
   body when completed."
   [& body]
-  `(let [bindings# (clojure.lang.Var/getThreadBindingFrame)]
-     (p/promise
-      (fn [resolve# reject#]
-        (run-async
-         (fn []
-           (let [f# ~(ioc/state-machine `(do ~@body) 1
-                                        (keys &env)
-                                        async-terminators)
-                 state# (ioc/aset-all! (f#)
-                                       PROMISE-IDX [resolve# reject#]
-                                       ioc/BINDINGS-IDX bindings#)]
-             (run-state-machine-wrapped state#))))))))
+  (let [crossing-env (zipmap (keys &env) (repeatedly gensym))]
+    `(let [bindings# (clojure.lang.Var/getThreadBindingFrame)]
+       (p/promise
+        (fn [resolve# reject#]
+          (run-async
+           (^:once fn* []
+            (let [~@(mapcat (fn [[l sym]] [sym `(^:once fn* [] ~(vary-meta l dissoc :tag))]) crossing-env)
+                  f# ~(ioc/state-machine `(do ~@body) 1
+                                         [crossing-env &env]
+                                         async-terminators)
+                  state# (ioc/aset-all! (f#)
+                                        PROMISE-IDX [resolve# reject#]
+                                        ioc/BINDINGS-IDX bindings#)]
+              (run-state-machine-wrapped state#)))))))))
 
