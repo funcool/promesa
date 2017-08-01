@@ -4,8 +4,8 @@
   :license {:name "BSD (2 Clause)"
             :url "http://opensource.org/licenses/BSD-2-Clause"}
   :dependencies [[org.clojure/clojure "1.8.0" :scope "provided"]
-                 [org.clojure/clojurescript "1.9.293" :scope "provided"]
-                 [org.clojure/core.async "0.3.442" :scope "provided"]]
+                 [org.clojure/clojurescript "1.9.854" :scope "provided"]
+                 [org.clojure/core.async "0.3.443" :scope "provided"]]
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
   :source-paths ["src" "assets"]
