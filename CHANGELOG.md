@@ -7,6 +7,8 @@ Date: 2018-08-XX
 - Update bluebird bundle to 3.5.0
 - Update dependencies.
 - Fix some issues on async macro (jvm only).
+- Fix issue with interop on alet macros.
+
 
 ## Version 1.8.1 ##
 
