@@ -1,5 +1,13 @@
 # Changelog #
 
+## Version 1.9.0 ##
+
+Date: 2018-08-XX
+
+- Update bluebird bundle to 3.5.0
+- Update dependencies.
+- Fix some issues on async macro (jvm only).
+
 ## Version 1.8.1 ##
 
 Date: 2017-04-20
