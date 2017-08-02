@@ -2,7 +2,7 @@
 
 ## Version 1.9.0 ##
 
-Date: 2018-08-XX
+Date: 2018-08-03
 
 - Update bluebird bundle to 3.5.0
 - Update dependencies.
