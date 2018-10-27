@@ -44,7 +44,7 @@
      (ForkJoinPool/commonPool)))
 
 #?(:cljs
-   (def ^:const Promise (js/Promise.noConflict)))
+   (def ^:const Promise js/Promise))
 
 ;; --- Promise Impl
 
