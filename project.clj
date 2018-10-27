@@ -3,8 +3,8 @@
   :url "https://github.com/funcool/promesa"
   :license {:name "BSD (2 Clause)"
             :url "http://opensource.org/licenses/BSD-2-Clause"}
-  :dependencies [[org.clojure/clojure "1.8.0" :scope "provided"]
-                 [org.clojure/clojurescript "1.9.854" :scope "provided"]
+  :dependencies [[org.clojure/clojure "1.9.0" :scope "provided"]
+                 [org.clojure/clojurescript "1.10.339" :scope "provided"]
                  [org.clojure/core.async "0.3.443" :scope "provided"]]
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
