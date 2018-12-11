@@ -8,7 +8,7 @@
                  [org.clojure/core.async "0.3.443" :scope "provided"]]
   :deploy-repositories {"releases" :clojars
                         "snapshots" :clojars}
-  :source-paths ["src" "assets"]
+  :source-paths ["src"]
   :test-paths ["test"]
   :jar-exclusions [#"\.swp|\.swo|user.clj"]
 

@@ -24,8 +24,7 @@
 
 (ns promesa.impl
   "Implementation of promise protocols."
-  (:require [promesa.protocols :as pt]
-            #?(:cljs [org.bluebird]))
+  (:require [promesa.protocols :as pt])
   #?(:clj (:import java.util.concurrent.CompletableFuture
                    java.util.concurrent.CompletionStage
                    java.util.concurrent.TimeoutException
@@ -40,47 +39,31 @@
 ;; --- Global Constants
 
 #?(:clj
-   (def ^:redef +executor+
-     (ForkJoinPool/commonPool)))
+   (def ^:dynamic *executor* (ForkJoinPool/commonPool)))
 
 #?(:cljs
-   (def ^:const Promise js/Promise))
+   (def ^:dynamic *default-promise* js/Promise))
 
 ;; --- Promise Impl
-
-#?(:cljs
-   (extend-type Promise
-     pt/IPromise
-     (-map [it cb]
-       (.then it #(cb %)))
-     (-bind [it cb]
-       (.then it #(cb %)))
-     (-catch [it cb]
-       (.caught it #(cb %)))
-
-     pt/IState
-     (-extract [it]
-       (if (.isRejected it)
-         (.reason it)
-         (.value it)))
-     (-resolved? [it]
-       (.isFulfilled it))
-     (-rejected? [it]
-       (.isRejected it))
-     (-pending? [it]
-       (.isPending it))))
 
 (declare resolved)
 
 #?(:cljs
-   (extend-type default
-     pt/IPromise
-     (-map [it cb]
-       (pt/-map (resolved it) cb))
-     (-bind [it cb]
-       (pt/-bind (resolved it) cb))
-     (-catch [it cb]
-       (pt/-catch (resolved it) cb))))
+   (defn extend-promise!
+     [t]
+     (extend-type t
+       pt/IPromiseFactory
+       (-promise [p] p)
+
+       pt/IPromise
+       (-map [it cb]
+         (.then it #(cb %)))
+       (-bind [it cb]
+         (.then it #(cb %)))
+       (-catch [it cb]
+         (.catch it #(cb %))))))
+
+#?(:cljs (extend-promise! js/Promise))
 
 #?(:clj
    (extend-type CompletableFuture
@@ -97,7 +80,7 @@
                     (apply [_ v]
                       (clojure.lang.Var/resetThreadBindingFrame binds)
                       (cb v)))]
-         (.thenApplyAsync it ^Function func ^Executor +executor+)))
+         (.thenApplyAsync it ^Function func ^Executor *executor*)))
 
      (-bind [it cb]
        (let [binds (clojure.lang.Var/getThreadBindingFrame)
@@ -105,7 +88,7 @@
                     (apply [_ v]
                       (clojure.lang.Var/resetThreadBindingFrame binds)
                       (cb v)))]
-         (.thenComposeAsync it ^Function func ^Executor +executor+)))
+         (.thenComposeAsync it ^Function func ^Executor *executor*)))
 
      (-catch [it cb]
        (let [binds (clojure.lang.Var/getThreadBindingFrame)
@@ -143,14 +126,14 @@
 
 (defn resolved
   [v]
-  #?(:cljs (.resolve Promise v)
+  #?(:cljs (.resolve *default-promise* v)
      :clj (let [p (CompletableFuture.)]
             (.complete p v)
             p)))
 
 (defn rejected
   [v]
-  #?(:cljs (.reject Promise v)
+  #?(:cljs (.reject *default-promise* v)
      :clj (let [p (CompletableFuture.)]
             (.completeExceptionally p v)
             p)))
@@ -187,32 +170,13 @@
    (extend-protocol pt/IPromiseFactory
      function
      (-promise [func]
-       (Promise. func))
-
-     Promise
-     (-promise [p] p)
+       (new *default-promise* func))
 
      js/Error
      (-promise [e]
        (rejected e))
 
-     object
-     (-promise [v]
-       (resolved v))
-
-     number
-     (-promise [v]
-       (resolved v))
-
-     boolean
-     (-promise [v]
-       (resolved v))
-
-     string
-     (-promise [v]
-       (resolved v))
-
-     nil
+     default
      (-promise [v]
        (resolved v))))
 
@@ -220,19 +184,15 @@
 
 (defn promise->str
   [p]
-  (str "#<Promise["
-       (cond
-         (pt/-pending? p) "~"
-         (pt/-rejected? p) (str "error=" (pt/-extract p))
-         :else (str "value=" (pt/-extract p)))
-       "]>"))
+  "#<Promise[~]>")
 
 #?(:clj
    (defmethod print-method java.util.concurrent.CompletionStage
      [p ^java.io.Writer writer]
-     (.write writer ^String (promise->str p)))
-   :cljs
-   (extend-type Promise
+     (.write writer ^String (promise->str p))))
+
+#?(:cljs
+   (extend-type js/Promise
      IPrintWithWriter
      (-pr-writer [p writer opts]
        (-write writer (promise->str p)))))

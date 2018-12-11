@@ -38,9 +38,22 @@
      "Replace the default executor instance with
      your own instance."
      [executor]
-     (alter-var-root #'impl/+executor+ (constantly executor))))
+     (alter-var-root #'impl/*executor* (constantly executor))))
 
-#?(:cljs (def ^:const Promise impl/Promise))
+#?(:cljs
+   (defn set-default-promise!
+     "Sets the default promise type that should be used for creating
+     all promise instances."
+     [promise]
+     (set! impl/*default-promise* promise)))
+
+#?(:cljs
+   (defn extend-promise!
+     "A helper function that attaches the internal protocols implementation
+     to a specified type. Usefull if you want to use different promise
+     implementations with promesa functions."
+     [promise]
+     (impl/extend-promise! promise)))
 
 ;; --- Scheduling helpers
 
@@ -74,7 +87,7 @@
   "Return true if `v` is a promise instance."
   [v]
   #?(:clj (instance? CompletionStage v)
-     :cljs (instance? Promise v)))
+     :cljs (instance? impl/*default-promise* v)))
 
 ;; Predicates
 
@@ -202,7 +215,7 @@
   If at least one of the promises is rejected, the resulting promise will be
   rejected."
   [promises]
-  #?(:cljs (-> (.all Promise (into-array promises))
+  #?(:cljs (-> (.all impl/*default-promise* (into-array promises))
                (then vec))
      :clj (let [promises (clojure.core/map pt/-promise promises)]
             (then (->> (into-array CompletableFuture promises)
@@ -214,11 +227,34 @@
   "Given an array of promises, return a promise
   that is fulfilled when first one item in the
   array is fulfilled."
-  [promises]
-  #?(:cljs (.any Promise (into-array promises))
-     :clj (->> (clojure.core/map pt/-promise promises)
-               (into-array CompletableFuture)
-               (CompletableFuture/anyOf))))
+  ([promises]
+   (any promises ::default))
+  ([promises default]
+   (let [state (atom {:resolved false
+                      :counter (count promises)
+                      :rejections []})]
+     (promise
+      (fn [resolve reject]
+        (doseq [p promises]
+          (-> (promise p)
+              (then (fn [v]
+                      (when-not (:resolved @state)
+                        (swap! state (fn [state]
+                                       (-> state
+                                           (assoc :resolved true)
+                                           (update :counter dec))))
+                        (resolve v))))
+              (catch (fn [e]
+                       (swap! state (fn [state]
+                                      (-> state
+                                          (update  :counter dec)
+                                          (update :rejections conj e))))
+                       (let [{:keys [resolved counter rejections]} @state]
+                         (when (and (not resolved) (= counter 0))
+                           (if (= default ::default)
+                             (reject (ex-info "No promises resolved"
+                                              {:rejections rejections}))
+                             (resolve default)))))))))))))
 
 ;; Cancellation
 

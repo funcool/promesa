@@ -13,37 +13,46 @@
   (t/is (string? (pr-str (p/promise nil)))))
 
 (t/deftest promise-from-value
-  (let [p1 (p/promise 1)]
-    (t/is (p/done? p1))
-    (t/is (= (p/extract p1) 1))))
+  #?(:cljs
+     (t/async done
+       (p/then (p/promise 1)
+               (fn [v]
+                 (t/is (= v 1))
+                 (done))))
+     :clj
 
-(t/deftest promise-from-boolean-value
-  (let [p1 (p/promise true)]
-    (t/is (p/done? p1))
-    (t/is (= (p/extract p1) true))))
+     (let [p1 (p/promise 1)]
+       (t/is (p/done? p1))
 
-(t/deftest promise-from-string-value
-  (let [p1 (p/promise "hello")]
-    (t/is (p/done? p1))
-    (t/is (= (p/extract p1) "hello"))))
+       (t/is (= (p/extract p1) 1)))))
 
-(t/deftest promise-from-nil-value
-  (let [p1 (p/promise nil)]
-    (t/is (p/done? p1))
-    (t/is (nil? (p/extract p1)))))
+;; (t/deftest promise-from-boolean-value
+;;   (let [p1 (p/promise true)]
+;;     (t/is (p/done? p1))
+;;     (t/is (= (p/extract p1) true))))
 
-(t/deftest promise-from-factory
-  (let [p1 (p/promise (fn [resolve _] (resolve 1)))]
-    #?(:clj (deref p1))
-    (t/is (p/done? p1))
-    (t/is (= (p/extract p1) 1))))
+;; (t/deftest promise-from-string-value
+;;   (let [p1 (p/promise "hello")]
+;;     (t/is (p/done? p1))
+;;     (t/is (= (p/extract p1) "hello"))))
+
+;; (t/deftest promise-from-nil-value
+;;   (let [p1 (p/promise nil)]
+;;     (t/is (p/done? p1))
+;;     (t/is (nil? (p/extract p1)))))
+
+;; (t/deftest promise-from-factory
+;;   (let [p1 (p/promise (fn [resolve _] (resolve 1)))]
+;;     #?(:clj (deref p1))
+;;     (t/is (p/done? p1))
+;;     (t/is (= (p/extract p1) 1))))
 
 (t/deftest promise-async-factory
   #?(:cljs
      (t/async done
        (let [p1 (p/promise (fn [resolve reject]
                              (p/schedule 50 #(resolve 1))))]
-         (t/is (p/pending? p1))
+         ;; (t/is (p/pending? p1))
          (p/then p1 (fn [v]
                       (t/is (= v 1))
                       (done)))))
@@ -63,17 +72,10 @@
      (t/async done
        (let [e (ex-info "foo" {})
              p1 (p/promise e)]
-         (t/is (p/rejected? p1))
+         ;; (t/is (p/rejected? p1))
          (p/catch p1 (fn [x]
                        (t/is (= e x))
                        (done)))))))
-
-(t/deftest promise-rejected
-  (let [e1 (ex-info "foobar" {})
-        p1 (p/rejected e1)
-        p2 (p/catch p1 (constantly nil))]
-    (t/is (p/rejected? p1))
-    (t/is (= e1 (p/extract p1)))))
 
 (t/deftest promise-from-promise
   (let [p1 (p/promise 1)
@@ -94,7 +96,7 @@
        (t/is (= x 1))
        (t/is (= y 2)))))
 
-(t/deftest arbitrary-choice-with-any
+(t/deftest arbitrary-choice-with-any-1
   #?(:cljs
      (t/async done
        (let [p1 (p/any [(p/delay 300 1) (p/delay 100 2)])]
@@ -104,6 +106,22 @@
      :clj
      (let [p1 (p/any [(p/delay 300 1) (p/delay 100 2)])]
        (t/is (= @p1 2)))))
+
+
+(t/deftest arbitrary-choice-with-any-2
+  #?(:cljs
+     (t/async done
+       (let [p1 (p/any [(p/rejected (ex-info "1" {}))
+                        (p/rejected (ex-info "2" {}))]
+                       :foobar)]
+         (p/then p1 (fn [v]
+                      (t/is (= v :foobar))
+                      (done)))))
+     :clj
+     (let [p1 (p/any [(p/rejected (ex-info "1" {}))
+                      (p/rejected (ex-info "2" {}))]
+                     :foobar)]
+       (t/is (= @p1 :foobar)))))
 
 (t/deftest reject-promise-in-chain
   #?(:cljs
@@ -324,23 +342,23 @@
                           z)]
        (t/is (= @result {:done true})))))
 
-;; ;; --- Do Expression tests
+;; --- Do Expression tests
 
-;; (t/deftest do-expression
-;;   #?(:cljs
-;;      (t/async done
-;;        (let [error (ex-info "foo" {})
-;;              result (p/do* (throw error))]
-;;          (p/catch result (fn [e]
-;;                            (t/is (= e error))
-;;                            (done)))))
-;;      :clj
-;;      (let [error (ex-info "foo" {})
-;;            result (p/do* (throw error))
-;;            result @(p/catch result (fn [e]
-;;                                      (assert (= e error))
-;;                                      nil))]
-;;        (t/is (= nil result)))))
+(t/deftest do-expression
+  #?(:cljs
+     (t/async done
+       (let [error (ex-info "foo" {})
+             result (p/do* (throw error))]
+         (p/catch result (fn [e]
+                           (t/is (= e error))
+                           (done)))))
+     :clj
+     (let [error (ex-info "foo" {})
+           result (p/do* (throw error))
+           result @(p/catch result (fn [e]
+                                     (assert (= e error))
+                                     nil))]
+       (t/is (= nil result)))))
 
 
 ;; --- `async` macro tests

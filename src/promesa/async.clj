@@ -74,7 +74,7 @@
   {:no-doc true
    :internal true}
   [f]
-  (.execute impl/+executor+ ^Runnable f))
+  (.execute impl/*executor* ^Runnable f))
 
 
 (defmacro async
