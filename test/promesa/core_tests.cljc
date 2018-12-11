@@ -29,26 +29,30 @@
 
        (t/is (= (p/extract p1) 1)))))
 
-;; (t/deftest promise-from-boolean-value
-;;   (let [p1 (p/promise true)]
-;;     (t/is (p/done? p1))
-;;     (t/is (= (p/extract p1) true))))
+(t/deftest promise-from-nil-value
+  #?(:cljs
+     (t/async done
+       (p/then (p/promise nil)
+               (fn [v]
+                 (t/is (= v nil))
+                 (done))))
+     :clj
+     @(p/then (p/promise nil)
+              (fn [v]
+                (t/is (= v nil))))))
 
-;; (t/deftest promise-from-string-value
-;;   (let [p1 (p/promise "hello")]
-;;     (t/is (p/done? p1))
-;;     (t/is (= (p/extract p1) "hello"))))
 
-;; (t/deftest promise-from-nil-value
-;;   (let [p1 (p/promise nil)]
-;;     (t/is (p/done? p1))
-;;     (t/is (nil? (p/extract p1)))))
-
-;; (t/deftest promise-from-factory
-;;   (let [p1 (p/promise (fn [resolve _] (resolve 1)))]
-;;     #?(:clj (deref p1))
-;;     (t/is (p/done? p1))
-;;     (t/is (= (p/extract p1) 1))))
+(t/deftest promise-from-factory
+  #?(:cljs
+     (t/async done
+       (-> (p/promise (fn [resolve _] (resolve 1)))
+           (p/then (fn [v]
+                     (t/is (= v 1))
+                     (done)))))
+     :clj
+     @(-> (p/promise (fn [resolve _] (resolve 1)))
+          (p/then (fn [v]
+                    (t/is (= v 1)))))))
 
 (t/deftest promise-async-factory
   #?(:cljs
