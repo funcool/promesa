@@ -1,5 +1,34 @@
 # Changelog #
 
+## Version 2.0.0 ##
+
+Date: unreleased
+
+This is a breaking change release. Finally bluebird is gone in favour
+of using the ES6 builtin Promise object. This removes the overhead (in
+size) of the additional external library.
+
+The reason of using bluebird initially was because native promises performed
+badly, but in new versions javascript engines the performance and memory
+usage is improved significantly. In any case you can still use the bluebird
+if you want, thanks to the new functions:
+
+- `set-default-promise!`: enables the user setting up a custom promise
+  constructor as default one for *promesa* library.
+- `extend-promise!`: enables the user to use a custom promise
+  implementation with *promesa* library abstractions.
+
+Other (also probably breaking) changes:
+
+- `timeout` is now implemented in terms of internal scheduler
+  facilities (bluebird impl was used previously) and it is now
+  available for clojure (jvm).
+- `any` is reimplemented in clj/cljs and now accepts an additional
+  argument for setting the default return value if promise is
+  resolved. If default value is not provided, an ExceptionInfo will be
+  throwed.
+
+
 ## Version 1.9.0 ##
 
 Date: 2018-08-03
