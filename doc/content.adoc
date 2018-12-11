@@ -14,8 +14,7 @@ Andrey Antukh, <niwi@niwi.nz>
 A promise library for Clojure and ClojureScript.
 
 On the JVM paltform _promesa_ is built on top of *completable futures* (requires jdk8). On
-JS engines it is built on top of the https://github.com/petkaantonov/bluebird/[bluebird]
-promise library.
+JS engines it is built on top of the builtin Promise implementation.
 
 
 === Project Maturity
@@ -29,7 +28,7 @@ Just include the following lines in your dependency vector on *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "1.9.0"]
+[funcool/promesa "2.0.0"]
 ----
 
 This package requires JDK8 if you are using it on the JVM and all
@@ -93,7 +92,7 @@ the `resolve` callback we just need to return the value:
     (+ a b)))
 ----
 
-`do*` blocks work similarly to clojure's `do` block, so you can put any
+`do*` block work similarly to clojure's `do` block, so you can put any
 expression but only the last one will be returned and that expression can be a
 plain value or an other promise.
 
@@ -146,7 +145,7 @@ If you want to apply multiple functions instead of using multiple `then` or
 ;; => 4
 ----
 
-There is also the `mapcat` function that removes one level of nesting when dealing 
+There is also the `mapcat` function that removes one level of nesting when dealing
 with multiple promises. It is specially useful if the function that you want to
 apply to also returns a promise instead of a value:
 
@@ -307,6 +306,36 @@ the `branch` function:
 ----
 
 
+=== Delays and timeouts.
+
+JavaScript due its nature, does not allow you to block or sleep. But with promises
+you can emulate the functionality using `delay` like so:
+
+[source, clojure]
+----
+(-> (p/delay 1000 "foobar")
+    (p/then (fn [v]
+              (println "Received:" v))))
+
+;; After 1 second it will print the message
+;; to the console: "Received: foobar"
+----
+
+The promise library also offers the ability to add a timeout to async
+operations thanks to the `timeout` function:
+
+[source, clojure]
+----
+(-> (some-async-task)
+    (p/timeout 200)
+    (p/then #(println "Task finished" %))
+    (p/catch #(println "Timeout" %)))
+----
+
+In case the async task is slow, in the example more that 200ms, the promise will be
+rejected with timeout error and successfully captured with the `catch` handler.
+
+
 === Working with collections
 
 In some circumstances you will want wait a completion of few promises at same time,
@@ -334,36 +363,6 @@ resolved promise. For this case, you can use the `any` combinator:
   (p/then p (fn [x]
               (.log js/console "The first one finished: " x))))
 ----
-
-
-=== Delays and timeouts.
-
-JavaScript due its nature, does not allow you to block or sleep. But with promises
-you can emulate the functionality using `delay` like so:
-
-[source, clojure]
-----
-(-> (p/delay 1000 "foobar")
-    (p/then (fn [v]
-              (println "Received:" v))))
-
-;; After 1 second it will print the message
-;; to the console: "Received: foobar"
-----
-
-The promise library offers the ability to add a timeout to async operations thanks
-to the `timeout` function:
-
-[source, clojure]
-----
-(-> (some-async-task)
-    (p/timeout 200)
-    (p/then #(println "Task finished" %))
-    (p/catch #(println "Timeout" %)))
-----
-
-In case the async task is slow, in the example more that 200ms, the promise will be
-rejected with timeout error and successfully captured with the `catch` handler.
 
 
 === Scheduling Tasks

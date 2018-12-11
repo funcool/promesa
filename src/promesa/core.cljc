@@ -239,9 +239,8 @@
                          (reject e))))))))))
 
 (defn any
-  "Given an array of promises, return a promise
-  that is fulfilled when first one item in the
-  array is fulfilled."
+  "Given an array of promises, return a promise that is fulfilled when
+  first one item in the array is fulfilled."
   ([promises]
    (any promises ::default))
   ([promises default]
