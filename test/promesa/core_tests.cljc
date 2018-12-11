@@ -5,7 +5,10 @@
                :cljs [promesa.async-cljs :refer-macros [async]])
             #?(:cljs [promesa.issue-36 :refer [async-let-issue-36]])
             [promesa.test-helpers :refer [future-ok future-fail]]
-            [promesa.core :as p]))
+            [promesa.core :as p])
+  #?(:clj
+     (:import java.util.concurrent.TimeoutException)))
+
 
 ;; --- Core Interface Tests
 
@@ -224,6 +227,36 @@
        (t/is (not (realized? c1)))
        (t/is (p/cancelled? c1))
        (t/is (= @value 2)))))
+
+(t/deftest timeout-test-1
+  #?(:cljs
+     (t/async done
+       (let [prm (-> (p/delay 1000 :value)
+                     (p/timeout 500))]
+         (p/catch prm (fn [e]
+                        (t/is (instance? p/TimeoutException e))
+                        (done)))))
+     :clj
+     (let [prm (-> (p/delay 1000 :value)
+                   (p/timeout 500))]
+       @(p/catch prm (fn [e]
+                       (t/is (instance? TimeoutException e)))))))
+
+(t/deftest timeout-test-2
+  #?(:cljs
+     (t/async done
+       (let [prm (-> (p/delay 200 :value)
+                     (p/timeout 500))]
+         (p/then prm (fn [v]
+                        (t/is (= (v :value)))
+                        (done)))))
+     :clj
+     (let [prm (-> (p/delay 200 :value)
+                   (p/timeout 500))]
+       @(p/then prm (fn [v]
+                     (t/is (= (v :value))))))))
+
+
 
 (t/deftest chaining-using-chain
   #?(:cljs

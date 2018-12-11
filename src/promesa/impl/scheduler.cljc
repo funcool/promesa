@@ -100,10 +100,10 @@
      []
      (Executors/newScheduledThreadPool 1)))
 
-(def ^:redef +scheduler+
+(def ^:dynamic *scheduler*
   "A default lazy scheduler instance."
   (delay (scheduler)))
 
 (defn schedule
   [ms func]
-  (pt/-schedule @+scheduler+ ms func))
+  (pt/-schedule @*scheduler* ms func))

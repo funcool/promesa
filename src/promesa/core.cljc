@@ -301,14 +301,27 @@
                        (reject e))))))))
 
 #?(:cljs
-   (defn timeout
-     "Returns a cancellable promise that will be fulfilled
-     with this promise's fulfillment value or rejection reason.
-     However, if this promise is not fulfilled or rejected
-     within `ms` milliseconds, the returned promise is cancelled
-     with a TimeoutError"
-     ([p t] (.timeout p t))
-     ([p t v] (.timeout p t v))))
+   (defn ^{:jsdoc ["@constructor"]}
+     TimeoutException [message]
+     (this-as it
+       (.call js/Error it message {} nil)
+       it)))
+
+#?(:cljs (goog/inherits TimeoutException js/Error))
+
+(defn timeout
+  "Returns a cancellable promise that will be fulfilled with this
+  promise's fulfillment value or rejection reason.  However, if this
+  promise is not fulfilled or rejected within `ms` milliseconds, the
+  returned promise is cancelled with a TimeoutError"
+  ([p t] (timeout p t ::default))
+  ([p t v]
+   (let [tp (promise (fn [resolve reject]
+                       (ps/schedule t (fn []
+                                        (if (= v ::default)
+                                          (reject (TimeoutException. "Operation timed out."))
+                                          (resolve v))))))]
+     (race [p tp]))))
 
 (defn delay
   "Given a timeout in miliseconds and optional
