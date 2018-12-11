@@ -29,7 +29,8 @@
             [promesa.impl.scheduler :as ps])
   #?(:clj
      (:import java.util.concurrent.CompletableFuture
-              java.util.concurrent.CompletionStage)))
+              java.util.concurrent.CompletionStage
+              java.util.concurrent.TimeoutException)))
 
 ;; --- Global Constants
 
@@ -222,6 +223,20 @@
                        (CompletableFuture/allOf))
                   (fn [_]
                     (mapv pt/-extract promises))))))
+
+(defn race
+  [promises]
+   (let [resolved (atom false)]
+     (promise
+      (fn [resolve reject]
+        (doseq [p promises]
+          (-> (promise p)
+              (then (fn [v]
+                      (when (compare-and-set! resolved false true)
+                        (resolve v))))
+              (catch (fn [e]
+                       (when (compare-and-set! resolved false true)
+                         (reject e))))))))))
 
 (defn any
   "Given an array of promises, return a promise
