@@ -37,31 +37,40 @@
 
 
 #?(:cljs
-   (def ^:const PROMISE-IDX ioc-helpers/USER-START-IDX))
-
-#?(:cljs
    (defn run-state-machine-wrapped
      [state]
      (try
        (ioc-helpers/run-state-machine state)
-       (catch js/Error ex
-         (let [[resolve reject] (ioc-helpers/aget-object state PROMISE-IDX)]
+       (catch :default ex
+         (let [[resolve reject] (ioc-helpers/aget-object state ioc-helpers/USER-START-IDX)]
            (reject ex)
-           (throw ex))))))
+           )))))
 
 #?(:cljs
    (defn do-take
      [state blk p]
-     (pt/-bind p (fn [v]
-                   (ioc/aset-all! state ioc-helpers/VALUE-IDX v ioc-helpers/STATE-IDX blk)
-                   (run-state-machine-wrapped state)
-                   v))
+
+     (-> p
+         (pt/-bind (fn [v]
+                     (ioc/aset-all! state ioc-helpers/VALUE-IDX v ioc-helpers/STATE-IDX blk)
+                     (run-state-machine-wrapped state)
+                     v))
+
+         (pt/-catch (fn [e]
+                      (if-let [excframes (seq (ioc-helpers/aget-object state ioc-helpers/EXCEPTION-FRAMES))]
+                        (do
+                          (ioc/aset-all! state ioc-helpers/CURRENT-EXCEPTION e)
+                          (ioc-helpers/process-exception state)
+                          (run-state-machine-wrapped state))
+                        (let [[resolve reject] (ioc-helpers/aget-object state ioc-helpers/USER-START-IDX)]
+                          (reject e))))))
      nil))
+
 
 #?(:cljs
    (defn do-return
      [state value]
-     (let [[resolve reject] (ioc-helpers/aget-object state PROMISE-IDX)]
+     (let [[resolve reject] (ioc-helpers/aget-object state ioc-helpers/USER-START-IDX)]
        (resolve value))))
 
 #?(:clj

@@ -61,12 +61,12 @@
        (t/is (= e @@(p/catch p1 (fn [x] (reduced x))))))
      :cljs
      (t/async done
-     (let [e (ex-info "foo" {})
-           p1 (p/promise e)]
-       (t/is (p/rejected? p1))
-       (p/catch p1 (fn [x]
-                     (t/is (= e x))
-                     (done)))))))
+       (let [e (ex-info "foo" {})
+             p1 (p/promise e)]
+         (t/is (p/rejected? p1))
+         (p/catch p1 (fn [x]
+                       (t/is (= e x))
+                       (done)))))))
 
 (t/deftest promise-rejected
   (let [e1 (ex-info "foobar" {})
@@ -343,7 +343,7 @@
 ;;        (t/is (= nil result)))))
 
 
-;; ;; --- `async` macro tests
+;; --- `async` macro tests
 
 (defn my-func
   [ixx]
@@ -375,6 +375,50 @@
                    (done))))
        :clj
        (t/is (= 100 @(do-stuff 10))))))
+
+(t/deftest exceptions-on-async-macro1
+  (letfn [(throw-exc [v]
+            (p/promise (ex-info "test" {:v v})))
+
+          (do-stuff [v]
+            (async
+              (p/await (throw-exc v))
+              4000))]
+
+    #?(:cljs
+       (t/async done
+         (p/catch (do-stuff 1) (fn [e]
+                                  (t/is (= (ex-data e) {:v 1}))
+                                  (done))))
+       :clj
+       (let [prm (-> (do-stuff 1)
+                     (p/then (fn [v] 1000))
+                     (p/catch (fn [e] 2000)))]
+
+         (t/is (= 2000 @prm))))))
+
+
+(t/deftest exceptions-on-async-macro2
+  (letfn [(throw-exc [v]
+            (p/promise (ex-info "test" {:v v})))
+
+          (do-stuff [v]
+            (async
+              (try
+                (p/await (throw-exc v))
+                (catch :default e
+                  v))))]
+
+    #?(:cljs
+       (t/async done
+         (p/then (do-stuff 1000) (fn [v]
+                                   (t/is (= v 1000))
+                                   (done))))
+       :clj
+       (let [prm (-> (do-stuff 1000)
+                     (p/then (fn [v] v))
+                     (p/catch (fn [e] 2000)))]
+         (t/is (= 1000 @prm))))))
 
 ;; --- Entry Point
 

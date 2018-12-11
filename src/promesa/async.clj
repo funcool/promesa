@@ -30,16 +30,15 @@
             [promesa.protocols :as pt]
             [clojure.core.async.impl.ioc-macros :as ioc]))
 
-(def ^:const PROMISE-IDX ioc/USER-START-IDX)
-
 (defn run-state-machine-wrapped
   [state]
   (try
     (ioc/run-state-machine state)
     (catch Throwable ex
-      (let [[resolve reject] (ioc/aget-object state PROMISE-IDX)]
+      (let [[resolve reject] (ioc/aget-object state ioc/USER-START-IDX)]
         (reject ex)
         (throw ex)))))
+
 
 (defn do-take
   [state blk p]
@@ -47,12 +46,25 @@
                 (ioc/aset-all! state ioc/VALUE-IDX v ioc/STATE-IDX blk)
                 (run-state-machine-wrapped state)
                 v))
+  (pt/-catch p (fn [e]
+                 (if-let [excframes (seq (ioc/aget-object state ioc/EXCEPTION-FRAMES))]
+                   (do
+                     (ioc/aset-all! state
+                                    ioc/VALUE-IDX e
+                                    ioc/STATE-IDX (first excframes)
+                                    ioc/EXCEPTION-FRAMES (rest excframes))
+                     (run-state-machine-wrapped state))
+                   (let [[resolve reject] (ioc/aget-object state ioc/USER-START-IDX)]
+                     (reject e)))))
+
   nil)
 
 (defn do-return
   [state value]
-  (let [[resolve reject] (ioc/aget-object state PROMISE-IDX)]
-    (resolve value)))
+  (let [[resolve reject] (ioc/aget-object state ioc/USER-START-IDX)]
+    (if-let [exception (ioc/aget-object state ioc/CURRENT-EXCEPTION)]
+      (reject exception)
+      (resolve value))))
 
 (def async-terminators
   {'promesa.core/await `do-take
@@ -87,7 +99,6 @@
                                          [crossing-env &env]
                                          async-terminators)
                   state# (ioc/aset-all! (f#)
-                                        PROMISE-IDX [resolve# reject#]
+                                        ioc/USER-START-IDX [resolve# reject#]
                                         ioc/BINDINGS-IDX bindings#)]
               (run-state-machine-wrapped state#)))))))))
-
