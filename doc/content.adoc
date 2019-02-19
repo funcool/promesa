@@ -28,11 +28,10 @@ Just include the following lines in your dependency vector on *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "2.0.0"]
+[funcool/promesa "2.0.1"]
 ----
 
-This package requires JDK8 if you are using it on the JVM and all
-environments that the *bluebird* library supports on JS engines.
+This package requires JDK8 if you are using it on the JVM.
 
 
 == User guide

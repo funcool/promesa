@@ -2,7 +2,7 @@
 
 ## Version 2.0.0 ##
 
-Date: unreleased
+Date: 2019-02-19
 
 This is a breaking change release. Finally bluebird is gone in favour
 of using the ES6 builtin Promise object. This removes the overhead (in
