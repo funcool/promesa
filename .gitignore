@@ -15,3 +15,5 @@ pom.xml.asc
 /node_modules
 /dev/dist
 /dist
+/.cpcache
+/settings.xml
