@@ -180,6 +180,24 @@
      (-promise [v]
        (resolved v))))
 
+(defn empty-promise
+  []
+  #?(:cljs
+     (let [state (volatile! {})
+           obj (new *default-promise*
+                  (fn [resolve reject]
+                    (vreset! state
+                             {:resolve resolve
+                              :reject reject})))]
+       (pr @state)
+       (specify! obj
+         pt/ICompletable
+         (-resolve [_ v]
+           (pr @state)
+           ((:resolve @state) v))
+         (-reject [_ v]
+           ((:reject @state) v))))))
+
 ;; --- Pretty printing
 
 (defn promise->str

@@ -81,8 +81,9 @@
 
 (defn promise
   "The promise constructor."
-  [v]
-  (pt/-promise v))
+  ([] (impl/empty-promise))
+  ([v]
+   (pt/-promise v)))
 
 (defn promise?
   "Return true if `v` is a promise instance."
@@ -282,6 +283,18 @@
   "Return true if `v` is a cancelled promise."
   [v]
   (pt/-cancelled? v))
+
+;; Completable
+
+(defn resolve!
+  "Resolve a completable promise with a value."
+  [p v]
+  (pt/-resolve p v))
+
+(defn reject!
+  "Reject a completable promise with an error."
+  [p e]
+  (pt/-reject p e))
 
 ;; Utils
 
