@@ -4,79 +4,11 @@
 <meta charset="UTF-8">
 <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 1.5.5">
+<meta name="generator" content="Asciidoctor 1.5.8">
 <meta name="author" content="Andrey Antukh, &lt;niwi@niwi.nz&gt;">
 <title>promesa - promise library for clojure and clojurescript</title>
 <style>
-.listingblock .pygments .hll { background-color: #ffffcc }
-.listingblock .pygments, .listingblock .pygments code { background: #f0f0f0; }
-.listingblock .pygments .tok-c { color: #60a0b0; font-style: italic } /* Comment */
-.listingblock .pygments .tok-err { border: 1px solid #FF0000 } /* Error */
-.listingblock .pygments .tok-k { color: #007020; font-weight: bold } /* Keyword */
-.listingblock .pygments .tok-o { color: #666666 } /* Operator */
-.listingblock .pygments .tok-ch { color: #60a0b0; font-style: italic } /* Comment.Hashbang */
-.listingblock .pygments .tok-cm { color: #60a0b0; font-style: italic } /* Comment.Multiline */
-.listingblock .pygments .tok-cp { color: #007020 } /* Comment.Preproc */
-.listingblock .pygments .tok-cpf { color: #60a0b0; font-style: italic } /* Comment.PreprocFile */
-.listingblock .pygments .tok-c1 { color: #60a0b0; font-style: italic } /* Comment.Single */
-.listingblock .pygments .tok-cs { color: #60a0b0; background-color: #fff0f0 } /* Comment.Special */
-.listingblock .pygments .tok-gd { color: #A00000 } /* Generic.Deleted */
-.listingblock .pygments .tok-ge { font-style: italic } /* Generic.Emph */
-.listingblock .pygments .tok-gr { color: #FF0000 } /* Generic.Error */
-.listingblock .pygments .tok-gh { color: #000080; font-weight: bold } /* Generic.Heading */
-.listingblock .pygments .tok-gi { color: #00A000 } /* Generic.Inserted */
-.listingblock .pygments .tok-go { color: #888888 } /* Generic.Output */
-.listingblock .pygments .tok-gp { color: #c65d09; font-weight: bold } /* Generic.Prompt */
-.listingblock .pygments .tok-gs { font-weight: bold } /* Generic.Strong */
-.listingblock .pygments .tok-gu { color: #800080; font-weight: bold } /* Generic.Subheading */
-.listingblock .pygments .tok-gt { color: #0044DD } /* Generic.Traceback */
-.listingblock .pygments .tok-kc { color: #007020; font-weight: bold } /* Keyword.Constant */
-.listingblock .pygments .tok-kd { color: #007020; font-weight: bold } /* Keyword.Declaration */
-.listingblock .pygments .tok-kn { color: #007020; font-weight: bold } /* Keyword.Namespace */
-.listingblock .pygments .tok-kp { color: #007020 } /* Keyword.Pseudo */
-.listingblock .pygments .tok-kr { color: #007020; font-weight: bold } /* Keyword.Reserved */
-.listingblock .pygments .tok-kt { color: #902000 } /* Keyword.Type */
-.listingblock .pygments .tok-m { color: #40a070 } /* Literal.Number */
-.listingblock .pygments .tok-s { color: #4070a0 } /* Literal.String */
-.listingblock .pygments .tok-na { color: #4070a0 } /* Name.Attribute */
-.listingblock .pygments .tok-nb { color: #007020 } /* Name.Builtin */
-.listingblock .pygments .tok-nc { color: #0e84b5; font-weight: bold } /* Name.Class */
-.listingblock .pygments .tok-no { color: #60add5 } /* Name.Constant */
-.listingblock .pygments .tok-nd { color: #555555; font-weight: bold } /* Name.Decorator */
-.listingblock .pygments .tok-ni { color: #d55537; font-weight: bold } /* Name.Entity */
-.listingblock .pygments .tok-ne { color: #007020 } /* Name.Exception */
-.listingblock .pygments .tok-nf { color: #06287e } /* Name.Function */
-.listingblock .pygments .tok-nl { color: #002070; font-weight: bold } /* Name.Label */
-.listingblock .pygments .tok-nn { color: #0e84b5; font-weight: bold } /* Name.Namespace */
-.listingblock .pygments .tok-nt { color: #062873; font-weight: bold } /* Name.Tag */
-.listingblock .pygments .tok-nv { color: #bb60d5 } /* Name.Variable */
-.listingblock .pygments .tok-ow { color: #007020; font-weight: bold } /* Operator.Word */
-.listingblock .pygments .tok-w { color: #bbbbbb } /* Text.Whitespace */
-.listingblock .pygments .tok-mb { color: #40a070 } /* Literal.Number.Bin */
-.listingblock .pygments .tok-mf { color: #40a070 } /* Literal.Number.Float */
-.listingblock .pygments .tok-mh { color: #40a070 } /* Literal.Number.Hex */
-.listingblock .pygments .tok-mi { color: #40a070 } /* Literal.Number.Integer */
-.listingblock .pygments .tok-mo { color: #40a070 } /* Literal.Number.Oct */
-.listingblock .pygments .tok-sa { color: #4070a0 } /* Literal.String.Affix */
-.listingblock .pygments .tok-sb { color: #4070a0 } /* Literal.String.Backtick */
-.listingblock .pygments .tok-sc { color: #4070a0 } /* Literal.String.Char */
-.listingblock .pygments .tok-dl { color: #4070a0 } /* Literal.String.Delimiter */
-.listingblock .pygments .tok-sd { color: #4070a0; font-style: italic } /* Literal.String.Doc */
-.listingblock .pygments .tok-s2 { color: #4070a0 } /* Literal.String.Double */
-.listingblock .pygments .tok-se { color: #4070a0; font-weight: bold } /* Literal.String.Escape */
-.listingblock .pygments .tok-sh { color: #4070a0 } /* Literal.String.Heredoc */
-.listingblock .pygments .tok-si { color: #70a0d0; font-style: italic } /* Literal.String.Interpol */
-.listingblock .pygments .tok-sx { color: #c65d09 } /* Literal.String.Other */
-.listingblock .pygments .tok-sr { color: #235388 } /* Literal.String.Regex */
-.listingblock .pygments .tok-s1 { color: #4070a0 } /* Literal.String.Single */
-.listingblock .pygments .tok-ss { color: #517918 } /* Literal.String.Symbol */
-.listingblock .pygments .tok-bp { color: #007020 } /* Name.Builtin.Pseudo */
-.listingblock .pygments .tok-fm { color: #06287e } /* Name.Function.Magic */
-.listingblock .pygments .tok-vc { color: #bb60d5 } /* Name.Variable.Class */
-.listingblock .pygments .tok-vg { color: #bb60d5 } /* Name.Variable.Global */
-.listingblock .pygments .tok-vi { color: #bb60d5 } /* Name.Variable.Instance */
-.listingblock .pygments .tok-vm { color: #bb60d5 } /* Name.Variable.Magic */
-.listingblock .pygments .tok-il { color: #40a070 } /* Literal.Number.Integer.Long */
+/* Pygments CSS disabled. Pygments is not available. */
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic|Liberation+Mono:400|Roboto+Slab:400,700"/>
 <link rel="stylesheet" href="https://www.niwi.nz/_assets/asciidoctor-styles/simple-red-titles/stylesheet.css"/>
@@ -101,19 +33,15 @@
 <li><a href="#introduction-2">Introduction</a></li>
 <li><a href="#creating-a-promise">Creating a promise</a></li>
 <li><a href="#promise-chaining">Promise Chaining</a></li>
-<li><a href="#async-await-syntax">Async/Await Syntax</a></li>
+<li><a href="#asyncawait-syntax">Async/Await Syntax</a></li>
 <li><a href="#error-handling">Error handling</a></li>
 <li><a href="#branching">Branching</a></li>
-<li><a href="#working-with-collections">Working with collections</a></li>
 <li><a href="#delays-and-timeouts">Delays and timeouts.</a></li>
+<li><a href="#working-with-collections">Working with collections</a></li>
 <li><a href="#scheduling-tasks">Scheduling Tasks</a></li>
 </ul>
 </li>
-<li><a href="#faq">FAQ</a>
-<ul class="sectlevel2">
-<li><a href="#why-bluebird-instead-of-es6-promise">Why bluebird instead of es6 promise?</a></li>
-</ul>
-</li>
+<li><a href="#faq">FAQ</a></li>
 <li><a href="#developers-guide">Developers Guide</a>
 <ul class="sectlevel2">
 <li><a href="#contributing">Contributing</a></li>
@@ -134,8 +62,7 @@
 </div>
 <div class="paragraph">
 <p>On the JVM paltform <em>promesa</em> is built on top of <strong>completable futures</strong> (requires jdk8). On
-JS engines it is built on top of the <a href="https://github.com/petkaantonov/bluebird/">bluebird</a>
-promise library.</p>
+JS engines it is built on top of the builtin Promise implementation.</p>
 </div>
 <div class="sect2">
 <h3 id="project-maturity"><a class="link" href="#project-maturity">Project Maturity</a></h3>
@@ -150,12 +77,11 @@ promise library.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">[</span><span class="tok-nv">funcool/promesa</span> <span class="tok-s">&quot;1.9.0&quot;</span><span class="tok-p">]</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure">[funcool/promesa "2.0.1"]</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>This package requires JDK8 if you are using it on the JVM and all
-environments that the <strong>bluebird</strong> library supports on JS engines.</p>
+<p>This package requires JDK8 if you are using it on the JVM.</p>
 </div>
 </div>
 </div>
@@ -197,11 +123,11 @@ operation that has the notion of error.</p>
 <div class="listingblock">
 <div class="title">Example creating already resolved promise instances from plain values.</div>
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">promesa.core</span> <span class="tok-ss">:as</span> <span class="tok-nv">p</span><span class="tok-p">])</span>
+<pre class="pygments highlight"><code data-lang="clojure">(require '[promesa.core :as p])
 
-<span class="tok-c1">;; Create a fulfilled promise</span>
-<span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">1</span><span class="tok-p">)</span>
-<span class="tok-c1">;; =&gt; #&lt;Promise [1]&gt;</span></code></pre>
+;; Create a fulfilled promise
+(p/promise 1)
+;; =&gt; #&lt;Promise [1]&gt;</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -217,8 +143,8 @@ respectively.</p>
 <div class="listingblock">
 <div class="title">Example creating promise instance using a factory.</div>
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nb">resolve </span><span class="tok-nv">reject</span><span class="tok-p">]</span>
-             <span class="tok-p">(</span><span class="tok-nb">resolve </span><span class="tok-mi">1</span><span class="tok-p">)))</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure">(p/promise (fn [resolve reject]
+             (resolve 1)))</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -228,14 +154,14 @@ the <code>resolve</code> callback we just need to return the value:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">p/do*</span>
-  <span class="tok-p">(</span><span class="tok-k">let </span><span class="tok-p">[</span><span class="tok-nv">a</span> <span class="tok-p">(</span><span class="tok-nb">rand-int </span><span class="tok-mi">10</span><span class="tok-p">)</span>
-        <span class="tok-nv">b</span> <span class="tok-p">(</span><span class="tok-nb">rand-int </span><span class="tok-mi">10</span><span class="tok-p">)]</span>
-    <span class="tok-p">(</span><span class="tok-nb">+ </span><span class="tok-nv">a</span> <span class="tok-nv">b</span><span class="tok-p">)))</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure">(p/do*
+  (let [a (rand-int 10)
+        b (rand-int 10)]
+    (+ a b)))</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p><code>do*</code> blocks work similarly to clojure&#8217;s <code>do</code> block, so you can put any
+<p><code>do*</code> block work similarly to clojure&#8217;s <code>do</code> block, so you can put any
 expression but only the last one will be returned and that expression can be a
 plain value or an other promise.</p>
 </div>
@@ -267,11 +193,11 @@ its execution) is using the well known <code>map</code> function:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">result</span> <span class="tok-p">(</span><span class="tok-nf">-&gt;&gt;</span> <span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">1</span><span class="tok-p">)</span>
-                 <span class="tok-p">(</span><span class="tok-nf">p/map</span> <span class="tok-nv">inc</span><span class="tok-p">)))</span>
+<pre class="pygments highlight"><code data-lang="clojure">(def result (-&gt;&gt; (p/promise 1)
+                 (p/map inc)))
 
-<span class="tok-o">@</span><span class="tok-nv">result</span>     <span class="tok-c1">; only on the jvm</span>
-<span class="tok-c1">;; =&gt; 2</span></code></pre>
+@result     ; only on the jvm
+;; =&gt; 2</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -280,11 +206,11 @@ in the same way as <code>map</code> but with the parameters inverted:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">result</span> <span class="tok-p">(</span><span class="tok-nb">-&gt; </span><span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">1</span><span class="tok-p">)</span>
-                <span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-nv">inc</span><span class="tok-p">)))</span>
+<pre class="pygments highlight"><code data-lang="clojure">(def result (-&gt; (p/promise 1)
+                (p/then inc)))
 
-<span class="tok-o">@</span><span class="tok-nv">result</span>     <span class="tok-c1">; only on the jvm</span>
-<span class="tok-c1">;; =&gt; 2</span></code></pre>
+@result     ; only on the jvm
+;; =&gt; 2</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -293,11 +219,11 @@ in the same way as <code>map</code> but with the parameters inverted:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">result</span> <span class="tok-p">(</span><span class="tok-nb">-&gt; </span><span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">1</span><span class="tok-p">)</span>
-                <span class="tok-p">(</span><span class="tok-nf">p/chain</span> <span class="tok-nb">inc inc </span><span class="tok-nv">inc</span><span class="tok-p">))</span>
+<pre class="pygments highlight"><code data-lang="clojure">(def result (-&gt; (p/promise 1)
+                (p/chain inc inc inc))
 
-<span class="tok-o">@</span><span class="tok-nv">result</span>     <span class="tok-c1">; only on the jvm</span>
-<span class="tok-c1">;; =&gt; 4</span></code></pre>
+@result     ; only on the jvm
+;; =&gt; 4</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -307,13 +233,13 @@ apply to also returns a promise instead of a value:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">incp</span> <span class="tok-o">#</span><span class="tok-p">(</span><span class="tok-nf">p/resolved</span> <span class="tok-p">(</span><span class="tok-nb">inc </span><span class="tok-nv">%</span><span class="tok-p">)))</span>
+<pre class="pygments highlight"><code data-lang="clojure">(def incp #(p/resolved (inc %)))
 
-<span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">result</span> <span class="tok-p">(</span><span class="tok-nf">-&gt;&gt;</span> <span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-mi">1</span><span class="tok-p">)</span>
-                 <span class="tok-p">(</span><span class="tok-nf">p/mapcat</span> <span class="tok-nv">incp</span><span class="tok-p">)))</span>
+(def result (-&gt;&gt; (p/promise 1)
+                 (p/mapcat incp)))
 
-<span class="tok-o">@</span><span class="tok-nv">result</span>     <span class="tok-c1">; only on the jvm</span>
-<span class="tok-c1">;; =&gt; 2</span></code></pre>
+@result     ; only on the jvm
+;; =&gt; 2</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -323,9 +249,9 @@ does that).</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="async-await-syntax"><a class="link" href="#async-await-syntax">Async/Await Syntax</a></h3>
+<h3 id="asyncawait-syntax"><a class="link" href="#asyncawait-syntax">Async/Await Syntax</a></h3>
 <div class="sect3">
-<h4 id="code-alet-code-macro-async-let"><a class="link" href="#code-alet-code-macro-async-let"><code>alet</code> macro (async let)</a></h4>
+<h4 id="alet-macro-async-let"><a class="link" href="#alet-macro-async-let"><code>alet</code> macro (async let)</a></h4>
 <div class="paragraph">
 <p>The <em>promesa</em> library comes with convenient syntax-sugar that allows you to create a
 compositions that looks like synchronous code while using the clojure&#8217;s familiar <code>let</code>
@@ -333,21 +259,21 @@ syntax:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">promesa.core</span> <span class="tok-ss">:as</span> <span class="tok-nv">p</span><span class="tok-p">])</span>
+<pre class="pygments highlight"><code data-lang="clojure">(require '[promesa.core :as p])
 
-<span class="tok-p">(</span><span class="tok-kd">defn </span><span class="tok-nv">sleep-promise</span>
-  <span class="tok-p">[</span><span class="tok-nv">wait</span><span class="tok-p">]</span>
-  <span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nb">resolve </span><span class="tok-nv">reject</span><span class="tok-p">]</span>
-               <span class="tok-p">(</span><span class="tok-nf">p/schedule</span> <span class="tok-nv">wait</span> <span class="tok-o">#</span><span class="tok-p">(</span><span class="tok-nb">resolve </span><span class="tok-nv">wait</span><span class="tok-p">)))))</span>
+(defn sleep-promise
+  [wait]
+  (p/promise (fn [resolve reject]
+               (p/schedule wait #(resolve wait)))))
 
-<span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">result</span>
-  <span class="tok-p">(</span><span class="tok-nf">p/alet</span> <span class="tok-p">[</span><span class="tok-nv">x</span> <span class="tok-p">(</span><span class="tok-nf">p/await</span> <span class="tok-p">(</span><span class="tok-nf">sleep-promise</span> <span class="tok-mi">42</span><span class="tok-p">))</span>
-           <span class="tok-nv">y</span> <span class="tok-p">(</span><span class="tok-nf">p/await</span> <span class="tok-p">(</span><span class="tok-nf">sleep-promise</span> <span class="tok-mi">41</span><span class="tok-p">))</span>
-           <span class="tok-nv">z</span> <span class="tok-mi">2</span><span class="tok-p">]</span>
-    <span class="tok-p">(</span><span class="tok-nb">+ </span><span class="tok-nv">x</span> <span class="tok-nv">y</span> <span class="tok-nv">z</span><span class="tok-p">)))</span>
+(def result
+  (p/alet [x (p/await (sleep-promise 42))
+           y (p/await (sleep-promise 41))
+           z 2]
+    (+ x y z)))
 
-<span class="tok-o">@</span><span class="tok-nv">result</span>     <span class="tok-c1">; only on the jvm</span>
-<span class="tok-c1">;; =&gt; 85</span></code></pre>
+@result     ; only on the jvm
+;; =&gt; 85</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -361,7 +287,7 @@ returning exceptionally resolved promise.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="code-async-code-macro-general-purpose"><a class="link" href="#code-async-code-macro-general-purpose"><code>async</code> macro (general purpose)</a></h4>
+<h4 id="async-macro-general-purpose"><a class="link" href="#async-macro-general-purpose"><code>async</code> macro (general purpose)</a></h4>
 <div class="paragraph">
 <p>In contrast to the <code>alet</code> macro, the <code>async</code> macro is more general purpose
 and enables the usage of <code>await</code> in any place (not only on the let
@@ -369,17 +295,17 @@ bindings). Let see an example:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">p</span> <span class="tok-p">(</span><span class="tok-nf">async</span>
-         <span class="tok-p">(</span><span class="tok-nb">dotimes </span><span class="tok-p">[</span><span class="tok-nv">i</span> <span class="tok-mi">3</span><span class="tok-p">]</span>
-           <span class="tok-p">(</span><span class="tok-nf">p/await</span> <span class="tok-p">(</span><span class="tok-nf">p/delay</span> <span class="tok-mi">100</span><span class="tok-p">))</span>
-           <span class="tok-p">(</span><span class="tok-nb">println </span><span class="tok-s">&quot;i=&quot;</span> <span class="tok-nv">i</span><span class="tok-p">))</span>
-         <span class="tok-mi">10</span><span class="tok-p">))</span>
+<pre class="pygments highlight"><code data-lang="clojure">(def p (async
+         (dotimes [i 3]
+           (p/await (p/delay 100))
+           (println "i=" i))
+         10))
 
-<span class="tok-o">@</span><span class="tok-nv">p</span>
-<span class="tok-c1">;; i=0</span>
-<span class="tok-c1">;; i=1</span>
-<span class="tok-c1">;; i=2</span>
-<span class="tok-c1">;; =&gt; 10</span></code></pre>
+@p
+;; i=0
+;; i=1
+;; i=2
+;; =&gt; 10</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -406,13 +332,13 @@ version of macro in <code>promesa.async-cljs</code> namespace.</p>
 <div class="listingblock">
 <div class="title">Example importing <code>async</code> macro in Clojure</div>
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">promesa.async</span> <span class="tok-ss">:refer</span> <span class="tok-p">[</span><span class="tok-nv">async</span><span class="tok-p">]])</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure">(require '[promesa.async :refer [async]])</code></pre>
 </div>
 </div>
 <div class="listingblock">
 <div class="title">Example importing <code>async</code> macro in ClojureScript</div>
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">promesa.async-cljs</span> <span class="tok-ss">:refer-macros</span> <span class="tok-p">[</span><span class="tok-nv">async</span><span class="tok-p">]])</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure">(require '[promesa.async-cljs :refer-macros [async]])</code></pre>
 </div>
 </div>
 </td>
@@ -450,9 +376,9 @@ the last promise making the effect of short-circuiting.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nb">-&gt; </span><span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-p">(</span><span class="tok-nf">ex-info</span> <span class="tok-s">&quot;error&quot;</span> <span class="tok-nv">nil</span><span class="tok-p">))</span>
-    <span class="tok-p">(</span><span class="tok-nf">p/catch</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">error</span><span class="tok-p">]</span>
-               <span class="tok-p">(</span><span class="tok-nf">.log</span> <span class="tok-nv">js/console</span> <span class="tok-nv">error</span><span class="tok-p">))))</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure">(-&gt; (p/promise (ex-info "error" nil))
+    (p/catch (fn [error]
+               (.log js/console error))))</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -467,9 +393,9 @@ alias) that works in same way as <code>catch</code> but has the parameters like 
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">-&gt;&gt;</span> <span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-p">(</span><span class="tok-nf">ex-info</span> <span class="tok-s">&quot;error&quot;</span> <span class="tok-nv">nil</span><span class="tok-p">))</span>
-     <span class="tok-p">(</span><span class="tok-nf">p/error</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">error</span><span class="tok-p">]</span>
-                <span class="tok-p">(</span><span class="tok-nf">.log</span> <span class="tok-nv">js/console</span> <span class="tok-nv">error</span><span class="tok-p">))))</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure">(-&gt;&gt; (p/promise (ex-info "error" nil))
+     (p/error (fn [error]
+                (.log js/console error))))</code></pre>
 </div>
 </div>
 <div class="admonitionblock note">
@@ -496,12 +422,45 @@ the <code>branch</code> function:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">p/branch</span> <span class="tok-nv">a-promise</span>
-          <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">v</span><span class="tok-p">]</span>
-            <span class="tok-p">(</span><span class="tok-nb">println </span><span class="tok-s">&quot;Ok&quot;</span> <span class="tok-nv">v</span><span class="tok-p">))</span>
-          <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">err</span><span class="tok-p">]</span>
-            <span class="tok-p">(</span><span class="tok-nb">println </span><span class="tok-nv">err</span><span class="tok-p">)))</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure">(p/branch a-promise
+          (fn [v]
+            (println "Ok" v))
+          (fn [err]
+            (println err)))</code></pre>
 </div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="delays-and-timeouts"><a class="link" href="#delays-and-timeouts">Delays and timeouts.</a></h3>
+<div class="paragraph">
+<p>JavaScript due its nature, does not allow you to block or sleep. But with promises
+you can emulate the functionality using <code>delay</code> like so:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure">(-&gt; (p/delay 1000 "foobar")
+    (p/then (fn [v]
+              (println "Received:" v))))
+
+;; After 1 second it will print the message
+;; to the console: "Received: foobar"</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The promise library also offers the ability to add a timeout to async
+operations thanks to the <code>timeout</code> function:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure">(-&gt; (some-async-task)
+    (p/timeout 200)
+    (p/then #(println "Task finished" %))
+    (p/catch #(println "Timeout" %)))</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In case the async task is slow, in the example more that 200ms, the promise will be
+rejected with timeout error and successfully captured with the <code>catch</code> handler.</p>
 </div>
 </div>
 <div class="sect2">
@@ -516,10 +475,10 @@ them are resolved. This can be done using the <code>all</code> combinator:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-k">let </span><span class="tok-p">[</span><span class="tok-nv">p</span> <span class="tok-p">(</span><span class="tok-nf">p/all</span> <span class="tok-p">[(</span><span class="tok-nf">do-some-io</span><span class="tok-p">)</span>
-                <span class="tok-p">(</span><span class="tok-nf">do-some-other-io</span><span class="tok-p">)])]</span>
-  <span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-nv">p</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[[</span><span class="tok-nv">result1</span> <span class="tok-nv">result2</span><span class="tok-p">]]</span>
-              <span class="tok-p">(</span><span class="tok-nf">do-something-with-results</span> <span class="tok-nv">result1</span> <span class="tok-nv">result2</span><span class="tok-p">))))</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure">(let [p (p/all [(do-some-io)
+                (do-some-other-io)])]
+  (p/then p (fn [[result1 result2]]
+              (do-something-with-results result1 result2))))</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -528,45 +487,12 @@ resolved promise. For this case, you can use the <code>any</code> combinator:</p
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-k">let </span><span class="tok-p">[</span><span class="tok-nv">p</span> <span class="tok-p">(</span><span class="tok-nf">p/any</span> <span class="tok-p">[(</span><span class="tok-nf">p/delay</span> <span class="tok-mi">100</span> <span class="tok-mi">1</span><span class="tok-p">)</span>
-                <span class="tok-p">(</span><span class="tok-nf">p/delay</span> <span class="tok-mi">200</span> <span class="tok-mi">2</span><span class="tok-p">)</span>
-                <span class="tok-p">(</span><span class="tok-nf">p/delay</span> <span class="tok-mi">120</span> <span class="tok-mi">3</span><span class="tok-p">)])]</span>
-  <span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-nv">p</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">x</span><span class="tok-p">]</span>
-              <span class="tok-p">(</span><span class="tok-nf">.log</span> <span class="tok-nv">js/console</span> <span class="tok-s">&quot;The first one finished: &quot;</span> <span class="tok-nv">x</span><span class="tok-p">))))</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure">(let [p (p/any [(p/delay 100 1)
+                (p/delay 200 2)
+                (p/delay 120 3)])]
+  (p/then p (fn [x]
+              (.log js/console "The first one finished: " x))))</code></pre>
 </div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="delays-and-timeouts"><a class="link" href="#delays-and-timeouts">Delays and timeouts.</a></h3>
-<div class="paragraph">
-<p>JavaScript due its nature, does not allow you to block or sleep. But with promises
-you can emulate the functionality using <code>delay</code> like so:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nb">-&gt; </span><span class="tok-p">(</span><span class="tok-nf">p/delay</span> <span class="tok-mi">1000</span> <span class="tok-s">&quot;foobar&quot;</span><span class="tok-p">)</span>
-    <span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">v</span><span class="tok-p">]</span>
-              <span class="tok-p">(</span><span class="tok-nb">println </span><span class="tok-s">&quot;Received:&quot;</span> <span class="tok-nv">v</span><span class="tok-p">))))</span>
-
-<span class="tok-c1">;; After 1 second it will print the message</span>
-<span class="tok-c1">;; to the console: &quot;Received: foobar&quot;</span></code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>The promise library offers the ability to add a timeout to async operations thanks
-to the <code>timeout</code> function:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nb">-&gt; </span><span class="tok-p">(</span><span class="tok-nf">some-async-task</span><span class="tok-p">)</span>
-    <span class="tok-p">(</span><span class="tok-nf">p/timeout</span> <span class="tok-mi">200</span><span class="tok-p">)</span>
-    <span class="tok-p">(</span><span class="tok-nf">p/then</span> <span class="tok-o">#</span><span class="tok-p">(</span><span class="tok-nb">println </span><span class="tok-s">&quot;Task finished&quot;</span> <span class="tok-nv">%</span><span class="tok-p">))</span>
-    <span class="tok-p">(</span><span class="tok-nf">p/catch</span> <span class="tok-o">#</span><span class="tok-p">(</span><span class="tok-nb">println </span><span class="tok-s">&quot;Timeout&quot;</span> <span class="tok-nv">%</span><span class="tok-p">)))</span></code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>In case the async task is slow, in the example more that 200ms, the promise will be
-rejected with timeout error and successfully captured with the <code>catch</code> handler.</p>
 </div>
 </div>
 <div class="sect2">
@@ -578,8 +504,8 @@ abstraction for scheduling task to be executed at some time in future:</p>
 <div class="listingblock">
 <div class="title">Example using a <code>schedule</code> function.</div>
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">p/schedule</span> <span class="tok-mi">1000</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[]</span>
-                   <span class="tok-p">(</span><span class="tok-nb">println </span><span class="tok-s">&quot;hello world&quot;</span><span class="tok-p">)))</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure">(p/schedule 1000 (fn []
+                   (println "hello world")))</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -591,9 +517,9 @@ in the future. It works in the same way for both plaforms (clj and cljs).</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">task</span> <span class="tok-p">(</span><span class="tok-nf">p/schedule</span> <span class="tok-mi">1000</span> <span class="tok-o">#</span><span class="tok-p">(</span><span class="tok-nf">do-stuff</span><span class="tok-p">)))</span>
+<pre class="pygments highlight"><code data-lang="clojure">(def task (p/schedule 1000 #(do-stuff)))
 
-<span class="tok-p">(</span><span class="tok-nf">p/cancel!</span> <span class="tok-nv">task</span><span class="tok-p">)</span></code></pre>
+(p/cancel! task)</code></pre>
 </div>
 </div>
 </div>
@@ -602,38 +528,7 @@ in the future. It works in the same way for both plaforms (clj and cljs).</p>
 <div class="sect1">
 <h2 id="faq"><a class="link" href="#faq">FAQ</a></h2>
 <div class="sectionbody">
-<div class="sect2">
-<h3 id="why-bluebird-instead-of-es6-promise"><a class="link" href="#why-bluebird-instead-of-es6-promise">Why bluebird instead of es6 promise?</a></h3>
-<div class="paragraph">
-<p>Because it is the state of the art and the most performant promise implementation.</p>
-</div>
-<div class="paragraph">
-<p>Let see some home made benchmarks:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="pygments highlight"><code data-lang="text">lib=promesa number=500
-promesa: 25.144ms
 
-lib=promesa-raw number=500
-promesa-raw: 15.646ms
-
-lib=es6 number=500
-es6: 2426.458ms
-
-lib=zousan number=500
-zousan: 114.634ms
-
-lib=goog number=500
-goog: 239.821ms</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>The <code>promesa-raw</code> lib refers to the raw usage of <strong>bluebird</strong> library
-and as you can observe, <code>promesa</code> has some overhead. But it is nothing
-important if you compare it with the rest of libraries.</p>
-</div>
-</div>
 </div>
 </div>
 <div class="sect1">
@@ -694,7 +589,7 @@ node out/tests.js</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre>Copyright (c) 2015-2016 Andrey Antukh &lt;niwi@niwi.nz&gt;
+<pre>Copyright (c) 2015-2019 Andrey Antukh &lt;niwi@niwi.nz&gt;
 
 All rights reserved.
 
@@ -726,7 +621,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-08-02 00:28:44 CEST
+Last updated 2019-02-19 10:57:22 +0100
 </div>
 </div>
 </body>
