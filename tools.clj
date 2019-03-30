@@ -5,7 +5,8 @@
          '[rebel-readline.clojure.line-reader]
          '[rebel-readline.clojure.service.local]
          '[rebel-readline.cljs.service.local]
-         '[rebel-readline.cljs.repl])
+         '[rebel-readline.cljs.repl]
+         '[eftest.runner :as ef])
 (require '[cljs.build.api :as api]
          '[cljs.repl :as repl]
          '[cljs.repl.node :as node])
@@ -56,6 +57,19 @@
    :verbose true})
 
 (defmethod task "test"
+  [[_ exclude]]
+  (let [tests (ef/find-tests "test")
+        tests (if (string? exclude)
+                (ef/find-tests (symbol exclude))
+                tests)]
+    (ef/run-tests tests
+                  {:fail-fast? true
+                   :capture-output? false
+                   :multithread? false})
+    (System/exit 1)))
+
+
+(defmethod task "test-cljs"
   [[_ type]]
   (letfn [(build [optimizations]
             (api/build (api/inputs "src" "test")
