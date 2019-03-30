@@ -1,5 +1,23 @@
 # Changelog #
 
+## Version 2.0.1 ##
+
+Date: 2019-03-30
+
+Yo now can create an empty promise (without a factory function) and
+resolve or reject it using the new functions: `resolve!` `reject!`.
+
+Example:
+
+```clojure
+(require '[promesa.core :as p])
+
+(let [pr (p/promise)]
+  ;; do something
+  (p/resolve! pr 2))
+```
+
+
 ## Version 2.0.0 ##
 
 Date: 2019-02-19

@@ -28,7 +28,7 @@ Just include the following lines in your dependency vector on *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "2.0.0"]
+[funcool/promesa "2.0.1"]
 ----
 
 This package requires JDK8 if you are using it on the JVM.
@@ -104,6 +104,24 @@ promise instead of re-raising the exception on the stack.
 In both platforms the promise factory function is executed synchronously and
 making it blocking or not blocking is the user's responsibility.
 ====
+
+And finally, you can create an empty promise object just calling the
+`promise` function without parameters, and then resolve or reject it
+with the `resolve!` or `reject!` functions.
+
+Example:
+
+[source, clojure]
+----
+(defn sleep
+  [ms]
+  (let [p (p/promise)]
+    (js/setTimeout #(p/resolve! p))
+    p))
+----
+
+You can only resolve or reject outside the factory function promise
+objects created with the `promise` function.
 
 
 === Promise Chaining

@@ -288,8 +288,8 @@
 
 (defn resolve!
   "Resolve a completable promise with a value."
-  [o v]
-  (pt/-resolve o v))
+  ([o] (resolve! o nil))
+  ([o v] (pt/-resolve o v)))
 
 (defn reject!
   "Reject a completable promise with an error."
