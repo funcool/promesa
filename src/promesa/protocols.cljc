@@ -48,8 +48,8 @@
   (-cancelled? [_]))
 
 (defprotocol ICompletable
-  (-resolve [_ _] "Deliver a value to empty promise.")
-  (-reject [_ _] "Deliver an error to empty promise."))
+  (-resolve [o _] "Deliver a value to empty promise.")
+  (-reject [o _] "Deliver an error to empty promise."))
 
 (defprotocol IScheduler
   "A generic abstraction for scheduler facilities."

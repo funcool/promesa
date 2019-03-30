@@ -182,21 +182,26 @@
 
 (defn empty-promise
   []
-  #?(:cljs
+  #?(:clj (CompletableFuture.)
+     :cljs
      (let [state (volatile! {})
            obj (new *default-promise*
                   (fn [resolve reject]
                     (vreset! state
                              {:resolve resolve
                               :reject reject})))]
-       (pr @state)
        (specify! obj
          pt/ICompletable
          (-resolve [_ v]
-           (pr @state)
            ((:resolve @state) v))
          (-reject [_ v]
            ((:reject @state) v))))))
+
+#?(:clj
+   (extend-protocol pt/ICompletable
+     CompletableFuture
+     (-resolve [f v] (.complete f v))
+     (-reject [f v] (.completeExceptionally f v))))
 
 ;; --- Pretty printing
 

@@ -23,11 +23,23 @@
                  (t/is (= v 1))
                  (done))))
      :clj
-
      (let [p1 (p/promise 1)]
        (t/is (p/done? p1))
-
        (t/is (= (p/extract p1) 1)))))
+
+(t/deftest promise-icompletable
+  #?(:cljs
+     (t/async done
+       (let [pr (p/promise)]
+         (p/then pr (fn [v]
+                     (t/is (= v 1))
+                     (done)))
+         (p/resolve! pr 1)))
+
+     :clj
+     (let [p (p/promise)]
+       (p/schedule 200 #(p/resolve! p 1))
+       (t/is (= @p 1)))))
 
 (t/deftest promise-from-nil-value
   #?(:cljs
