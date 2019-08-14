@@ -39,7 +39,14 @@
 ;; --- Global Constants
 
 #?(:clj
-   (def ^:dynamic *executor* (ForkJoinPool/commonPool)))
+   (def ^:dynamic *executor* (delay (ForkJoinPool/commonPool))))
+
+#?(:clj
+   (defn ^Executor get-executor
+     []
+     (if (delay? *executor*)
+       @*executor*
+       *executor*)))
 
 #?(:cljs
    (def ^:dynamic *default-promise* js/Promise))
@@ -80,7 +87,7 @@
                     (apply [_ v]
                       (clojure.lang.Var/resetThreadBindingFrame binds)
                       (cb v)))]
-         (.thenApplyAsync it ^Function func ^Executor *executor*)))
+         (.thenApplyAsync it ^Function func ^Executor (get-executor))))
 
      (-bind [it cb]
        (let [binds (clojure.lang.Var/getThreadBindingFrame)
@@ -88,7 +95,7 @@
                     (apply [_ v]
                       (clojure.lang.Var/resetThreadBindingFrame binds)
                       (cb v)))]
-         (.thenComposeAsync it ^Function func ^Executor *executor*)))
+         (.thenComposeAsync it ^Function func ^Executor (get-executor))))
 
      (-catch [it cb]
        (let [binds (clojure.lang.Var/getThreadBindingFrame)
