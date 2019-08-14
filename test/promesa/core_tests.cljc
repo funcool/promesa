@@ -77,7 +77,7 @@
                       (done)))))
      :clj
      (let [p1 (p/promise (fn [resolve reject]
-                           (p/schedule 50 #(resolve 1))))]
+                           (p/schedule 500 #(resolve 1))))]
        (t/is (p/pending? p1))
        (t/is (= @p1 1)))))
 
