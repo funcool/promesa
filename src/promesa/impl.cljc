@@ -56,12 +56,19 @@
        pt/IPromise
        (-map [it cb]
          (.then it #(cb %)))
-       (-bind [it cb]
-         (.then it #(cb %)))
        (-catch [it cb]
          (.catch it #(cb %))))))
 
-#?(:cljs (extend-promise! js/Promise))
+#?(:cljs
+   (extend-promise! js/Promise))
+
+#?(:cljs
+   (extend-type object
+     pt/IPromise
+     (-map [it cb]
+       (pt/-map (pt/-promise it) cb))
+     (-catch [it cb]
+       (pt/-catch (pt/-promise it) cb))))
 
 #?(:clj
    (extend-type CompletableFuture
