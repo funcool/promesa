@@ -25,11 +25,17 @@
 (ns promesa.protocols
   "A generic promise abstraction and related protocols.")
 
-(defprotocol IPromise
-  "A basic future abstraction."
-  (-map [_ callback] "Chain a promise.")
-  (-bind [_ callback] "Chain a promise.")
-  (-catch [_ callback] "Catch a error in a promise."))
+#?(:clj
+   (defprotocol IPromise
+    "A basic future abstraction."
+    (-map [_ callback] "Chain a promise.")
+    (-bind [_ callback] "Chain a promise.")
+    (-catch [_ callback] "Catch a error in a promise."))
+   :cljs
+   (defprotocol IPromise
+    "A basic future abstraction."
+    (-map [_ callback] "Chain a promise.")
+    (-catch [_ callback] "Catch a error in a promise.")))
 
 (defprotocol IState
   "Additional state/introspection abstraction."

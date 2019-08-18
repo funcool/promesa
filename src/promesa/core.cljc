@@ -134,12 +134,14 @@
   to `map` because the promise abstraction overloads
   the `map` operator."
   [f p]
-  (pt/-bind p f))
+  #?(:clj (pt/-bind p f)
+     :cljs (pt/-map p f)))
 
-(defn bind
-  "A chain helper for promises."
-  [p f]
-  (pt/-bind p f))
+#?(:clj
+   (defn bind
+    "A chain helper for promises."
+     [p f]
+     (pt/-bind p f)))
 
 (defn then
   "Similar to `map` but with parameters inverted
