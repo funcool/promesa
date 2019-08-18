@@ -1,5 +1,14 @@
 # Changelog #
 
+## Version 3.0.0 ##
+
+Date: 2019-08-18
+
+- Allow use promise on GraalVM native compilation.
+- Make promesa compatible with thenable objects (see issue #66).
+- Remove `-bind` from IPromise protocol for CLJS (redundant) (possible
+  internal BREAKING CHANGE).
+
 ## Version 2.0.1 ##
 
 Date: 2019-03-30
