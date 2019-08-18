@@ -1,10 +1,9 @@
-(ns promesa.core-tests
+(ns promesa.tests.test-core
   (:require #?(:cljs [cljs.test :as t]
                :clj [clojure.test :as t])
             #?(:clj [promesa.async :refer [async]]
                :cljs [promesa.async-cljs :refer-macros [async]])
-            #?(:cljs [promesa.issue-36 :refer [async-let-issue-36]])
-            [promesa.test-helpers :refer [future-ok future-fail]]
+            [promesa.tests.util :refer [future-ok future-fail]]
             [promesa.core :as p])
   #?(:clj
      (:import java.util.concurrent.TimeoutException)))
@@ -489,13 +488,13 @@
 
 ;; --- Entry Point
 
-#?(:cljs (enable-console-print!))
-#?(:cljs (set! *main-cli-fn* #(t/run-tests
-                               'promesa.core-tests
-                               'promesa.issue-36)))
-#?(:cljs
-   (defmethod t/report [:cljs.test/default :end-run-tests]
-     [m]
-     (if (t/successful? m)
-       (set! (.-exitCode js/process) 0)
-       (set! (.-exitCode js/process) 1))))
+;; #?(:cljs (enable-console-print!))
+;; #?(:cljs (set! *main-cli-fn* #(t/run-tests
+;;                                'promesa.core-tests
+;;                                'promesa.issue-36)))
+;; #?(:cljs
+;;    (defmethod t/report [:cljs.test/default :end-run-tests]
+;;      [m]
+;;      (if (t/successful? m)
+;;        (set! (.-exitCode js/process) 0)
+;;        (set! (.-exitCode js/process) 1))))

@@ -2,7 +2,7 @@
 
 ## Version 3.0.0 ##
 
-Date: 2019-08-18
+Date: ---
 
 - Allow use promise on GraalVM native compilation.
 - Make promesa compatible with thenable objects (see issue #66).

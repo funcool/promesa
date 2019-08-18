@@ -137,11 +137,11 @@
   #?(:clj (pt/-bind p f)
      :cljs (pt/-map p f)))
 
-#?(:clj
-   (defn bind
-    "A chain helper for promises."
-     [p f]
-     (pt/-bind p f)))
+(defn bind
+  "A chain helper for promises."
+  [p f]
+  #?(:clj (pt/-bind p f)
+     :cljs (pt/-map p f)))
 
 (defn then
   "Similar to `map` but with parameters inverted

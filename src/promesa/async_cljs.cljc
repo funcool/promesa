@@ -51,7 +51,7 @@
      [state blk p]
 
      (-> p
-         (pt/-bind (fn [v]
+         (pt/-map (fn [v]
                      (ioc/aset-all! state ioc-helpers/VALUE-IDX v ioc-helpers/STATE-IDX blk)
                      (run-state-machine-wrapped state)
                      v))

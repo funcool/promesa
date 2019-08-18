@@ -5,11 +5,13 @@
          '[rebel-readline.clojure.line-reader]
          '[rebel-readline.clojure.service.local]
          '[rebel-readline.cljs.service.local]
-         '[rebel-readline.cljs.repl]
-         '[eftest.runner :as ef])
+         '[rebel-readline.cljs.repl])
 (require '[cljs.build.api :as api]
          '[cljs.repl :as repl]
          '[cljs.repl.node :as node])
+(require '[badigeon.jar]
+         '[badigeon.deploy])
+
 
 (defmulti task first)
 
@@ -41,71 +43,98 @@
      :output-dir "out"
      :cache-analysis false)))
 
-(def options
-  {:main 'promesa.core-tests
+(def build-options
+  {:main 'promesa.tests.main
    :output-to "out/tests.js"
    :output-dir "out/tests"
    :source-map "out/tests.js.map"
    :language-in  :ecmascript5
    :language-out :ecmascript5
    :target :nodejs
-   :optimizations :simple
+   :optimizations :advanced
    :pretty-print true
    :pseudo-names true
    :verbose true})
 
-(defmethod task "test"
-  [[_ exclude]]
-  (let [tests (ef/find-tests "test")
-        tests (if (string? exclude)
-                (ef/find-tests (symbol exclude))
-                tests)]
-    (ef/run-tests tests
-                  {:fail-fast? true
-                   :capture-output? false
-                   :multithread? false})
-    (System/exit 1)))
+;; (defmethod task "test"
+;;   [[_ exclude]]
+;;   (let [tests (ef/find-tests "test")
+;;         tests (if (string? exclude)
+;;                 (ef/find-tests (symbol exclude))
+;;                 tests)]
+;;     (ef/run-tests tests
+;;                   {:fail-fast? true
+;;                    :capture-output? false
+;;                    :multithread? false})
+;;     (System/exit 1)))
 
+(defmethod task "build:tests"
+  [args]
+  (api/build (api/inputs "src" "test") build-options))
 
-(defmethod task "test-cljs"
-  [[_ type]]
-  (letfn [(build [optimizations]
-            (api/build (api/inputs "src" "test")
-                       (cond->  (assoc options :optimizations optimizations)
-                         (= optimizations :none) (assoc :source-map true))))
+;; (defmethod task "test-cljs"
+;;   [[_ type]]
+;;   (letfn [(build [optimizations]
+;;             (api/build (api/inputs "src" "test")
+;;                        (cond->  (assoc options :optimizations optimizations)
+;;                          (= optimizations :none) (assoc :source-map true))))
 
-          (run-tests []
-            (let [{:keys [out err]} (shell/sh "node" "out/tests.js")]
-              (println out err)))
+;;           (run-tests []
+;;             (let [{:keys [out err]} (shell/sh "node" "out/tests.js")]
+;;               (println out err)))
 
-          (test-once []
-            (build :none)
-            (run-tests)
-            (shutdown-agents))
+;;           (test-once []
+;;             (build :none)
+;;             (run-tests)
+;;             (shutdown-agents))
 
-          (test-watch []
-            (println "Start watch loop...")
-            (try
-              (api/watch (api/inputs "src", "test")
-                         (assoc options
-                                :parallel-build false
-                                :watch-fn run-tests
-                                :cache-analysis false
-                                :optimizations :none
-                                :source-map true))
-              (catch Exception e
-                (println "ERROR:" e)
-                (Thread/sleep 2000)
-                (test-watch))))]
+;;           (test-watch []
+;;             (println "Start watch loop...")
+;;             (try
+;;               (api/watch (api/inputs "src", "test")
+;;                          (assoc options
+;;                                 :parallel-build false
+;;                                 :watch-fn run-tests
+;;                                 :cache-analysis false
+;;                                 :optimizations :none
+;;                                 :source-map true))
+;;               (catch Exception e
+;;                 (println "ERROR:" e)
+;;                 (Thread/sleep 2000)
+;;                 (test-watch))))]
 
-    (case type
-      (nil "once") (test-once)
-      "watch"      (test-watch)
-      "build-none"     (build :none)
-      "build-simple"   (build :simple)
-      "build-advanced" (build :advanced)
-      (do (println "Unknown argument to test task:" type)
-          (System/exit 1)))))
+;;     (case type
+;;       (nil "once") (test-once)
+;;       "watch"      (test-watch)
+;;       "build-none"     (build :none)
+;;       "build-simple"   (build :simple)
+;;       "build-advanced" (build :advanced)
+;;       (do (println "Unknown argument to test task:" type)
+;;           (System/exit 1)))))
+
+(defmethod task "jar"
+  [args]
+  (badigeon.jar/jar 'funcool/promesa
+                    {:mvn/version "3.0.0-SNAPSHOT"}
+                    {:out-path "target/promesa.jar"
+                     :mvn/repos '{"clojars" {:url "https://repo.clojars.org/"}}
+                     :allow-all-dependencies? false}))
+
+(defmethod task "deploy"
+  [args]
+  (let [artifacts [{:file-path "target/promesa.jar" :extension "jar"}
+                   {:file-path "pom.xml" :extension "pom"}]]
+    (badigeon.deploy/deploy
+     'funcool/promesa "3.0.0-SNAPSHOT"
+     artifacts
+     {:id "clojars" :url "https://repo.clojars.org/"}
+     {:allow-unsigned? true})))
+
+(defmethod task "build-and-deploy"
+  [args]
+  (task ["jar"])
+  (task ["deploy"]))
+
 
 ;;; Build script entrypoint. This should be the last expression.
 

@@ -1,4 +1,4 @@
-(ns promesa.test-helpers
+(ns promesa.tests.util
   (:require [promesa.core :as p]))
 
 (defn future-ok
