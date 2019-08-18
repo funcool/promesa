@@ -20,28 +20,26 @@
     (println "Unknown or missing task. Choose one of:" interposed)
     (System/exit 1)))
 
-(defmethod task "repl"
-  [[_ type]]
-  (case type
-    (nil "clj")
-    (rebel-readline.core/with-line-reader
-      (rebel-readline.clojure.line-reader/create
-       (rebel-readline.clojure.service.local/create))
-      (clojure.main/repl
-       :prompt (fn []) ;; prompt is handled by line-reader
-       :read (rebel-readline.clojure.main/create-repl-read)))
+(defmethod task "repl:jvm"
+  [args]
+  (rebel-readline.core/with-line-reader
+    (rebel-readline.clojure.line-reader/create
+     (rebel-readline.clojure.service.local/create))
+    (clojure.main/repl
+     :prompt (fn []) ;; prompt is handled by line-reader
+     :read (rebel-readline.clojure.main/create-repl-read))))
 
-    "node"
-    (rebel-readline.core/with-line-reader
-      (rebel-readline.clojure.line-reader/create (rebel-readline.cljs.service.local/create))
-      (cljs.repl/repl
-       (node/repl-env)
-       :prompt (fn []) ;; prompt is handled by line-reader
-       :read (rebel-readline.cljs.repl/create-repl-read)
-       :output-dir "out"
-       :cache-analysis false))
-    (println "Unknown repl: " type)
-    (System/exit 1)))
+(defmethod task "repl:node"
+  [args]
+  (rebel-readline.core/with-line-reader
+    (rebel-readline.clojure.line-reader/create
+     (rebel-readline.cljs.service.local/create))
+    (cljs.repl/repl
+     (node/repl-env)
+     :prompt (fn []) ;; prompt is handled by line-reader
+     :read (rebel-readline.cljs.repl/create-repl-read)
+     :output-dir "out"
+     :cache-analysis false)))
 
 (def options
   {:main 'promesa.core-tests
