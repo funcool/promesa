@@ -70,6 +70,22 @@
      (-catch [it cb]
        (pt/-catch (pt/-promise it) cb))))
 
+#?(:clj 
+   (deftype CallbackSuccessFunction [callback bindings]
+     Function
+     (apply [_ v]
+       (clojure.lang.Var/resetThreadBindingFrame bindings)
+       (callback v))))
+
+#?(:clj
+   (deftype CallbackFailureFunction [callback bindings]
+     Function
+     (apply [_ e]
+       (clojure.lang.Var/resetThreadBindingFrame bindings)
+       (if (instance? CompletionException e)
+         (callback (.getCause ^Exception e))
+         (callback e)))))
+
 #?(:clj
    (extend-type CompletableFuture
      pt/ICancellable
@@ -81,28 +97,17 @@
      pt/IPromise
      (-map [it cb]
        (let [binds (clojure.lang.Var/getThreadBindingFrame)
-             func (reify Function
-                    (apply [_ v]
-                      (clojure.lang.Var/resetThreadBindingFrame binds)
-                      (cb v)))]
+             func (CallbackSuccessFunction. cb binds)]
          (.thenApplyAsync it ^Function func ^Executor (get-executor))))
 
      (-bind [it cb]
        (let [binds (clojure.lang.Var/getThreadBindingFrame)
-             func (reify Function
-                    (apply [_ v]
-                      (clojure.lang.Var/resetThreadBindingFrame binds)
-                      (cb v)))]
+             func (CallbackSuccessFunction. cb binds)]
          (.thenComposeAsync it ^Function func ^Executor (get-executor))))
 
      (-catch [it cb]
        (let [binds (clojure.lang.Var/getThreadBindingFrame)
-             func (reify Function
-                    (apply [_ e]
-                      (clojure.lang.Var/resetThreadBindingFrame binds)
-                      (if (instance? CompletionException e)
-                        (cb (.getCause ^Exception e))
-                        (cb e))))]
+             func (CallbackFailureFunction. cb binds)]
          (.exceptionally it ^Function func)))
 
      pt/IState
