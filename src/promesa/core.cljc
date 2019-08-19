@@ -27,6 +27,7 @@
   (:require [promesa.protocols :as pt]
             [promesa.impl :as impl]
             [promesa.impl.scheduler :as ps])
+  #?(:cljs (:require-macros [promesa.core]))
   #?(:clj
      (:import java.util.concurrent.CompletableFuture
               java.util.concurrent.CompletionStage
@@ -83,13 +84,21 @@
   "The promise constructor."
   ([] (impl/empty-promise))
   ([v]
-   (pt/-promise v)))
+   (if (fn? v)
+     (impl/promise-factory v)
+     (pt/-promise v))))
 
 (defn promise?
   "Return true if `v` is a promise instance."
   [v]
   #?(:clj (instance? CompletionStage v)
      :cljs (instance? impl/*default-promise* v)))
+
+#?(:cljs
+   (defn thenable?
+     "Returns true if `v` is a promise like object."
+     [v]
+     (and (object? v) (fn? (unchecked-get v "then")))))
 
 ;; Predicates
 
@@ -370,24 +379,19 @@
      `(attempt #(do ~@body))))
 
 (defn await
-  [& args]
-  (throw (ex-info "Should be only used in alet macro." {})))
+  [v]
+  (pt/-promise v))
 
 #?(:clj
    (defmacro alet
-     "A `let` alternative that always returns promise and allows
-     use `await` marker function in order to emulate the async/await
-     syntax and make the let expression look like synchronous where
-     async operations are performed."
+     "A `let` alternative that always returns promise and waits for
+     all the promises on the bindings.
+
+     The `promise.core/await` is no longer necesary (it is maintained
+     only for backward compatibility."
      [bindings & body]
-     (let [await# `await]
-       (->> (reverse (partition 2 bindings))
-            (reduce (fn [acc [l r]]
-                      (if (and (coll? r)
-                               (symbol? (first r))
-                               (not= "." (subs (name (first r)) 0 1)))
-                        `(if (= ~await# ~(first r))
-                           (bind ~(second r) (fn [~l] ~acc))
-                           (let [~l ~r] ~acc))
-                        `(let [~l ~r] ~acc)))
-                    `(promise (do ~@body)))))))
+     (->> (reverse (partition 2 bindings))
+          (reduce (fn [acc [l r]]
+                    `(bind ~r (fn [~l] ~acc)))
+                  `(pt/-promise (do ~@body))))))
+

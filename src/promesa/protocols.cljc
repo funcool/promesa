@@ -46,7 +46,7 @@
 
 (defprotocol IPromiseFactory
   "A promise constructor abstraction."
-  (-promise [_] "Create a promise instance."))
+  (-promise [_] "Create a promise instance from other types"))
 
 (defprotocol ICancellable
   "A cancellation abstraction."
