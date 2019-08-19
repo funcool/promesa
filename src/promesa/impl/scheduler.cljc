@@ -33,6 +33,30 @@
               java.util.concurrent.TimeUnit
               java.util.concurrent.TimeoutException)))
 
+#?(:clj
+   (deftype FutureScheduledTask [^Future fut]
+     clojure.lang.IDeref
+     (deref [_]
+       (.get fut))
+
+     clojure.lang.IBlockingDeref
+     (deref [_ ms default]
+       (try
+         (.get fut ms TimeUnit/MILLISECONDS)
+         (catch TimeoutException e
+           default)))
+
+     clojure.lang.IPending
+     (isRealized [_] (and (.isDone fut)
+                          (not (.isCancelled fut))))
+
+     pt/ICancellable
+     (-cancelled? [_]
+       (.isCancelled fut))
+     (-cancel [_]
+       (when-not (.isCancelled fut)
+         (.cancel fut true)))))
+
 #?(:cljs
    (defn- scheduled-task
      [cur done?]
@@ -51,28 +75,7 @@
    :clj
    (defn- scheduled-task
      [^Future fut]
-     (reify
-       clojure.lang.IDeref
-       (deref [_]
-         (.get fut))
-
-       clojure.lang.IBlockingDeref
-       (deref [_ ms default]
-         (try
-           (.get fut ms TimeUnit/MILLISECONDS)
-           (catch TimeoutException e
-             default)))
-
-       clojure.lang.IPending
-       (isRealized [_] (and (.isDone fut)
-                            (not (.isCancelled fut))))
-
-       pt/ICancellable
-       (-cancelled? [_]
-         (.isCancelled fut))
-       (-cancel [_]
-         (when-not (.isCancelled fut)
-           (.cancel fut true))))))
+     (FutureScheduledTask. fut)))
 
 #?(:clj
    (extend-type ScheduledExecutorService
