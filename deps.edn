@@ -1,5 +1,4 @@
-{:deps {org.clojure/core.async {:mvn/version "0.4.490"}}
- :paths ["src"]
+{:paths ["src"]
  :aliases
  {:dev {:extra-deps {com.bhauman/rebel-readline-cljs {:mvn/version "0.1.4"}
                      com.bhauman/rebel-readline {:mvn/version "0.1.4"}

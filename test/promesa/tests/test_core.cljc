@@ -1,13 +1,10 @@
 (ns promesa.tests.test-core
   (:require #?(:cljs [cljs.test :as t]
                :clj [clojure.test :as t])
-            #?(:clj [promesa.async :refer [async]]
-               :cljs [promesa.async-cljs :refer-macros [async]])
             [promesa.tests.util :refer [future-ok future-fail]]
-            [promesa.core :as p])
+            [promesa.core :as p :include-macros true])
   #?(:clj
      (:import java.util.concurrent.TimeoutException)))
-
 
 ;; --- Core Interface Tests
 
@@ -360,35 +357,25 @@
 
 #?(:clj
    (t/deftest async-let
-     (let [result (p/alet [a (p/await (future-ok 50 1))
+     (let [result (p/alet [a (future-ok 50 1)
                            b 2
                            c 3
-                           d (p/await (future-ok 100 4))]
+                           d (future-ok 100 4)]
                     (+ a b c d))]
        (t/is (= @result 10)))))
 
 #?(:cljs
    (t/deftest async-let
      (t/async done
-       (let [result (p/alet [a (p/await (future-ok 50 1))
+       (let [result (p/alet [a (future-ok 50 1)
                              b 2
                              c 3
-                             d (p/await (future-ok 100 4))
+                             d (future-ok 100 4)
                              e (.toString c)]
                       (+ a b c d))]
          (p/then result (fn [result]
                           (t/is (= result 10))
                           (done)))))))
-
-#?(:clj
-   (t/deftest async-let-await-binding
-     ;; Test for https://github.com/funcool/promesa/issues/36
-     (let [result (p/alet [x (agent {})
-                           _ (send-off x #(assoc % :done true))
-                           _ (clojure.core/await x)
-                           z (p/await (p/promise @x))]
-                          z)]
-       (t/is (= @result {:done true})))))
 
 ;; --- Do Expression tests
 
@@ -407,94 +394,3 @@
                                      (assert (= e error))
                                      nil))]
        (t/is (= nil result)))))
-
-
-;; --- `async` macro tests
-
-(defn my-func
-  [ixx]
-  (async
-    (loop [sum 0
-           c 0]
-      (if (< c ixx)
-        (do
-          (p/await (p/delay 10))
-          (recur (+ sum ixx) (inc c)))
-        sum))))
-
-
-(t/deftest async-macro
-  (letfn [(do-stuff [i]
-            (async
-              (loop [sum 0
-                     c 0]
-                (if (< c i)
-                  (do
-                    (p/await (p/delay 10))
-                    (recur (+ sum i) (inc c)))
-                  sum))))]
-    #?(:cljs
-       (t/async done
-         (p/then (do-stuff 10)
-                 (fn [result]
-                   (t/is (= 100 result))
-                   (done))))
-       :clj
-       (t/is (= 100 @(do-stuff 10))))))
-
-(t/deftest exceptions-on-async-macro1
-  (letfn [(throw-exc [v]
-            (p/promise (ex-info "test" {:v v})))
-
-          (do-stuff [v]
-            (async
-              (p/await (throw-exc v))
-              4000))]
-
-    #?(:cljs
-       (t/async done
-         (p/catch (do-stuff 1) (fn [e]
-                                  (t/is (= (ex-data e) {:v 1}))
-                                  (done))))
-       :clj
-       (let [prm (-> (do-stuff 1)
-                     (p/then (fn [v] 1000))
-                     (p/catch (fn [e] 2000)))]
-
-         (t/is (= 2000 @prm))))))
-
-
-(t/deftest exceptions-on-async-macro2
-  (letfn [(throw-exc [v]
-            (p/promise (ex-info "test" {:v v})))
-
-          (do-stuff [v]
-            (async
-              (try
-                (p/await (throw-exc v))
-                (catch :default e
-                  v))))]
-
-    #?(:cljs
-       (t/async done
-         (p/then (do-stuff 1000) (fn [v]
-                                   (t/is (= v 1000))
-                                   (done))))
-       :clj
-       (let [prm (-> (do-stuff 1000)
-                     (p/then (fn [v] v))
-                     (p/catch (fn [e] 2000)))]
-         (t/is (= 1000 @prm))))))
-
-;; --- Entry Point
-
-;; #?(:cljs (enable-console-print!))
-;; #?(:cljs (set! *main-cli-fn* #(t/run-tests
-;;                                'promesa.core-tests
-;;                                'promesa.issue-36)))
-;; #?(:cljs
-;;    (defmethod t/report [:cljs.test/default :end-run-tests]
-;;      [m]
-;;      (if (t/successful? m)
-;;        (set! (.-exitCode js/process) 0)
-;;        (set! (.-exitCode js/process) 1))))
