@@ -28,7 +28,7 @@ Just include the following lines in your dependency vector on *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "2.0.1"]
+[funcool/promesa "3.0.0"]
 ----
 
 This package requires JDK8 if you are using it on the JVM.
@@ -186,9 +186,9 @@ does that).
 
 ==== `alet` macro (async let)
 
-The _promesa_ library comes with convenient syntax-sugar that allows you to create a
-compositions that looks like synchronous code while using the clojure's familiar `let`
-syntax:
+The _promesa_ library comes with convenient syntax-sugar that allows
+you to create a compositions that looks like synchronous code while
+using the clojure's familiar `let` syntax:
 
 [source, clojure]
 ----
@@ -200,74 +200,33 @@ syntax:
                (p/schedule wait #(resolve wait)))))
 
 (def result
-  (p/alet [x (p/await (sleep-promise 42))
-           y (p/await (sleep-promise 41))
+  (p/alet [x (sleep-promise 42)
+           y (sleep-promise 41)
            z 2]
     (+ x y z)))
 
-@result     ; only on the jvm
+@result     ; @ syntax only on the jvm
 ;; => 85
 ----
 
-The `alet` macro behaves identical to the `let` with the exception that it always
-return a promise and allows you to mark async operations with the `await` 
-placeholder making it looks like a synchronous operation.
+The `alet` macro behaves identical to the `let` with the exception
+that it always return a promise and if a promise is found on bindings
+it is automatically awaited before executing the rest of code.
 
-If an error occurs at any step the entire composition will be short-circuited,
-returning exceptionally resolved promise.
+It emulates the `async/await` sintax just without the need of `await`.
 
+If an error occurs at any step the entire composition will be
+short-circuited, returning exceptionally resolved promise.
 
-==== `async` macro (general purpose)
+Under the hood, the previous `alet` macro evalutes to something like
+this:
 
-In contrast to the `alet` macro, the `async` macro is more general purpose
-and enables the usage of `await` in any place (not only on the let
-bindings). Let see an example:
-
-[source, clojure]
-----
-(def p (async
-         (dotimes [i 3]
-           (p/await (p/delay 100))
-           (println "i=" i))
-         10))
-
-@p
-;; i=0
-;; i=1
-;; i=2
-;; => 10
-----
-
-As expected, it returns a promise which will be resolved with result of the body
-when completed.
-
-If you are familiar with *core.async* `go` macro, `async` macro works
-in the same way (in fact, it uses core.async machinery to archive
-that).
-
-[NOTE]
-====
-Because of some differences in the macro implementation in clj and cljs, the
-clojure version of macro is available in `promesa.async` namespace and ClojureScript
-version of macro in `promesa.async-cljs` namespace.
-
-.Example importing `async` macro in Clojure
-[source, clojure]
-----
-(require '[promesa.async :refer [async]])
-----
-
-.Example importing `async` macro in ClojureScript
-[source, clojure]
-----
-(require '[promesa.async-cljs :refer-macros [async]])
-----
-====
-
-If you are not familiar with `async`/`await` syntax, you can read more about it
-link:http://jakearchibald.com/2014/es7-async-functions/[here].
-
-WARNING: experimental
+```clojure
+(p/bind (sleep-promise 42)
+        (fn [x] (p/bind (sleep-promise 41)
+                        (fn [y] (p/bind 2 (fn [z]
+                                            (p/promise (do (+ x y z)))))))))
+```
 
 
 === Error handling

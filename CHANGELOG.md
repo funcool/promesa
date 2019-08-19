@@ -1,13 +1,25 @@
 # Changelog #
 
-## Version 3.0.0 ##
+## Version 3.0.0-SNAPSHOT ##
 
 Date: ---
 
+This is a **breaking change** release; even though the majority of
+public (not experimental) api is not affected. Relevant changes are:
+
+- Remove `promesa.async` and `promesa.async-cljs` namespaces. They was
+  experimental and finally they don't demonstrate to be useful in
+  comparison to the complexity that they introduce.
+- Remove `-bind` from `IPromise` protocol on cljs; because that method
+  is redundant for javascript `Promise` objects.
+
+Other changes:
+
 - Allow use promise on GraalVM native compilation.
 - Make promesa compatible with thenable objects (see issue #66).
-- Remove `-bind` from IPromise protocol for CLJS (redundant) (possible
-  internal BREAKING CHANGE).
+- Simplified `alet` macro implementation; it's no longer needs `await`
+  for wait promise binding resolution.
+
 
 ## Version 2.0.1 ##
 
@@ -31,14 +43,15 @@ Example:
 
 Date: 2019-02-19
 
-This is a breaking change release. Finally bluebird is gone in favour
-of using the ES6 builtin Promise object. This removes the overhead (in
-size) of the additional external library.
+This is a **breaking change** release. Finally bluebird is gone in
+favour of using the ES6 builtin Promise object. This removes the
+overhead (in size) of the additional external library.
 
-The reason of using bluebird initially was because native promises performed
-badly, but in new versions javascript engines the performance and memory
-usage is improved significantly. In any case you can still use the bluebird
-if you want, thanks to the new functions:
+The reason of using bluebird initially was because native promises
+performed badly, but in new versions javascript engines the
+performance and memory usage is improved significantly. In any case
+you can still use the bluebird if you want, thanks to the new
+functions:
 
 - `set-default-promise!`: enables the user setting up a custom promise
   constructor as default one for *promesa* library.
