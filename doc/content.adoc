@@ -13,8 +13,9 @@ Andrey Antukh, <niwi@niwi.nz>
 
 A promise library for Clojure and ClojureScript.
 
-On the JVM paltform _promesa_ is built on top of *completable futures* (requires jdk8). On
-JS engines it is built on top of the builtin Promise implementation.
+On the JVM paltform _promesa_ is built on top of *completable futures*
+(requires jdk>=8). On JS engines it is built on top of the builtin
+Promise implementation.
 
 
 === Project Maturity
@@ -183,8 +184,6 @@ does that).
 
 
 === Async/Await Syntax
-
-==== `alet` macro (async let)
 
 The _promesa_ library comes with convenient syntax-sugar that allows
 you to create a compositions that looks like synchronous code while

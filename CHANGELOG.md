@@ -1,8 +1,8 @@
 # Changelog #
 
-## Version 3.0.0-SNAPSHOT ##
+## Version 3.0.0 ##
 
-Date: ---
+Date: 2019-08-21
 
 This is a **breaking change** release; even though the majority of
 public (not experimental) api is not affected. Relevant changes are:
