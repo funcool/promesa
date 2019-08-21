@@ -10,8 +10,6 @@ public (not experimental) api is not affected. Relevant changes are:
 - Remove `promesa.async` and `promesa.async-cljs` namespaces. They was
   experimental and finally they don't demonstrate to be useful in
   comparison to the complexity that they introduce.
-- Remove `-bind` from `IPromise` protocol on cljs; because that method
-  is redundant for javascript `Promise` objects.
 
 Other changes:
 

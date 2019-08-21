@@ -83,6 +83,8 @@
        pt/IPromise
        (-map [it cb]
          (.then it #(cb %)))
+       (-bind [it cb]
+         (.then it #(cb %)))
        (-catch [it cb]
          (.catch it #(cb %))))))
 
@@ -94,6 +96,8 @@
      pt/IPromise
      (-map [it cb]
        (pt/-map (pt/-promise it) cb))
+     (-bind [it cb]
+       (pt/-bind (pt/-promise it) cb))
      (-catch [it cb]
        (pt/-catch (pt/-promise it) cb))))
 
