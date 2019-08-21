@@ -56,61 +56,9 @@
    :pseudo-names true
    :verbose true})
 
-;; (defmethod task "test"
-;;   [[_ exclude]]
-;;   (let [tests (ef/find-tests "test")
-;;         tests (if (string? exclude)
-;;                 (ef/find-tests (symbol exclude))
-;;                 tests)]
-;;     (ef/run-tests tests
-;;                   {:fail-fast? true
-;;                    :capture-output? false
-;;                    :multithread? false})
-;;     (System/exit 1)))
-
 (defmethod task "build:tests"
   [args]
   (api/build (api/inputs "src" "test") build-options))
-
-;; (defmethod task "test-cljs"
-;;   [[_ type]]
-;;   (letfn [(build [optimizations]
-;;             (api/build (api/inputs "src" "test")
-;;                        (cond->  (assoc options :optimizations optimizations)
-;;                          (= optimizations :none) (assoc :source-map true))))
-
-;;           (run-tests []
-;;             (let [{:keys [out err]} (shell/sh "node" "out/tests.js")]
-;;               (println out err)))
-
-;;           (test-once []
-;;             (build :none)
-;;             (run-tests)
-;;             (shutdown-agents))
-
-;;           (test-watch []
-;;             (println "Start watch loop...")
-;;             (try
-;;               (api/watch (api/inputs "src", "test")
-;;                          (assoc options
-;;                                 :parallel-build false
-;;                                 :watch-fn run-tests
-;;                                 :cache-analysis false
-;;                                 :optimizations :none
-;;                                 :source-map true))
-;;               (catch Exception e
-;;                 (println "ERROR:" e)
-;;                 (Thread/sleep 2000)
-;;                 (test-watch))))]
-
-;;     (case type
-;;       (nil "once") (test-once)
-;;       "watch"      (test-watch)
-;;       "build-none"     (build :none)
-;;       "build-simple"   (build :simple)
-;;       "build-advanced" (build :advanced)
-;;       (do (println "Unknown argument to test task:" type)
-;;           (System/exit 1)))))
 
 (defmethod task "jar"
   [args]
