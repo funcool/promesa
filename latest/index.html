@@ -2,82 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 1.5.8">
+<meta name="generator" content="Asciidoctor 2.0.10">
 <meta name="author" content="Andrey Antukh, &lt;niwi@niwi.nz&gt;">
 <title>promesa - promise library for clojure and clojurescript</title>
-<style>
-.listingblock .pygments .hll { background-color: #ffffcc }
-.listingblock .pygments, .listingblock .pygments code { background: #f0f0f0; }
-.listingblock .pygments .tok-c { color: #60a0b0; font-style: italic } /* Comment */
-.listingblock .pygments .tok-err { border: 1px solid #FF0000 } /* Error */
-.listingblock .pygments .tok-k { color: #007020; font-weight: bold } /* Keyword */
-.listingblock .pygments .tok-o { color: #666666 } /* Operator */
-.listingblock .pygments .tok-ch { color: #60a0b0; font-style: italic } /* Comment.Hashbang */
-.listingblock .pygments .tok-cm { color: #60a0b0; font-style: italic } /* Comment.Multiline */
-.listingblock .pygments .tok-cp { color: #007020 } /* Comment.Preproc */
-.listingblock .pygments .tok-cpf { color: #60a0b0; font-style: italic } /* Comment.PreprocFile */
-.listingblock .pygments .tok-c1 { color: #60a0b0; font-style: italic } /* Comment.Single */
-.listingblock .pygments .tok-cs { color: #60a0b0; background-color: #fff0f0 } /* Comment.Special */
-.listingblock .pygments .tok-gd { color: #A00000 } /* Generic.Deleted */
-.listingblock .pygments .tok-ge { font-style: italic } /* Generic.Emph */
-.listingblock .pygments .tok-gr { color: #FF0000 } /* Generic.Error */
-.listingblock .pygments .tok-gh { color: #000080; font-weight: bold } /* Generic.Heading */
-.listingblock .pygments .tok-gi { color: #00A000 } /* Generic.Inserted */
-.listingblock .pygments .tok-go { color: #888888 } /* Generic.Output */
-.listingblock .pygments .tok-gp { color: #c65d09; font-weight: bold } /* Generic.Prompt */
-.listingblock .pygments .tok-gs { font-weight: bold } /* Generic.Strong */
-.listingblock .pygments .tok-gu { color: #800080; font-weight: bold } /* Generic.Subheading */
-.listingblock .pygments .tok-gt { color: #0044DD } /* Generic.Traceback */
-.listingblock .pygments .tok-kc { color: #007020; font-weight: bold } /* Keyword.Constant */
-.listingblock .pygments .tok-kd { color: #007020; font-weight: bold } /* Keyword.Declaration */
-.listingblock .pygments .tok-kn { color: #007020; font-weight: bold } /* Keyword.Namespace */
-.listingblock .pygments .tok-kp { color: #007020 } /* Keyword.Pseudo */
-.listingblock .pygments .tok-kr { color: #007020; font-weight: bold } /* Keyword.Reserved */
-.listingblock .pygments .tok-kt { color: #902000 } /* Keyword.Type */
-.listingblock .pygments .tok-m { color: #40a070 } /* Literal.Number */
-.listingblock .pygments .tok-s { color: #4070a0 } /* Literal.String */
-.listingblock .pygments .tok-na { color: #4070a0 } /* Name.Attribute */
-.listingblock .pygments .tok-nb { color: #007020 } /* Name.Builtin */
-.listingblock .pygments .tok-nc { color: #0e84b5; font-weight: bold } /* Name.Class */
-.listingblock .pygments .tok-no { color: #60add5 } /* Name.Constant */
-.listingblock .pygments .tok-nd { color: #555555; font-weight: bold } /* Name.Decorator */
-.listingblock .pygments .tok-ni { color: #d55537; font-weight: bold } /* Name.Entity */
-.listingblock .pygments .tok-ne { color: #007020 } /* Name.Exception */
-.listingblock .pygments .tok-nf { color: #06287e } /* Name.Function */
-.listingblock .pygments .tok-nl { color: #002070; font-weight: bold } /* Name.Label */
-.listingblock .pygments .tok-nn { color: #0e84b5; font-weight: bold } /* Name.Namespace */
-.listingblock .pygments .tok-nt { color: #062873; font-weight: bold } /* Name.Tag */
-.listingblock .pygments .tok-nv { color: #bb60d5 } /* Name.Variable */
-.listingblock .pygments .tok-ow { color: #007020; font-weight: bold } /* Operator.Word */
-.listingblock .pygments .tok-w { color: #bbbbbb } /* Text.Whitespace */
-.listingblock .pygments .tok-mb { color: #40a070 } /* Literal.Number.Bin */
-.listingblock .pygments .tok-mf { color: #40a070 } /* Literal.Number.Float */
-.listingblock .pygments .tok-mh { color: #40a070 } /* Literal.Number.Hex */
-.listingblock .pygments .tok-mi { color: #40a070 } /* Literal.Number.Integer */
-.listingblock .pygments .tok-mo { color: #40a070 } /* Literal.Number.Oct */
-.listingblock .pygments .tok-sa { color: #4070a0 } /* Literal.String.Affix */
-.listingblock .pygments .tok-sb { color: #4070a0 } /* Literal.String.Backtick */
-.listingblock .pygments .tok-sc { color: #4070a0 } /* Literal.String.Char */
-.listingblock .pygments .tok-dl { color: #4070a0 } /* Literal.String.Delimiter */
-.listingblock .pygments .tok-sd { color: #4070a0; font-style: italic } /* Literal.String.Doc */
-.listingblock .pygments .tok-s2 { color: #4070a0 } /* Literal.String.Double */
-.listingblock .pygments .tok-se { color: #4070a0; font-weight: bold } /* Literal.String.Escape */
-.listingblock .pygments .tok-sh { color: #4070a0 } /* Literal.String.Heredoc */
-.listingblock .pygments .tok-si { color: #70a0d0; font-style: italic } /* Literal.String.Interpol */
-.listingblock .pygments .tok-sx { color: #c65d09 } /* Literal.String.Other */
-.listingblock .pygments .tok-sr { color: #235388 } /* Literal.String.Regex */
-.listingblock .pygments .tok-s1 { color: #4070a0 } /* Literal.String.Single */
-.listingblock .pygments .tok-ss { color: #517918 } /* Literal.String.Symbol */
-.listingblock .pygments .tok-bp { color: #007020 } /* Name.Builtin.Pseudo */
-.listingblock .pygments .tok-fm { color: #06287e } /* Name.Function.Magic */
-.listingblock .pygments .tok-vc { color: #bb60d5 } /* Name.Variable.Class */
-.listingblock .pygments .tok-vg { color: #bb60d5 } /* Name.Variable.Global */
-.listingblock .pygments .tok-vi { color: #bb60d5 } /* Name.Variable.Instance */
-.listingblock .pygments .tok-vm { color: #bb60d5 } /* Name.Variable.Magic */
-.listingblock .pygments .tok-il { color: #40a070 } /* Literal.Number.Integer.Long */
-</style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic|Liberation+Mono:400|Roboto+Slab:400,700"/>
 <link rel="stylesheet" href="https://www.niwi.nz/_assets/asciidoctor-styles/simple-red-titles/stylesheet.css"/>
 </head>
@@ -129,8 +58,9 @@
 <p>A promise library for Clojure and ClojureScript.</p>
 </div>
 <div class="paragraph">
-<p>On the JVM paltform <em>promesa</em> is built on top of <strong>completable futures</strong> (requires jdk8). On
-JS engines it is built on top of the builtin Promise implementation.</p>
+<p>On the JVM paltform <em>promesa</em> is built on top of <strong>completable futures</strong>
+(requires jdk&gt;=8). On JS engines it is built on top of the builtin
+Promise implementation.</p>
 </div>
 <div class="sect2">
 <h3 id="project-maturity"><a class="link" href="#project-maturity">Project Maturity</a></h3>
@@ -145,7 +75,7 @@ JS engines it is built on top of the builtin Promise implementation.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">[</span><span class="tok-nv">funcool/promesa</span> <span class="tok-s">&quot;2.0.1&quot;</span><span class="tok-p">]</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">[</span><span class="tok-nv">funcool/promesa</span> <span class="tok-s">&quot;3.0.0&quot;</span><span class="tok-p">]</span></code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -339,12 +269,10 @@ does that).</p>
 </div>
 <div class="sect2">
 <h3 id="asyncawait-syntax"><a class="link" href="#asyncawait-syntax">Async/Await Syntax</a></h3>
-<div class="sect3">
-<h4 id="alet-macro-async-let"><a class="link" href="#alet-macro-async-let"><code>alet</code> macro (async let)</a></h4>
 <div class="paragraph">
-<p>The <em>promesa</em> library comes with convenient syntax-sugar that allows you to create a
-compositions that looks like synchronous code while using the clojure&#8217;s familiar <code>let</code>
-syntax:</p>
+<p>The <em>promesa</em> library comes with convenient syntax-sugar that allows
+you to create a compositions that looks like synchronous code while
+using the clojure&#8217;s familiar <code>let</code> syntax:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -356,99 +284,37 @@ syntax:</p>
                <span class="tok-p">(</span><span class="tok-nf">p/schedule</span> <span class="tok-nv">wait</span> <span class="tok-o">#</span><span class="tok-p">(</span><span class="tok-nb">resolve </span><span class="tok-nv">wait</span><span class="tok-p">)))))</span>
 
 <span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">result</span>
-  <span class="tok-p">(</span><span class="tok-nf">p/alet</span> <span class="tok-p">[</span><span class="tok-nv">x</span> <span class="tok-p">(</span><span class="tok-nf">p/await</span> <span class="tok-p">(</span><span class="tok-nf">sleep-promise</span> <span class="tok-mi">42</span><span class="tok-p">))</span>
-           <span class="tok-nv">y</span> <span class="tok-p">(</span><span class="tok-nf">p/await</span> <span class="tok-p">(</span><span class="tok-nf">sleep-promise</span> <span class="tok-mi">41</span><span class="tok-p">))</span>
+  <span class="tok-p">(</span><span class="tok-nf">p/alet</span> <span class="tok-p">[</span><span class="tok-nv">x</span> <span class="tok-p">(</span><span class="tok-nf">sleep-promise</span> <span class="tok-mi">42</span><span class="tok-p">)</span>
+           <span class="tok-nv">y</span> <span class="tok-p">(</span><span class="tok-nf">sleep-promise</span> <span class="tok-mi">41</span><span class="tok-p">)</span>
            <span class="tok-nv">z</span> <span class="tok-mi">2</span><span class="tok-p">]</span>
     <span class="tok-p">(</span><span class="tok-nb">+ </span><span class="tok-nv">x</span> <span class="tok-nv">y</span> <span class="tok-nv">z</span><span class="tok-p">)))</span>
 
-<span class="tok-o">@</span><span class="tok-nv">result</span>     <span class="tok-c1">; only on the jvm</span>
+<span class="tok-o">@</span><span class="tok-nv">result</span>     <span class="tok-c1">; @ syntax only on the jvm</span>
 <span class="tok-c1">;; =&gt; 85</span></code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>The <code>alet</code> macro behaves identical to the <code>let</code> with the exception that it always
-return a promise and allows you to mark async operations with the <code>await</code>
-placeholder making it looks like a synchronous operation.</p>
+<p>The <code>alet</code> macro behaves identical to the <code>let</code> with the exception
+that it always return a promise and if a promise is found on bindings
+it is automatically awaited before executing the rest of code.</p>
 </div>
 <div class="paragraph">
-<p>If an error occurs at any step the entire composition will be short-circuited,
-returning exceptionally resolved promise.</p>
+<p>It emulates the <code>async/await</code> sintax just without the need of <code>await</code>.</p>
 </div>
-</div>
-<div class="sect3">
-<h4 id="async-macro-general-purpose"><a class="link" href="#async-macro-general-purpose"><code>async</code> macro (general purpose)</a></h4>
 <div class="paragraph">
-<p>In contrast to the <code>alet</code> macro, the <code>async</code> macro is more general purpose
-and enables the usage of <code>await</code> in any place (not only on the let
-bindings). Let see an example:</p>
+<p>If an error occurs at any step the entire composition will be
+short-circuited, returning exceptionally resolved promise.</p>
+</div>
+<div class="paragraph">
+<p>Under the hood, the previous <code>alet</code> macro evalutes to something like
+this:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">p</span> <span class="tok-p">(</span><span class="tok-nf">async</span>
-         <span class="tok-p">(</span><span class="tok-nb">dotimes </span><span class="tok-p">[</span><span class="tok-nv">i</span> <span class="tok-mi">3</span><span class="tok-p">]</span>
-           <span class="tok-p">(</span><span class="tok-nf">p/await</span> <span class="tok-p">(</span><span class="tok-nf">p/delay</span> <span class="tok-mi">100</span><span class="tok-p">))</span>
-           <span class="tok-p">(</span><span class="tok-nb">println </span><span class="tok-s">&quot;i=&quot;</span> <span class="tok-nv">i</span><span class="tok-p">))</span>
-         <span class="tok-mi">10</span><span class="tok-p">))</span>
-
-<span class="tok-o">@</span><span class="tok-nv">p</span>
-<span class="tok-c1">;; i=0</span>
-<span class="tok-c1">;; i=1</span>
-<span class="tok-c1">;; i=2</span>
-<span class="tok-c1">;; =&gt; 10</span></code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>As expected, it returns a promise which will be resolved with result of the body
-when completed.</p>
-</div>
-<div class="paragraph">
-<p>If you are familiar with <strong>core.async</strong> <code>go</code> macro, <code>async</code> macro works
-in the same way (in fact, it uses core.async machinery to archive
-that).</p>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Note</div>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Because of some differences in the macro implementation in clj and cljs, the
-clojure version of macro is available in <code>promesa.async</code> namespace and ClojureScript
-version of macro in <code>promesa.async-cljs</code> namespace.</p>
-</div>
-<div class="listingblock">
-<div class="title">Example importing <code>async</code> macro in Clojure</div>
-<div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">promesa.async</span> <span class="tok-ss">:refer</span> <span class="tok-p">[</span><span class="tok-nv">async</span><span class="tok-p">]])</span></code></pre>
-</div>
-</div>
-<div class="listingblock">
-<div class="title">Example importing <code>async</code> macro in ClojureScript</div>
-<div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">promesa.async-cljs</span> <span class="tok-ss">:refer-macros</span> <span class="tok-p">[</span><span class="tok-nv">async</span><span class="tok-p">]])</span></code></pre>
-</div>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>If you are not familiar with <code>async</code>/<code>await</code> syntax, you can read more about it
-<a href="http://jakearchibald.com/2014/es7-async-functions/">here</a>.</p>
-</div>
-<div class="admonitionblock warning">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Warning</div>
-</td>
-<td class="content">
-experimental
-</td>
-</tr>
-</table>
+<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">(</span><span class="tok-nf">p/bind</span> <span class="tok-p">(</span><span class="tok-nf">sleep-promise</span> <span class="tok-mi">42</span><span class="tok-p">)</span>
+        <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">x</span><span class="tok-p">]</span> <span class="tok-p">(</span><span class="tok-nf">p/bind</span> <span class="tok-p">(</span><span class="tok-nf">sleep-promise</span> <span class="tok-mi">41</span><span class="tok-p">)</span>
+                        <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">y</span><span class="tok-p">]</span> <span class="tok-p">(</span><span class="tok-nf">p/bind</span> <span class="tok-mi">2</span> <span class="tok-p">(</span><span class="tok-k">fn </span><span class="tok-p">[</span><span class="tok-nv">z</span><span class="tok-p">]</span>
+                                            <span class="tok-p">(</span><span class="tok-nf">p/promise</span> <span class="tok-p">(</span><span class="tok-k">do </span><span class="tok-p">(</span><span class="tok-nb">+ </span><span class="tok-nv">x</span> <span class="tok-nv">y</span> <span class="tok-nv">z</span><span class="tok-p">)))))))))</span></code></pre>
 </div>
 </div>
 </div>
@@ -474,7 +340,7 @@ the last promise making the effect of short-circuiting.</p>
 <p>The <code>catch</code> function adds a new handler to the promise chain that will be called
 when any of the previous promises in the chain are rejected or an exception is
 raised. The <code>catch</code> function also returns a promise that will be resolved or
-rejected depending on that will happen inside the catch hanlder.</p>
+rejected depending on that will happen inside the catch handler.</p>
 </div>
 <div class="paragraph">
 <p>If you prefer <code>map</code> like parameters order, it there <code>err</code> function (and <code>error</code>
@@ -710,8 +576,79 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2019-03-30 18:10:19 +0100
+Last updated 2019-08-21 17:04:27 +0200
 </div>
 </div>
+<style>
+pre.pygments .hll { background-color: #ffffcc }
+pre.pygments  { background: #f0f0f0; }
+pre.pygments .tok-c { color: #60a0b0; font-style: italic } /* Comment */
+pre.pygments .tok-err { border: 1px solid #FF0000 } /* Error */
+pre.pygments .tok-k { color: #007020; font-weight: bold } /* Keyword */
+pre.pygments .tok-o { color: #666666 } /* Operator */
+pre.pygments .tok-ch { color: #60a0b0; font-style: italic } /* Comment.Hashbang */
+pre.pygments .tok-cm { color: #60a0b0; font-style: italic } /* Comment.Multiline */
+pre.pygments .tok-cp { color: #007020 } /* Comment.Preproc */
+pre.pygments .tok-cpf { color: #60a0b0; font-style: italic } /* Comment.PreprocFile */
+pre.pygments .tok-c1 { color: #60a0b0; font-style: italic } /* Comment.Single */
+pre.pygments .tok-cs { color: #60a0b0; background-color: #fff0f0 } /* Comment.Special */
+pre.pygments .tok-gd { color: #A00000 } /* Generic.Deleted */
+pre.pygments .tok-ge { font-style: italic } /* Generic.Emph */
+pre.pygments .tok-gr { color: #FF0000 } /* Generic.Error */
+pre.pygments .tok-gh { color: #000080; font-weight: bold } /* Generic.Heading */
+pre.pygments .tok-gi { color: #00A000 } /* Generic.Inserted */
+pre.pygments .tok-go { color: #888888 } /* Generic.Output */
+pre.pygments .tok-gp { color: #c65d09; font-weight: bold } /* Generic.Prompt */
+pre.pygments .tok-gs { font-weight: bold } /* Generic.Strong */
+pre.pygments .tok-gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+pre.pygments .tok-gt { color: #0044DD } /* Generic.Traceback */
+pre.pygments .tok-kc { color: #007020; font-weight: bold } /* Keyword.Constant */
+pre.pygments .tok-kd { color: #007020; font-weight: bold } /* Keyword.Declaration */
+pre.pygments .tok-kn { color: #007020; font-weight: bold } /* Keyword.Namespace */
+pre.pygments .tok-kp { color: #007020 } /* Keyword.Pseudo */
+pre.pygments .tok-kr { color: #007020; font-weight: bold } /* Keyword.Reserved */
+pre.pygments .tok-kt { color: #902000 } /* Keyword.Type */
+pre.pygments .tok-m { color: #40a070 } /* Literal.Number */
+pre.pygments .tok-s { color: #4070a0 } /* Literal.String */
+pre.pygments .tok-na { color: #4070a0 } /* Name.Attribute */
+pre.pygments .tok-nb { color: #007020 } /* Name.Builtin */
+pre.pygments .tok-nc { color: #0e84b5; font-weight: bold } /* Name.Class */
+pre.pygments .tok-no { color: #60add5 } /* Name.Constant */
+pre.pygments .tok-nd { color: #555555; font-weight: bold } /* Name.Decorator */
+pre.pygments .tok-ni { color: #d55537; font-weight: bold } /* Name.Entity */
+pre.pygments .tok-ne { color: #007020 } /* Name.Exception */
+pre.pygments .tok-nf { color: #06287e } /* Name.Function */
+pre.pygments .tok-nl { color: #002070; font-weight: bold } /* Name.Label */
+pre.pygments .tok-nn { color: #0e84b5; font-weight: bold } /* Name.Namespace */
+pre.pygments .tok-nt { color: #062873; font-weight: bold } /* Name.Tag */
+pre.pygments .tok-nv { color: #bb60d5 } /* Name.Variable */
+pre.pygments .tok-ow { color: #007020; font-weight: bold } /* Operator.Word */
+pre.pygments .tok-w { color: #bbbbbb } /* Text.Whitespace */
+pre.pygments .tok-mb { color: #40a070 } /* Literal.Number.Bin */
+pre.pygments .tok-mf { color: #40a070 } /* Literal.Number.Float */
+pre.pygments .tok-mh { color: #40a070 } /* Literal.Number.Hex */
+pre.pygments .tok-mi { color: #40a070 } /* Literal.Number.Integer */
+pre.pygments .tok-mo { color: #40a070 } /* Literal.Number.Oct */
+pre.pygments .tok-sa { color: #4070a0 } /* Literal.String.Affix */
+pre.pygments .tok-sb { color: #4070a0 } /* Literal.String.Backtick */
+pre.pygments .tok-sc { color: #4070a0 } /* Literal.String.Char */
+pre.pygments .tok-dl { color: #4070a0 } /* Literal.String.Delimiter */
+pre.pygments .tok-sd { color: #4070a0; font-style: italic } /* Literal.String.Doc */
+pre.pygments .tok-s2 { color: #4070a0 } /* Literal.String.Double */
+pre.pygments .tok-se { color: #4070a0; font-weight: bold } /* Literal.String.Escape */
+pre.pygments .tok-sh { color: #4070a0 } /* Literal.String.Heredoc */
+pre.pygments .tok-si { color: #70a0d0; font-style: italic } /* Literal.String.Interpol */
+pre.pygments .tok-sx { color: #c65d09 } /* Literal.String.Other */
+pre.pygments .tok-sr { color: #235388 } /* Literal.String.Regex */
+pre.pygments .tok-s1 { color: #4070a0 } /* Literal.String.Single */
+pre.pygments .tok-ss { color: #517918 } /* Literal.String.Symbol */
+pre.pygments .tok-bp { color: #007020 } /* Name.Builtin.Pseudo */
+pre.pygments .tok-fm { color: #06287e } /* Name.Function.Magic */
+pre.pygments .tok-vc { color: #bb60d5 } /* Name.Variable.Class */
+pre.pygments .tok-vg { color: #bb60d5 } /* Name.Variable.Global */
+pre.pygments .tok-vi { color: #bb60d5 } /* Name.Variable.Instance */
+pre.pygments .tok-vm { color: #bb60d5 } /* Name.Variable.Magic */
+pre.pygments .tok-il { color: #40a070 } /* Literal.Number.Integer.Long */
+</style>
 </body>
 </html>
