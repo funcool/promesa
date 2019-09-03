@@ -284,8 +284,8 @@ using the clojure&#8217;s familiar <code>let</code> syntax:</p>
                <span class="tok-p">(</span><span class="tok-nf">p/schedule</span> <span class="tok-nv">wait</span> <span class="tok-o">#</span><span class="tok-p">(</span><span class="tok-nb">resolve </span><span class="tok-nv">wait</span><span class="tok-p">)))))</span>
 
 <span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">result</span>
-  <span class="tok-p">(</span><span class="tok-nf">p/alet</span> <span class="tok-p">[</span><span class="tok-nv">x</span> <span class="tok-p">(</span><span class="tok-nf">sleep-promise</span> <span class="tok-mi">42</span><span class="tok-p">)</span>
-           <span class="tok-nv">y</span> <span class="tok-p">(</span><span class="tok-nf">sleep-promise</span> <span class="tok-mi">41</span><span class="tok-p">)</span>
+  <span class="tok-p">(</span><span class="tok-nf">p/alet</span> <span class="tok-p">[</span><span class="tok-nv">x</span> <span class="tok-p">(</span><span class="tok-nf">p/await</span> <span class="tok-p">(</span><span class="tok-nf">sleep-promise</span> <span class="tok-mi">42</span><span class="tok-p">))</span>
+           <span class="tok-nv">y</span> <span class="tok-p">(</span><span class="tok-nf">p/await</span> <span class="tok-p">(</span><span class="tok-nf">sleep-promise</span> <span class="tok-mi">41</span><span class="tok-p">))</span>
            <span class="tok-nv">z</span> <span class="tok-mi">2</span><span class="tok-p">]</span>
     <span class="tok-p">(</span><span class="tok-nb">+ </span><span class="tok-nv">x</span> <span class="tok-nv">y</span> <span class="tok-nv">z</span><span class="tok-p">)))</span>
 
@@ -295,11 +295,12 @@ using the clojure&#8217;s familiar <code>let</code> syntax:</p>
 </div>
 <div class="paragraph">
 <p>The <code>alet</code> macro behaves identical to the <code>let</code> with the exception
-that it always return a promise and if a promise is found on bindings
-it is automatically awaited before executing the rest of code.</p>
+that it always return a promise.</p>
 </div>
 <div class="paragraph">
-<p>It emulates the <code>async/await</code> sintax just without the need of <code>await</code>.</p>
+<p>[NOTE]: Since version 3.0.0, the <code>p/await</code> is not longer necessary,
+because the macro automatically awaits if an expression returns a
+promise.</p>
 </div>
 <div class="paragraph">
 <p>If an error occurs at any step the entire composition will be
@@ -576,7 +577,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2019-08-21 17:04:27 +0200
+Last updated 2019-09-03 09:28:59 +0200
 </div>
 </div>
 <style>
