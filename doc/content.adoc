@@ -93,18 +93,33 @@ the `resolve` callback we just need to return the value:
 ----
 
 `do*` block work similarly to clojure's `do` block, so you can put any
-expression but only the last one will be returned and that expression can be a
-plain value or an other promise.
+expression but only the last one will be returned and that expression
+can be a plain value or an other promise.
 
-If an exception is raised inside the `do*` block, it will return the rejected
-promise instead of re-raising the exception on the stack.
+If an exception is raised inside the `do*` block, it will return the
+rejected promise instead of re-raising the exception on the stack.
 
+If the `do*` contains more than one expression, they will be treated
+as promise expressions and will be executed one after the other,
+alwais awaiting the resolution of the previous expression. 
 
-[NOTE]
-====
-In both platforms the promise factory function is executed synchronously and
-making it blocking or not blocking is the user's responsibility.
-====
+In this case the `do*` macro:
+
+[source, clojure]
+----
+(p/do* (expr1)
+       (expr2)
+       (expr3))
+----
+
+Is roughtly equivalent to:
+
+[source, clojure]
+----
+(p/alet [_ (expr1)
+         _ (expr2)]
+  (expr3))
+----
 
 And finally, you can create an empty promise object just calling the
 `promise` function without parameters, and then resolve or reject it
@@ -178,9 +193,9 @@ apply to also returns a promise instead of a value:
 ;; => 2
 ----
 
-*Important*: The `mapcat` function is only useful in the JVM platform. In JS engines, the `map`
-function already flattens the result magically (because the underlying implementation
-does that).
+*Important*: The `mapcat` function is only useful in the JVM
+platform. In JS engines, the `map` function already flattens the
+result magically (because the underlying implementation does that).
 
 
 === Async/Await Syntax
@@ -199,8 +214,8 @@ using the clojure's familiar `let` syntax:
                (p/schedule wait #(resolve wait)))))
 
 (def result
-  (p/alet [x (sleep-promise 42)
-           y (sleep-promise 41)
+  (p/alet [x (p/await (sleep-promise 42))
+           y (p/await (sleep-promise 41))
            z 2]
     (+ x y z)))
 
@@ -209,10 +224,19 @@ using the clojure's familiar `let` syntax:
 ----
 
 The `alet` macro behaves identical to the `let` with the exception
-that it always return a promise and if a promise is found on bindings
-it is automatically awaited before executing the rest of code.
+that it always return a promise.
 
-It emulates the `async/await` sintax just without the need of `await`.
+Since version 3.0.0, the `p/await` is not longer necessary, because
+the macro automatically awaits if an expression returns a promise. So
+the previous code can be written without `await`:
+
+```clojure
+(def result
+  (p/alet [x (sleep-promise 42)
+           y (sleep-promise 41)
+           z 2]
+    (+ x y z)))
+```
 
 If an error occurs at any step the entire composition will be
 short-circuited, returning exceptionally resolved promise.
