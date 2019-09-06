@@ -384,8 +384,9 @@
      The `promise.core/await` is no longer necesary (it is maintained
      only for backward compatibility."
      [bindings & body]
-     (->> (reverse (partition 2 bindings))
-          (reduce (fn [acc [l r]]
-                    `(bind ~r (fn [~l] ~acc)))
-                  `(pt/-promise (do ~@body))))))
+     `(p/bind nil (fn [_#]
+                    ~(->> (reverse (partition 2 bindings))
+                          (reduce (fn [acc [l r]]
+                                    `(bind ~r (fn [~l] ~acc)))
+                                  `(pt/-promise (do ~@body))))))))
 
