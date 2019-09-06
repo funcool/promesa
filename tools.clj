@@ -9,9 +9,6 @@
 (require '[cljs.build.api :as api]
          '[cljs.repl :as repl]
          '[cljs.repl.node :as node])
-(require '[badigeon.jar]
-         '[badigeon.deploy])
-
 
 (defmulti task first)
 
@@ -59,30 +56,6 @@
 (defmethod task "build:tests"
   [args]
   (api/build (api/inputs "src" "test") build-options))
-
-(defmethod task "jar"
-  [args]
-  (badigeon.jar/jar 'funcool/promesa
-                    {:mvn/version "3.0.0"}
-                    {:out-path "target/promesa.jar"
-                     :mvn/repos '{"clojars" {:url "https://repo.clojars.org/"}}
-                     :allow-all-dependencies? false}))
-
-(defmethod task "deploy"
-  [args]
-  (let [artifacts [{:file-path "target/promesa.jar" :extension "jar"}
-                   {:file-path "pom.xml" :extension "pom"}]]
-    (badigeon.deploy/deploy
-     'funcool/promesa "3.0.0"
-     artifacts
-     {:id "clojars" :url "https://repo.clojars.org/"}
-     {:allow-unsigned? true})))
-
-(defmethod task "build-and-deploy"
-  [args]
-  (task ["jar"])
-  (task ["deploy"]))
-
 
 ;;; Build script entrypoint. This should be the last expression.
 

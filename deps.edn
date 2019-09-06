@@ -2,15 +2,16 @@
  :aliases
  {:dev {:extra-deps {com.bhauman/rebel-readline-cljs {:mvn/version "0.1.4"}
                      com.bhauman/rebel-readline {:mvn/version "0.1.4"}
+                     org.clojure/tools.namespace {:mvn/version "0.3.1"}
                      org.clojure/clojurescript {:mvn/version "1.10.520"}
-                     org.clojure/clojure {:mvn/version "1.10.1"}
-                     badigeon/badigeon {:git/url "https://github.com/EwenG/badigeon.git"
-                                        :sha "db25a8f7053dec65afeb7fb0d1a5351dcdbe78bd"
-                                        :tag "0.0.8"}}
+                     org.clojure/clojure {:mvn/version "1.10.1"}}
         :extra-paths ["test"]}
 
   :ancient {:main-opts ["-m" "deps-ancient.deps-ancient"]
             :extra-deps {deps-ancient {:mvn/version "RELEASE"}}}
 
-  :test
-  {:extra-paths ["test"]}}}
+  :deploy {:extra-deps {badigeon/badigeon {:git/url "https://github.com/EwenG/badigeon.git"
+                                           :sha "db25a8f7053dec65afeb7fb0d1a5351dcdbe78bd"
+                                           :tag "0.0.8"}}
+           :main-opts ["deploy.clj"]}}}
+
