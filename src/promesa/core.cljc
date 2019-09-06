@@ -360,18 +360,6 @@
               (schedule t #(.complete p v))
               p))))
 
-(defn attempt
-  "A helper for start promise chain without worry about
-  synchronous or asynchronous exceptions. Returns a promise
-  resolved with the return value of the callback."
-  [callback]
-  #?(:cljs (promise (fn [resolve] (resolve (callback))))
-     :clj  (promise (fn [resolve reject]
-                      (let [result (callback)]
-                        (if (promise? result)
-                          (then result resolve)
-                          (resolve result)))))))
-
 #?(:clj
    (defmacro do*
      [& exprs]
