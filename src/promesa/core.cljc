@@ -374,9 +374,15 @@
 
 #?(:clj
    (defmacro do*
-     "A sugar syntax on top of `attempt`."
-     [& body]
-     `(attempt #(do ~@body))))
+     [& exprs]
+     `(p/bind nil (fn [_#]
+                    ~(condp = (count exprs)
+                       0 `(pt/-promise nil)
+                       1 `(pt/-promise ~(first exprs))
+                       (reduce (fn [acc e]
+                                 `(bind ~e (fn [_#] ~acc)))
+                               `(pt/-promise ~(last exprs))
+                               (reverse (butlast exprs))))))))
 
 (defn await
   [v]
