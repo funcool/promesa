@@ -17,9 +17,9 @@ and macros that are not heavily used):
 ```clojure
 (require '[promesa.core :as p])
 
-(p/do (expr1)
-      (expr2)
-      (expr3))
+(p/do* (expr1)
+       (expr2)
+       (expr3))
 
 ;; That is roughtly equivalent to:
 
