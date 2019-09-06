@@ -1,5 +1,38 @@
 # Changelog #
 
+## Version 4.0.0-SNAPSHOT ##
+
+Date: ---
+
+Relevant changes (minor **breaking changes** that affects functions
+and macros that are not heavily used):
+
+- `attempt` function is removed (not useful).
+-  `do*` macro now does that should have been doing from the
+   start. Now it treats each individual expression as a expression
+   that evaluates to promise and executes serially awaiting each
+   expression. Returns a promise resolved to the result of the last
+   expression, ignoring all intermediate results.
+
+```clojure
+(require '[promesa.core :as p])
+
+(p/do (expr1)
+      (expr2)
+      (expr3))
+
+;; That is roughtly equivalent to:
+
+(p/alet [_ (expr1)
+         _ (expr2)]
+  (expr3))
+```
+
+- Improve `alet` macro making it safe to synchronos exception that can
+  be raised from the first evaluated expression. Now all exception
+  raised inside `alet` returs properly rejected promise.
+
+
 ## Version 3.0.0 ##
 
 Date: 2019-08-21
