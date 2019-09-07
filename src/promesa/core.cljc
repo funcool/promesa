@@ -238,17 +238,10 @@
 
 (defn race
   [promises]
-  (let [resolved (atom false)]
-    (promise
-     (fn [resolve reject]
-       (doseq [p promises]
-         (-> (promise p)
-             (then (fn [v]
-                     (when (compare-and-set! resolved false true)
-                       (resolve v))))
-             (catch (fn [e]
-                      (when (compare-and-set! resolved false true)
-                        (reject e))))))))))
+  #?(:cljs (.race impl/*default-promise* (into-array (cljs.core/map pt/-promise promises)))
+     :clj (CompletableFuture/anyOf (->> (clojure.core/map pt/-promise promises)
+                                        (into-array CompletableFuture)))))
+
 
 (defn any
   "Given an array of promises, return a promise that is fulfilled when
