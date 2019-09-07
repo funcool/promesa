@@ -138,6 +138,25 @@
                      :foobar)]
        (t/is (= @p1 :foobar)))))
 
+(t/deftest serial-execution-with-run
+  #?(:cljs
+     (t/async done
+       (let [state (atom [])
+             func (fn [i]
+                    (p/then (p/delay 100)
+                            (fn [_] (swap! state conj i))))]
+         (p/then (p/run! func [1 2 3 4 5 6])
+                 (fn [_]
+                   (t/is (= [1 2 3 4 5 6] @state))
+                   (done)))))
+
+     :clj
+     (let [state (atom [])]
+       @(p/run! (fn [i] (p/then (p/delay 100) (fn [_] (swap! state conj i))))
+                [1 2 3 4 5 6])
+       (t/is (= [1 2 3 4 5 6] @state)))))
+
+
 (t/deftest reject-promise-in-chain
   #?(:cljs
      (t/async done

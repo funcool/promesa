@@ -23,7 +23,7 @@
 ;; THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (ns promesa.core
-  (:refer-clojure :exclude [delay spread promise await map mapcat])
+  (:refer-clojure :exclude [delay spread promise await map mapcat run!])
   (:require [promesa.protocols :as pt]
             [promesa.impl :as impl]
             [promesa.impl.scheduler :as ps])
@@ -238,17 +238,17 @@
 
 (defn race
   [promises]
-   (let [resolved (atom false)]
-     (promise
-      (fn [resolve reject]
-        (doseq [p promises]
-          (-> (promise p)
-              (then (fn [v]
+  (let [resolved (atom false)]
+    (promise
+     (fn [resolve reject]
+       (doseq [p promises]
+         (-> (promise p)
+             (then (fn [v]
+                     (when (compare-and-set! resolved false true)
+                       (resolve v))))
+             (catch (fn [e]
                       (when (compare-and-set! resolved false true)
-                        (resolve v))))
-              (catch (fn [e]
-                       (when (compare-and-set! resolved false true)
-                         (reject e))))))))))
+                        (reject e))))))))))
 
 (defn any
   "Given an array of promises, return a promise that is fulfilled when
@@ -281,6 +281,15 @@
                              (reject (ex-info "No promises resolved"
                                               {:rejections rejections}))
                              (resolve default)))))))))))))
+
+(defn run!
+  "A promise aware run! function."
+  [f coll]
+  (reduce (fn [acc o]
+            (bind acc (fn [_]
+                          (pt/-promise (f o)))))
+          (pt/-promise nil)
+          coll))
 
 ;; Cancellation
 
