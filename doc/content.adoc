@@ -139,7 +139,6 @@ Example:
 You can only resolve or reject outside the factory function promise
 objects created with the `promise` function.
 
-
 === Promise Chaining
 
 The most common way to apply a function to a promise (or in other words, to chain
@@ -198,7 +197,9 @@ platform. In JS engines, the `map` function already flattens the
 result magically (because the underlying implementation does that).
 
 
-=== Async/Await Syntax
+=== Promise Composition
+
+==== `alet`
 
 The _promesa_ library comes with convenient syntax-sugar that allows
 you to create a compositions that looks like synchronous code while
@@ -214,8 +215,8 @@ using the clojure's familiar `let` syntax:
                (p/schedule wait #(resolve wait)))))
 
 (def result
-  (p/alet [x (p/await (sleep-promise 42))
-           y (p/await (sleep-promise 41))
+  (p/alet [x (sleep-promise 42)
+           y (sleep-promise 41)
            z 2]
     (+ x y z)))
 
@@ -225,18 +226,6 @@ using the clojure's familiar `let` syntax:
 
 The `alet` macro behaves identical to the `let` with the exception
 that it always return a promise.
-
-Since version 3.0.0, the `p/await` is not longer necessary, because
-the macro automatically awaits if an expression returns a promise. So
-the previous code can be written without `await`:
-
-```clojure
-(def result
-  (p/alet [x (sleep-promise 42)
-           y (sleep-promise 41)
-           z 2]
-    (+ x y z)))
-```
 
 If an error occurs at any step the entire composition will be
 short-circuited, returning exceptionally resolved promise.
@@ -250,6 +239,86 @@ this:
                         (fn [y] (p/bind 2 (fn [z]
                                             (p/promise (do (+ x y z)))))))))
 ```
+
+==== `all`
+
+In some circumstances you will want wait a completion of few promises at same time,
+and _promesa_ also provides helpers for that.
+
+Imagine that you have a collection of promises and you want to wait until all of
+them are resolved. This can be done using the `all` combinator:
+
+[source, clojure]
+----
+(let [p (p/all [(do-some-io)
+                (do-some-other-io)])]
+  (p/then p (fn [[result1 result2]]
+              (do-something-with-results result1 result2))))
+----
+
+
+==== `plet`
+
+This is combination of `alet` syntax with `all`. Enables a simple
+declaration of parallel operations followed by a body expression that
+will be executed when all parallel operations will be successfully
+resolved.
+
+[source, clojure]
+----
+(-> (p/plet [a (p/delay 100 1)
+             b (p/delay 200 2)
+             c (p/delay 120 3)]
+      (+ a b c))
+    (p/then (fn [result]
+              (println "result:" result))))
+
+;; => result: 6
+----
+
+The `plet` macro is just a syntax abstraction on top of `all`. The
+previous example can be written using `all` in this manner:
+
+[source, clojure]
+----
+(p/all [(p/delay 100 1)
+        (p/delay 200 2)
+        (p/delay 120 3)]
+  (fn [[a b c]] (+ a b c)))
+----
+
+
+==== `any`
+
+It there are also circumstances where you only want arbitrary select
+of the first successfully resolved promise. For this case, you can use
+the `any` combinator:
+
+[source, clojure]
+----
+(let [p (p/any [(p/delay 100 1)
+                (p/delay 200 2)
+                (p/delay 120 3)])]
+  (p/then p (fn [x]
+              (.log js/console "The first one finished: " x))))
+----
+
+
+==== `race`
+
+The `race` function method returns a promise that fulfills or rejects
+as soon as one of the promises in an iterable fulfills or rejects,
+with the value or reason from that promise:
+
+[source, clojure]
+----
+(-> (p/race [(p/delay 100 1)
+             (p/delay 110 2)])
+    (p/then (fn [res]
+              (prn "result:" res))))
+
+;; => "result:" 2
+----
 
 
 === Error handling
@@ -333,35 +402,6 @@ operations thanks to the `timeout` function:
 
 In case the async task is slow, in the example more that 200ms, the promise will be
 rejected with timeout error and successfully captured with the `catch` handler.
-
-
-=== Working with collections
-
-In some circumstances you will want wait a completion of few promises at same time,
-and _promesa_ also provides helpers for that.
-
-Imagine that you have a collection of promises and you want to wait until all of
-them are resolved. This can be done using the `all` combinator:
-
-[source, clojure]
-----
-(let [p (p/all [(do-some-io)
-                (do-some-other-io)])]
-  (p/then p (fn [[result1 result2]]
-              (do-something-with-results result1 result2))))
-----
-
-It there are also circumstances where you only want arbitrary select of the first
-resolved promise. For this case, you can use the `any` combinator:
-
-[source, clojure]
-----
-(let [p (p/any [(p/delay 100 1)
-                (p/delay 200 2)
-                (p/delay 120 3)])]
-  (p/then p (fn [x]
-              (.log js/console "The first one finished: " x))))
-----
 
 
 === Scheduling Tasks
