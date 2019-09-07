@@ -392,3 +392,15 @@
                                     `(bind ~r (fn [~l] ~acc)))
                                   `(pt/-promise (do ~@body))))))))
 
+#?(:clj
+   (defmacro plet
+     "A parallel let; executes all the bindings in parallel and
+     when all bindings are resolved, executes the body."
+     [bindings & body]
+     `(p/bind nil (fn [_#]
+                    ~(let [bindings (partition 2 bindings)]
+                       `(all ~(mapv second bindings)
+                             (fn [[~@(mapv first bindings)]]
+                               ~@body)))))))
+
+
