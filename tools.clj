@@ -57,6 +57,26 @@
   [args]
   (api/build (api/inputs "src" "test") build-options))
 
+(defmethod task "watch:tests"
+  [args]
+  (println "Start watch loop...")
+  (letfn [(run-tests []
+            (let [{:keys [out err]} (shell/sh "node" "out/tests.js")]
+              (println out err)))
+          (start-watch []
+            (try
+              (api/watch (api/inputs "src" "test")
+                         (assoc build-options
+                                :watch-fn run-tests
+                                :source-map true
+                                :optimizations :none))
+              (catch Exception e
+                (println "ERROR:" e)
+                (Thread/sleep 2000)
+                start-watch)))]
+    (trampoline start-watch)))
+
+
 ;;; Build script entrypoint. This should be the last expression.
 
 (task *command-line-args*)
