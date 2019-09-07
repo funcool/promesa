@@ -31,6 +31,9 @@ and macros that are not heavily used):
 - Improve `alet` macro making it safe to synchronos exception that can
   be raised from the first evaluated expression. Now all exception
   raised inside `alet` returs properly rejected promise.
+- Add `plet` as syntactic abstraction/sugar for `all` composition
+  operator.
+- Add `race` composition operator.
 
 
 ## Version 3.0.0 ##
