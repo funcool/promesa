@@ -46,13 +46,25 @@
 
 #?(:cljs (declare ->Executor))
 
-(defonce scheduler
+(defonce ^:dynamic *scheduler*
   (delay #?(:clj (scheduled-pool)
             :cljs (->ScheduledExecutor))))
 
-(defonce executor
+(defonce ^:dynamic *executor*
   (delay #?(:clj (ForkJoinPool/commonPool)
             :cljs (->Executor))))
+
+(defn get-default-executor
+  []
+  (if (delay? *executor*)
+    (deref *executor*)
+    *executor*))
+
+(defn get-default-scheduler
+  []
+  (if (delay? *scheduler*)
+    (deref *scheduler*)
+    *scheduler*))
 
 ;; --- Public Api
 
@@ -63,7 +75,7 @@
 
   A task is a plain clojure function."
   ([task]
-   (pt/-submit @executor task))
+   (pt/-submit (get-default-executor) task))
   ([executor task]
    (pt/-submit executor task)))
 
@@ -74,7 +86,7 @@
   In JVM it uses a scheduled executor service and in JS
   it uses the `setTimeout` function."
   ([ms task]
-   (pt/-schedule @scheduler ms task))
+   (pt/-schedule (get-default-scheduler) ms task))
   ([scheduler ms task]
    (pt/-schedule scheduler ms task)))
 

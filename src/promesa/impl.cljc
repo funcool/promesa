@@ -122,14 +122,14 @@
              func (CallbackSuccessFunction. cb binds)]
          (.thenApplyAsync ^CompletionStage it
                           ^Function func
-                          ^Executor @exec/executor)))
+                          ^Executor (exec/get-default-executor))))
 
      (-bind [it cb]
        (let [binds (clojure.lang.Var/getThreadBindingFrame)
              func (CallbackSuccessFunction. cb binds)]
          (.thenComposeAsync ^CompletionStage it
                             ^Function func
-                            ^Executor @exec/executor)))
+                            ^Executor (exec/get-default-executor))))
 
      (-catch [it cb]
        (let [binds (clojure.lang.Var/getThreadBindingFrame)
