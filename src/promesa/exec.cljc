@@ -230,7 +230,7 @@
      (-cancelled? [_]
        (gobj/get state "cancelled"))
      (-cancel [self]
-       (when-not (-cancelled? self)
+       (when-not (pt/-cancelled? self)
          (let [cancel-fn (gobj/get state "cancel-fn")]
            (gobj/set state "cancelled" true)
            (cancel-fn))))))
@@ -254,7 +254,7 @@
                      (finally
                        (vreset! done true)))
              tid (js/setTimeout task ms)
-             cancel #(js/cancelTimeout tid)]
+             cancel #(js/clearTimeout tid)]
          (->ScheduledTask #js {:done done
                                :cancelled false
                                :cancel-fn cancel})))))

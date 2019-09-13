@@ -88,7 +88,6 @@
      (t/async done
        (let [e (ex-info "foo" {})
              p1 (p/promise e)]
-         ;; (t/is (p/rejected? p1))
          (p/catch p1 (fn [x]
                        (t/is (= e x))
                        (done)))))))
@@ -108,10 +107,9 @@
 
     #?(:cljs
        (t/async done
-         (p/do*
-          (p/then p1 (fn [r] (t/is (= [:ok1 :ok2] r))))
-          (p/then p2 (fn [r] (t/is (= :fail r))))
-          (done)))
+         (p/do! (p/then p1 (fn [r] (t/is (= [:ok1 :ok2] r))))
+                (p/then p2 (fn [r] (t/is (= :fail r))))
+                (done)))
        :clj
        (do
          (t/is (= [:ok1 :ok2] @p1))
@@ -131,7 +129,7 @@
          (t/is (= :fail @p2)))
        :cljs
        (t/async done
-         (p/do* (p/then p1 (fn [r] (t/is (= r :ok))))
+         (p/do! (p/then p1 (fn [r] (t/is (= r :ok))))
                 (p/then p2 (fn [r] (t/is (= r :fail))))
                 (done))))))
 
@@ -213,36 +211,42 @@
                      (done)))))))
 
 (t/deftest chaining-using-map
-  #?(:cljs
-     (t/async done
-       (let [p1 (promise-ok 100 2)
-             p2 (p/map inc p1)
-             p3 (p/map inc p2)]
-         (p/then p3 (fn [v]
-                      (t/is (= v 4))
-                      (done)))))
-     :clj
-     (let [p1 (promise-ok 100 2)
-           p2 (p/map inc p1)
-           p3 (p/map inc p2)]
-       (t/is (= @p3 4)))))
+  (let [p1 (promise-ok 10 2)
+        p2 (p/map inc p1)
+        p3 (p/map inc p2)
+
+        test #(p/then p3 (fn [res] (t/is (= res 4))))]
+    #?(:cljs (t/async done (p/do! (test) (done)))
+       :clj @(test))))
+
+(t/deftest chaining-using-map'
+  (let [p1 (promise-ok 10 2)
+        p2 (p/map' inc p1)
+        p3 (p/map' inc p2)
+
+        test #(p/then p3 (fn [res] (t/is (= res 4))))]
+    #?(:cljs (t/async done (p/do! (test) (done)))
+       :clj @(test))))
 
 (t/deftest chaining-using-mapcat
-  #?(:cljs
-     (t/async done
-       (let [p1 (promise-ok 100 2)
-             inc #(p/resolved (inc %))
-             p2 (p/mapcat inc p1)
-             p3 (p/mapcat inc p2)]
-         (p/then p3 (fn [v]
-                      (t/is (= v 4))
-                      (done)))))
-     :clj
-     (let [p1 (promise-ok 100 2)
-           inc #(p/resolved (inc %))
-           p2 (p/mapcat inc p1)
-           p3 (p/mapcat inc p2)]
-       (t/is (= @p3 4)))))
+  (let [p1 (promise-ok 100 2)
+        inc #(p/resolved (inc %))
+        p2 (p/mapcat inc p1)
+        p3 (p/mapcat inc p2)
+        test #(p/then p3 (fn [v] (t/is (= v 4))))]
+
+    #?(:cljs (t/async done (p/do! (test) (done)))
+       :clj @(test))))
+
+(t/deftest chaining-using-mapcat'
+  (let [p1 (promise-ok 100 2)
+        inc #(p/resolved (inc %))
+        p2 (p/mapcat' inc p1)
+        p3 (p/mapcat' inc p2)
+        test #(p/then p3 (fn [v] (t/is (= v 4))))]
+
+    #?(:cljs (t/async done (p/do! (test) (done)))
+       :clj @(test))))
 
 (t/deftest cancel-scheduled-task
   #?(:cljs
@@ -407,17 +411,33 @@
 ;; --- Do Expression tests
 
 (t/deftest do-expression
-  #?(:cljs
-     (t/async done
-       (let [error (ex-info "foo" {})
-             result (p/do* (throw error))]
-         (p/catch result (fn [e]
-                           (t/is (= e error))
-                           (done)))))
-     :clj
-     (let [error (ex-info "foo" {})
-           result (p/do* (throw error))
-           result @(p/catch result (fn [e]
-                                     (assert (= e error))
-                                     nil))]
-       (t/is (= nil result)))))
+  (let [err (ex-info "error" {})
+        p1 (p/do! (throw err))
+        p2 (p/do! (promise-ko 10 :ko))
+        p3 (p/do! (promise-ok 10 :ok1)
+                  (promise-ok 10 :ok2))
+
+        test #(p/do!
+               (-> (normalize-to-value p1)
+                   (p/then (fn [res] (t/is (= res 'error)))))
+               (-> (normalize-to-value p2)
+                   (p/then (fn [res] (t/is (= res :ko)))))
+               (-> (normalize-to-value p3)
+                   (p/then (fn [res] (t/is (= res :ok2))))))]
+    #?(:cljs (t/async done (p/do! (test) (done)))
+       :clj @(test))))
+
+(t/deftest run-helper
+  (let [f (fn [i] (p/then (p/delay i) (constantly i)))
+        p1 (run! f [10 20 30])
+        test #(->> (p/race [p1 (p/delay 100)])
+                   (p/map (fn [res] (t/is (= res nil)))))]
+    #?(:cljs (t/async done (p/do! (test) (done)))
+       :clj @(test))))
+
+(t/deftest future-macro
+  (let [p1 (p/future (+ 1 2 3))
+        test #(p/then p1 (fn [res] (t/is (= res 6))))]
+    #?(:cljs (t/async done (p/do! (test) (done)))
+       :clj @(test))))
+
