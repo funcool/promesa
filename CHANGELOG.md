@@ -46,6 +46,9 @@ and macros that are not heavily used):
 - Improve `let` macro making it safe to synchronos exception that can
   be raised from the first evaluated expression. Now all exception
   raised inside `let` returs properly rejected promise.
+- Add `map'`, `bind'` and `mapcat'` variants that uses inline
+  composition (wihtout microtasking, read more on docs).
+- Make `chain` use the `map'` variant for batch computations.
 
 
 
