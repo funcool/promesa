@@ -23,7 +23,9 @@
 ;; THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (ns promesa.core
-  (:refer-clojure :exclude [delay spread promise await map mapcat run! future let])
+  (:refer-clojure :exclude [delay spread promise
+                            await map mapcat run!
+                            future let loop recur])
   (:require [promesa.protocols :as pt]
             [clojure.core :as c]
             [promesa.exec :as exec]
@@ -404,5 +406,22 @@
                             (pt/-promise (f#)))))
            (mapcat' identity))))
 
+(def ^:private INTERNAL_LOOP_FN_NAME
+  (gensym 'internal-loop-fn-name))
 
+(defmacro loop
+  "Analogous to `clojure.core/loop`."
+  [bindings & body]
+  (c/let [bindings (partition 2 2 bindings)
+          names (mapv first bindings)
+          fvals (mapv second bindings)
+          syms (mapv gensym names)]
+    `(letfn [(~INTERNAL_LOOP_FN_NAME [~@syms]
+              (-> (p/all [~@syms])
+                  (p/then (fn [[~@names]] (do! ~@body)))))]
+       (~INTERNAL_LOOP_FN_NAME ~@fvals))))
+
+(defmacro recur
+  [& args]
+  `(~INTERNAL_LOOP_FN_NAME ~@args))
 
