@@ -23,50 +23,16 @@
 ;; THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (ns promesa.core
-  (:refer-clojure :exclude [delay spread promise await map mapcat run!])
+  (:refer-clojure :exclude [delay spread promise await map mapcat run! future])
   (:require [promesa.protocols :as pt]
-            [promesa.impl :as impl]
-            [promesa.impl.scheduler :as ps])
+            [promesa.exec :as exec]
+            [promesa.impl :as impl])
+            ;; [promesa.impl.scheduler :as ps])
   #?(:cljs (:require-macros [promesa.core]))
   #?(:clj
      (:import java.util.concurrent.CompletableFuture
               java.util.concurrent.CompletionStage
               java.util.concurrent.TimeoutException)))
-
-;; --- Global Constants
-
-#?(:clj
-   (defn set-executor!
-     "Replace the default executor instance with
-     your own instance."
-     [executor]
-     (alter-var-root #'impl/*executor* (constantly executor))))
-
-#?(:cljs
-   (defn set-default-promise!
-     "Sets the default promise type that should be used for creating
-     all promise instances."
-     [promise]
-     (set! impl/*default-promise* promise)))
-
-#?(:cljs
-   (defn extend-promise!
-     "A helper function that attaches the internal protocols implementation
-     to a specified type. Usefull if you want to use different promise
-     implementations with promesa functions."
-     [promise]
-     (impl/extend-promise! promise)))
-
-;; --- Scheduling helpers
-
-(defn schedule
-  "Schedule a callable to be executed after the `ms` delay
-  is reached.
-
-  In JVM it uses a scheduled executor service and in JS
-  it uses the `setTimeout` function."
-  [ms func]
-  (ps/schedule ms func))
 
 ;; --- Promise
 
@@ -205,10 +171,9 @@
   executed independently if promise is
   resolved or rejected."
   [p callback]
-  #?(:clj (-> p
-              (then (fn [_] (callback)))
-              (catch (fn [_] (callback))))
-     :cljs (.lastly p callback)))
+  (-> p
+      (then (fn [_] (callback)))
+      (catch (fn [_] (callback)))))
 
 (defn all
   "Given an array of promises, return a promise
@@ -309,7 +274,7 @@
   [p e]
   (pt/-reject p e))
 
-;; Utils
+;; --- Utils
 
 (defn promisify
   "Given a function that accepts a callback as the last argument return other
@@ -318,12 +283,11 @@
   [callable]
   (fn [& args]
     (promise (fn [resolve reject]
-               (let [args (-> (vec args)
-                              (conj resolve))]
+               (let [args (-> (vec args) (conj resolve))]
                  (try
                    (apply callable args)
                    (catch #?(:clj Throwable :cljs js/Error) e
-                       (reject e))))))))
+                     (reject e))))))))
 
 #?(:cljs
    (defn ^{:jsdoc ["@constructor"]}
@@ -342,10 +306,10 @@
   ([p t] (timeout p t ::default))
   ([p t v]
    (let [tp (promise (fn [resolve reject]
-                       (ps/schedule t (fn []
-                                        (if (= v ::default)
-                                          (reject (TimeoutException. "Operation timed out."))
-                                          (resolve v))))))]
+                       (exec/schedule t (fn []
+                                          (if (= v ::default)
+                                            (reject (TimeoutException. "Operation timed out."))
+                                            (resolve v))))))]
      (race [p tp]))))
 
 (defn delay
@@ -359,7 +323,7 @@
                        (schedule t #(resolve v))))
 
       :clj  (let [p (CompletableFuture.)]
-              (schedule t #(.complete p v))
+              (exec/schedule t #(.complete p v))
               p))))
 
 #?(:clj
@@ -402,5 +366,13 @@
                        `(all ~(mapv second bindings)
                              (fn [[~@(mapv first bindings)]]
                                ~@body)))))))
+
+#?(:clj
+   (defmacro future
+     "Analogous to `clojure.core/future` that returns a promise instance
+     instead of the `Future`. Usefull for execute synchronous code in a
+     separate thread (Also works in cljs)."
+     [& body]
+     `(exec/submit (fn [] ~@body))))
 
 

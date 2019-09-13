@@ -2,7 +2,8 @@
   (:require #?(:cljs [cljs.test :as t]
                :clj [clojure.test :as t])
             [promesa.tests.util :refer [promise-ok promise-ko normalize-to-value]]
-            [promesa.core :as p :include-macros true])
+            [promesa.core :as p :include-macros true]
+            [promesa.exec :as e])
   #?(:clj
      (:import java.util.concurrent.TimeoutException)))
 
@@ -34,7 +35,7 @@
 
      :clj
      (let [p (p/promise)]
-       (p/schedule 200 #(p/resolve! p 1))
+       (e/schedule 200 #(p/resolve! p 1))
        (t/is (= @p 1)))))
 
 (t/deftest promise-from-nil-value
@@ -66,14 +67,14 @@
   #?(:cljs
      (t/async done
        (let [p1 (p/promise (fn [resolve reject]
-                             (p/schedule 50 #(resolve 1))))]
+                             (e/schedule 50 #(resolve 1))))]
          ;; (t/is (p/pending? p1))
          (p/then p1 (fn [v]
                       (t/is (= v 1))
                       (done)))))
      :clj
      (let [p1 (p/promise (fn [resolve reject]
-                           (p/schedule 500 #(resolve 1))))]
+                           (e/schedule 500 #(resolve 1))))]
        (t/is (p/pending? p1))
        (t/is (= @p1 1)))))
 
@@ -247,10 +248,10 @@
   #?(:cljs
      (t/async done
        (let [value (volatile! nil)
-             c1 (p/schedule 100 #(vreset! value 1))
-             c2 (p/schedule 100 #(vreset! value 2))]
+             c1 (e/schedule 100 #(vreset! value 1))
+             c2 (e/schedule 100 #(vreset! value 2))]
          (p/cancel! c1)
-         (p/schedule 300
+         (e/schedule 300
                      (fn []
                        (t/is (= @value 2))
                        (t/is (realized? c2))
@@ -259,10 +260,10 @@
                        (done)))))
      :clj
      (let [value (volatile! nil)
-           c1 (p/schedule 500 #(vreset! value 1))
-           c2 (p/schedule 500 #(vreset! value 2))]
+           c1 (e/schedule 500 #(vreset! value 1))
+           c2 (e/schedule 500 #(vreset! value 2))]
        (p/cancel! c1)
-       @(p/schedule 1100 (constantly nil))
+       @(e/schedule 1100 (constantly nil))
        (t/is (realized? c2))
        (t/is (not (realized? c1)))
        (t/is (p/cancelled? c1))

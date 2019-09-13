@@ -7,7 +7,6 @@ Date: ---
 Relevant changes (minor **breaking changes** that affects functions
 and macros that are not heavily used):
 
-- `attempt` function is removed (not useful).
 -  `do*` macro now does that should have been doing from the
    start. Now it treats each individual expression as a expression
    that evaluates to promise and executes serially awaiting each
@@ -28,12 +27,22 @@ and macros that are not heavily used):
   (expr3))
 ```
 
-- Improve `alet` macro making it safe to synchronos exception that can
-  be raised from the first evaluated expression. Now all exception
-  raised inside `alet` returs properly rejected promise.
 - Add `plet` as syntactic abstraction/sugar for `all` composition
   operator.
 - Add `race` composition operator.
+- Add `run!` function (a promise aware `run!` variant).
+- Add `future` macro (analogous to `clojure.core/future` that returns
+  promise instance instead of Future, also works in cljs)
+- Add `promesa.exec` namespace with Executors & Schedulers abstractions.
+- Removed `schedule` function from `promesa.core` (replaced by `promesa.exec`).
+- Removed `extend-promise!` from `promesa.core` (still available in `promesa.impl`).
+- Removed `set-default-promise!` helper (the user can do the same without the helper).
+- Remove `attempt` function (not useful).
+- Fix `finally` implementation on cljs.
+- Improve `alet` macro making it safe to synchronos exception that can
+  be raised from the first evaluated expression. Now all exception
+  raised inside `alet` returs properly rejected promise.
+
 
 
 ## Version 3.0.0 ##

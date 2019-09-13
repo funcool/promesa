@@ -1,5 +1,6 @@
 (ns user
   (:require [clojure.tools.namespace.repl :as r]
+            [criterium.core :refer [quick-bench]]
             [clojure.walk :refer [macroexpand-all]]
             [clojure.pprint :refer [pprint]]
             [clojure.test :as test]))

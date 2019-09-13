@@ -1,4 +1,4 @@
-;; Copyright (c) 2015-2016 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) 2015-2019 Andrey Antukh <niwi@niwi.nz>
 ;; All rights reserved.
 ;;
 ;; Redistribution and use in source and binary forms, with or without
@@ -50,6 +50,9 @@
 (defprotocol ICompletable
   (-resolve [o _] "Deliver a value to empty promise.")
   (-reject [o _] "Deliver an error to empty promise."))
+
+(defprotocol IExecutor
+  (-submit [_ task] "Submit a task and return a promise."))
 
 (defprotocol IScheduler
   "A generic abstraction for scheduler facilities."

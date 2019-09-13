@@ -24,22 +24,19 @@
 
 (ns promesa.impl
   "Implementation of promise protocols."
-  (:require [promesa.protocols :as pt])
+  (:require [promesa.protocols :as pt]
+            [promesa.exec :as exec])
   #?(:clj (:import java.util.concurrent.CompletableFuture
                    java.util.concurrent.CompletionStage
                    java.util.concurrent.TimeoutException
                    java.util.concurrent.ExecutionException
                    java.util.concurrent.CompletionException
                    java.util.concurrent.Executor
-                   java.util.concurrent.Executors
-                   java.util.concurrent.ForkJoinPool
                    java.util.function.Function
                    java.util.function.Supplier)))
 
 ;; --- Global Constants
 
-#?(:clj (def ^:dynamic *executor* (delay (ForkJoinPool/commonPool))))
-#?(:clj (def get-executor #(if (delay? *executor*) @*executor* *executor*)))
 #?(:cljs (def ^:dynamic *default-promise* js/Promise))
 
 ;; --- Promise Impl
@@ -125,14 +122,14 @@
              func (CallbackSuccessFunction. cb binds)]
          (.thenApplyAsync ^CompletionStage it
                           ^Function func
-                          ^Executor (get-executor))))
+                          ^Executor @exec/executor)))
 
      (-bind [it cb]
        (let [binds (clojure.lang.Var/getThreadBindingFrame)
              func (CallbackSuccessFunction. cb binds)]
          (.thenComposeAsync ^CompletionStage it
                             ^Function func
-                            ^Executor (get-executor))))
+                            ^Executor @exec/executor)))
 
      (-catch [it cb]
        (let [binds (clojure.lang.Var/getThreadBindingFrame)
