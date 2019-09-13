@@ -23,8 +23,9 @@
 ;; THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (ns promesa.core
-  (:refer-clojure :exclude [delay spread promise await map mapcat run! future])
+  (:refer-clojure :exclude [delay spread promise await map mapcat run! future let])
   (:require [promesa.protocols :as pt]
+            [clojure.core :as c]
             [promesa.exec :as exec]
             [promesa.impl :as impl])
             ;; [promesa.impl.scheduler :as ps])
@@ -128,7 +129,7 @@
   [p f]
   #?(:cljs (pt/-map p f)
      :clj  (pt/-bind p (fn promise-wrap [in]
-                         (let [out (f in)]
+                         (c/let [out (f in)]
                            (if (promise? out)
                              out
                              (promise out)))))))
@@ -149,7 +150,7 @@
   ([p f]
    (pt/-catch p f))
   ([p pred-or-type f]
-   (let [accept? (if (ifn? pred-or-type)
+   (c/let [accept? (if (ifn? pred-or-type)
                    pred-or-type
                    #(instance? pred-or-type %))]
      (pt/-catch p (fn [e]
@@ -195,7 +196,7 @@
   [promises]
   #?(:cljs (-> (.all impl/*default-promise* (into-array promises))
                (then vec))
-     :clj (let [promises (clojure.core/map pt/-promise promises)]
+     :clj (c/let [promises (clojure.core/map pt/-promise promises)]
             (then (->> (into-array CompletableFuture promises)
                        (CompletableFuture/allOf))
                   (fn [_]
@@ -214,7 +215,7 @@
   ([promises]
    (any promises ::default))
   ([promises default]
-   (let [state (atom {:resolved false
+   (c/let [state (atom {:resolved false
                       :counter (count promises)
                       :rejections []})]
      (promise
@@ -233,7 +234,7 @@
                                       (-> state
                                           (update  :counter dec)
                                           (update :rejections conj e))))
-                       (let [{:keys [resolved counter rejections]} @state]
+                       (c/let [{:keys [resolved counter rejections]} @state]
                          (when (and (not resolved) (= counter 0))
                            (if (= default ::default)
                              (reject (ex-info "No promises resolved"
@@ -283,7 +284,7 @@
   [callable]
   (fn [& args]
     (promise (fn [resolve reject]
-               (let [args (-> (vec args) (conj resolve))]
+               (c/let [args (-> (vec args) (conj resolve))]
                  (try
                    (apply callable args)
                    (catch #?(:clj Throwable :cljs js/Error) e
@@ -305,7 +306,7 @@
   returned promise is cancelled with a TimeoutError"
   ([p t] (timeout p t ::default))
   ([p t v]
-   (let [tp (promise (fn [resolve reject]
+   (c/let [tp (promise (fn [resolve reject]
                        (exec/schedule t (fn []
                                           (if (= v ::default)
                                             (reject (TimeoutException. "Operation timed out."))
@@ -320,14 +321,17 @@
   ([t] (delay t nil))
   ([t v]
    #?(:cljs (promise (fn [resolve reject]
-                       (schedule t #(resolve v))))
+                       (exec/schedule t #(resolve v))))
 
-      :clj  (let [p (CompletableFuture.)]
+      :clj  (c/let [p (CompletableFuture.)]
               (exec/schedule t #(.complete p v))
               p))))
 
 #?(:clj
-   (defmacro do*
+   (defmacro do!
+     "Execute potentially side effect-ful code and return a promise
+     resolved to the last expression. Always awaiting the result of each
+     expression."
      [& exprs]
      `(p/bind nil (fn [_#]
                     ~(condp = (count exprs)
@@ -343,12 +347,9 @@
   (pt/-promise v))
 
 #?(:clj
-   (defmacro alet
+   (defmacro let
      "A `let` alternative that always returns promise and waits for
-     all the promises on the bindings.
-
-     The `promise.core/await` is no longer necesary (it is maintained
-     only for backward compatibility."
+     all the promises on the bindings."
      [bindings & body]
      `(p/bind nil (fn [_#]
                     ~(->> (reverse (partition 2 bindings))
@@ -356,13 +357,17 @@
                                     `(bind ~r (fn [~l] ~acc)))
                                   `(pt/-promise (do ~@body))))))))
 
+#?(:clj (def #^{:macro true :doc "A backward compatibility alias for `let`."}
+          alet #'let))
+
+
 #?(:clj
    (defmacro plet
      "A parallel let; executes all the bindings in parallel and
      when all bindings are resolved, executes the body."
      [bindings & body]
      `(p/bind nil (fn [_#]
-                    ~(let [bindings (partition 2 bindings)]
+                    ~(c/let [bindings (partition 2 bindings)]
                        `(all ~(mapv second bindings)
                              (fn [[~@(mapv first bindings)]]
                                ~@body)))))))
