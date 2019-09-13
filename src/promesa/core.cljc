@@ -397,8 +397,12 @@
    (defmacro future
      "Analogous to `clojure.core/future` that returns a promise instance
      instead of the `Future`. Usefull for execute synchronous code in a
-     separate thread (Also works in cljs)."
+     separate thread (also works in cljs)."
      [& body]
-     `(exec/submit (fn [] ~@body))))
+     `(->> (exec/submit (fn []
+                          (c/let [f# (fn [] ~@body)]
+                            (pt/-promise (f#)))))
+           (mapcat' identity))))
+
 
 
