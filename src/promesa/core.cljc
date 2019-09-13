@@ -158,7 +158,7 @@
 (defn chain
   "Like then but accepts multiple parameters."
   [p & funcs]
-  (reduce #(then %1 %2) p funcs))
+  (reduce #(map' %2 %1) p funcs))
 
 (defn branch
   [p success failure]
