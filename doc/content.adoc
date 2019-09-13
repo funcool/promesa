@@ -29,7 +29,7 @@ Just include the following lines in your dependency vector on *_project.clj_*:
 
 [source,clojure]
 ----
-[funcool/promesa "3.0.0"]
+[funcool/promesa "4.0.0"]
 ----
 
 This package requires JDK8 if you are using it on the JVM.
@@ -80,34 +80,35 @@ respectively.
              (resolve 1)))
 ----
 
-An other way to create a promise is using the `do*` macro which works similar to the
-factory callback with the exception that to resolve the promise instead of calling
-the `resolve` callback we just need to return the value:
+An other way to create a promise is using the `do*` macro which works
+similar to the factory callback with the exception that to resolve the
+promise instead of calling the `resolve` callback we just need to
+return the value:
 
 [source, clojure]
 ----
-(p/do*
+(p/do!
   (let [a (rand-int 10)
         b (rand-int 10)]
     (+ a b)))
 ----
 
-`do*` block work similarly to clojure's `do` block, so you can put any
+`do!` block work similarly to clojure's `do` block, so you can put any
 expression but only the last one will be returned and that expression
 can be a plain value or an other promise.
 
-If an exception is raised inside the `do*` block, it will return the
+If an exception is raised inside the `do!` block, it will return the
 rejected promise instead of re-raising the exception on the stack.
 
-If the `do*` contains more than one expression, they will be treated
+If the `do!` contains more than one expression, they will be treated
 as promise expressions and will be executed one after the other,
-alwais awaiting the resolution of the previous expression. 
+alwais awaiting the resolution of the previous expression.
 
-In this case the `do*` macro:
+In this case the `do!` macro:
 
 [source, clojure]
 ----
-(p/do* (expr1)
+(p/do! (expr1)
        (expr2)
        (expr3))
 ----
@@ -116,14 +117,14 @@ Is roughtly equivalent to:
 
 [source, clojure]
 ----
-(p/alet [_ (expr1)
+(p/let [_ (expr1)
          _ (expr2)]
   (expr3))
 ----
 
-And finally, you can create an empty promise object just calling the
-`promise` function without parameters, and then resolve or reject it
-with the `resolve!` or `reject!` functions.
+Alternativelly, you also can create an empty promise object just
+calling the `promise` function without parameters, and then resolve or
+reject it with the `resolve!` or `reject!` functions.
 
 Example:
 
@@ -138,6 +139,25 @@ Example:
 
 You can only resolve or reject outside the factory function promise
 objects created with the `promise` function.
+
+And finally, **promesa** exposes a `future` macro (very similar to the
+`clojure.core/future`):
+
+[source, clojure]
+----
+@(p/future (some-complex-task))
+;; => "result-of-complex-task"
+----
+
+With the exception that if the return value of the future expression
+is a promise instance, then it will awaited and unwrapped:
+
+[source, clojure]
+----
+@(p/future (p/future (p/future 1)))
+;; => 1
+----
+
 
 === Promise Chaining
 
@@ -199,7 +219,7 @@ result magically (because the underlying implementation does that).
 
 === Promise Composition
 
-==== `alet`
+==== `let`
 
 The _promesa_ library comes with convenient syntax-sugar that allows
 you to create a compositions that looks like synchronous code while
@@ -215,22 +235,22 @@ using the clojure's familiar `let` syntax:
                (p/schedule wait #(resolve wait)))))
 
 (def result
-  (p/alet [x (sleep-promise 42)
-           y (sleep-promise 41)
-           z 2]
+  (p/let [x (sleep-promise 42)
+          y (sleep-promise 41)
+          z 2]
     (+ x y z)))
 
 @result     ; @ syntax only on the jvm
 ;; => 85
 ----
 
-The `alet` macro behaves identical to the `let` with the exception
+The `let` macro behaves identical to the `let` with the exception
 that it always return a promise.
 
 If an error occurs at any step the entire composition will be
 short-circuited, returning exceptionally resolved promise.
 
-Under the hood, the previous `alet` macro evalutes to something like
+Under the hood, the previous `let` macro evalutes to something like
 this:
 
 ```clojure
@@ -259,7 +279,7 @@ them are resolved. This can be done using the `all` combinator:
 
 ==== `plet`
 
-This is combination of `alet` syntax with `all`. Enables a simple
+This is combination of `let` syntax with `all`. Enables a simple
 declaration of parallel operations followed by a body expression that
 will be executed when all parallel operations will be successfully
 resolved.
@@ -359,21 +379,6 @@ but in JS platform it can by any value.
 ====
 
 
-=== Branching
-
-For adding both success and error handlers to a promise at the same time you can use
-the `branch` function:
-
-[source, clojure]
-----
-(p/branch a-promise
-          (fn [v]
-            (println "Ok" v))
-          (fn [err]
-            (println err)))
-----
-
-
 === Delays and timeouts.
 
 JavaScript due its nature, does not allow you to block or sleep. But with promises
@@ -428,7 +433,88 @@ The tasks can be cancelled using its return value:
 (p/cancel! task)
 ----
 
-== FAQ
+== Advanced topics
+
+=== Execution model
+
+NOTE: This section is only affects to **JVM**.
+
+Lets take this example as a context:
+
+[source, clojure]
+----
+@(->> (p/delay 100 1)
+      (p/map inc)
+      (p/map inc))
+;; => 3
+----
+
+This will create a promise that will be resolved to 1 in 100ms, then
+will schedule a task (in the default executor service) to execute the
+first `inc` operation, followed by an other task for execute the
+second `inc`. In total of 3 tasks.
+
+In summary: each computation is executed in a separated microtask,
+making the system fully asynchonous and cooperative (executing a lot
+of small tasks instead of one big and blocking task/operation). This
+is especially useful on systems with high amount of tasks and makes
+the system more responsive.
+
+But the underlying JVM abstraction, also allows to execute
+computations "inline" or in the calling thread (without creating
+additioal tasks, and this is exposed with `map'`, `mapcat'` and
+`bind'` functions. Let's se the same example but using `map'`:
+
+[source, clojure]
+----
+@(->> (p/delay 100 1)
+      (p/map' inc)
+      (p/map' inc))
+;; => 3
+----
+
+This will create a promise that will be resolved to 1 in 100ms, then
+will schedule a task (in the default executor service) to execute the
+both `inc`. In total 2 tasks.
+
+This is especially useful when you don't want schedule a task for each
+operation and execute them just after main promise completion
+(probably laveraging the JVM runtime inlining mechanism for
+performance). Not recommended in systems with hight amount of tasks
+because can cause delays on executing other smaller tasks.
+
+
+=== Using your own executor
+
+The `promesa` library internally uses the JVM
+`ForkJoinPool/commonPool` as a default executor service for promise
+computations. This is a good default because this pool is highly
+optimized for high mount of small tasks. But in some cases you may
+need to use your own executor service.
+
+In this case, **promesa** exposes many ways to do it. If you want
+completelly replace the executor service, you con do it just using
+the `alter-var-root`:
+
+[source, clojure]
+----
+(require '[promesa.exec :as exec])
+
+(alter-var-root #'exec/*executor* (constantly your-own-executor))
+----
+
+If you want switch to a custom executor for a specific tasks, you can
+use the `exec/on` macro:
+
+[source, clojure]
+----
+(def my-executor (exec/cached-pool 10))
+
+@(binding [exec/*executor* my-executor]
+   (p/map inc (p/delay 100 1)))
+
+;; => 2
+----
 
 == Developers Guide
 

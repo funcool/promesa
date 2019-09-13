@@ -38,7 +38,7 @@ and macros that are not heavily used):
 - Add `future` macro (analogous to `clojure.core/future` that returns
   promise instance instead of Future, also works in cljs) that uses
   `promesa.exec` behind the schenes.
-- Removed `schedule` function from `promesa.core` (replaced by `promesa.exec`).
+- Removed `schedule` function from `promesa.core` (replaced by `promesa.exec/schedule`).
 - Removed `extend-promise!` from `promesa.core` (still available in `promesa.impl`).
 - Removed `set-default-promise!` helper (the user can do the same without the helper).
 - Remove `attempt` function (not useful).
