@@ -441,3 +441,12 @@
     #?(:cljs (t/async done (p/do! (test) (done)))
        :clj @(test))))
 
+(t/deftest loop-and-recur
+  (let [p1 (p/loop [a (p/delay 50 0)]
+             (if (= a 5)
+               a
+               (p/recur (p/delay 50 (inc a)))))
+        test #(->> (p/race [p1 (p/delay 400 10)])
+                   (p/map (fn [res] (t/is (= res 5)))))]
+    #?(:cljs (t/async done (p/do! (test) (done)))
+       :clj @(test))))

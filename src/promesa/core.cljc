@@ -416,10 +416,11 @@
           names (mapv first bindings)
           fvals (mapv second bindings)
           syms (mapv gensym names)]
-    `(letfn [(~INTERNAL_LOOP_FN_NAME [~@syms]
-              (-> (p/all [~@syms])
-                  (p/then (fn [[~@names]] (do! ~@body)))))]
-       (~INTERNAL_LOOP_FN_NAME ~@fvals))))
+    `(do!
+      (letfn [(~INTERNAL_LOOP_FN_NAME [~@syms]
+               (-> (p/all [~@syms])
+                   (p/then (fn [[~@names]] (do! ~@body)))))]
+        (~INTERNAL_LOOP_FN_NAME ~@fvals)))))
 
 (defmacro recur
   [& args]

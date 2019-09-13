@@ -49,6 +49,7 @@ and macros that are not heavily used):
 - Add `map'`, `bind'` and `mapcat'` variants that uses inline
   composition (wihtout microtasking, read more on docs).
 - Make `chain` use the `map'` variant for batch computations.
+- Add `loop/recur` syntax abstraction.
 
 
 
