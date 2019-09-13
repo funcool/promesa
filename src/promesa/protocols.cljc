@@ -26,10 +26,15 @@
   "A generic promise abstraction and related protocols.")
 
 (defprotocol IPromise
-  "A basic future abstraction."
-  (-map [_ callback] "Chain a promise.")
-  (-bind [_ callback] "Chain a promise.")
+  "A basic promise abstraction."
+  (-map [_ callback] "Chain a computation to be executed in a microtask.")
+  (-bind [_ callback] "Chain a computation to be executed in a microtask.")
   (-catch [_ callback] "Catch a error in a promise."))
+
+(defprotocol IPromise'
+  "A batched/inlined promise abstraction."
+  (-map' [_ callback] "Chain a computation to be executed inline.")
+  (-bind' [_ callback] "Chain a computation to be executed inline."))
 
 (defprotocol IState
   "Additional state/introspection abstraction."

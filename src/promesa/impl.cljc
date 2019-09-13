@@ -154,6 +154,21 @@
        (pt/-catch (pt/-promise it) cb))))
 
 #?(:clj
+   (extend-protocol pt/IPromise'
+     CompletionStage
+     (-map' [it cb]
+       (let [binds (clojure.lang.Var/getThreadBindingFrame)
+             func (CallbackSuccessFunction. cb binds)]
+         (.thenApply ^CompletionStage it
+                     ^Function func)))
+
+     (-bind' [it cb]
+       (let [binds (clojure.lang.Var/getThreadBindingFrame)
+             func (CallbackSuccessFunction. cb binds)]
+         (.thenCompose ^CompletionStage it
+                       ^Function func)))))
+
+#?(:clj
    (extend-type CompletableFuture
      pt/ICancellable
      (-cancel [it]

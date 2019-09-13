@@ -96,15 +96,23 @@
 ;; Chaining
 
 (defn map
-  "Apply a function to the promise value and
+  "Apply a function to the promise value (in a separated microtask) and
   return a new promise with the result."
   [f p]
   (pt/-map p f))
 
+(defn map'
+  "Apply a function to the promise value (in a calling thread) and
+  return a new promise with the result."
+  [f p]
+  #?(:clj (pt/-map' p f)
+     :cljs (pt/-map p f)))
+
 (defn mapcat
-  "Same as `map` but removes one level of
-  promise neesting. Useful when the map function
-  returns a promise instead of value.
+  "Same as `map` but removes one level of promise neesting. Useful
+  when the map function returns a promise instead of value.
+
+  The computation is executed in a separated microtask.
 
   In JS environment this function is analogous
   to `map` because the promise abstraction overloads
@@ -113,10 +121,23 @@
   #?(:clj (pt/-bind p f)
      :cljs (pt/-map p f)))
 
+(defn mapcat'
+  "Same as `mapcat` but executes the computation in the calling thread;
+  in cljs behaves identically to `mapcat`."
+  [f p]
+  #?(:clj (pt/-bind' p f)
+     :cljs (pt/-map p f)))
+
 (defn bind
-  "A chain helper for promises."
+  "The same as `mapcat` with arguments order inverted."
   [p f]
   #?(:clj (pt/-bind p f)
+     :cljs (pt/-map p f)))
+
+(defn bind'
+  "The same as `mapcat'` with arguments order inverted."
+  [p f]
+  #?(:clj (pt/-bind' p f)
      :cljs (pt/-map p f)))
 
 (defn then
