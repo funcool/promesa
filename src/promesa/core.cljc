@@ -219,10 +219,9 @@
   "A short alias for `error` function."
   error)
 
-;; TODO: implement via protocols
-;; .whenCompleteAsync cf
-;; (f/biconsumer f)
-;; ^Executor executor)))
+(defn handle
+  ([p f] (pt/-handle p f exec/current-thread-executor))
+  ([p f executor] (pt/-handle p f executor)))
 
 (defn finally
   "Attach handler to promise that will be
