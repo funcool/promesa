@@ -251,19 +251,18 @@
   rejected."
   [promises]
   #?(:cljs (-> (.all impl/*default-promise* (into-array promises))
-               (then vec))
+               (then' vec))
      :clj (c/let [promises (clojure.core/map pt/-promise promises)]
-            (then (->> (into-array CompletableFuture promises)
-                       (CompletableFuture/allOf))
-                  (fn [_]
-                    (mapv pt/-extract promises))))))
+            (then' (->> (into-array CompletableFuture promises)
+                        (CompletableFuture/allOf))
+                   (fn [_]
+                     (mapv pt/-extract promises))))))
 
 (defn race
   [promises]
   #?(:cljs (.race impl/*default-promise* (into-array (cljs.core/map pt/-promise promises)))
      :clj (CompletableFuture/anyOf (->> (clojure.core/map pt/-promise promises)
                                         (into-array CompletableFuture)))))
-
 
 (defn any
   "Given an array of promises, return a promise that is fulfilled when
@@ -356,32 +355,30 @@
   promise's fulfillment value or rejection reason.  However, if this
   promise is not fulfilled or rejected within `ms` milliseconds, the
   returned promise is cancelled with a TimeoutError"
-  ([p t] (timeout p t ::default))
-  ([p t v]
-   (c/let [tp (promise (fn [resolve reject]
-                       (exec/schedule! t (fn []
-                                          (if (= v ::default)
-                                            (reject (TimeoutException. "Operation timed out."))
-                                            (resolve v))))))]
-     (race [p tp]))))
+  ([p t] (timeout p t ::default exec/default-scheduler))
+  ([p t v] (timeout p t v exec/default-scheduler))
+  ([p t v scheduler]
+   (c/let [timeout (deferred)]
+     (exec/schedule! scheduler t #(if (= v ::default)
+                                    (reject! timeout (TimeoutException. "Operation timed out."))
+                                    (resolve! timeout v)))
+     (race [p timeout]))))
 
 (defn delay
   "Given a timeout in miliseconds and optional
   value, returns a promise that will fulfilled
   with provided value (or nil) after the
   time is reached."
-  ([t] (delay t nil))
-  ([t v]
-   #?(:cljs (promise (fn [resolve reject]
-                       (exec/schedule! t #(resolve v))))
-
-      :clj  (c/let [p (CompletableFuture.)]
-              (exec/schedule! t #(.complete p v))
-              p))))
+  ([t] (delay t nil exec/default-scheduler))
+  ([t v] (delay t v exec/default-scheduler))
+  ([t v scheduler]
+   (c/let [d (deferred)]
+     (exec/schedule! scheduler t #(resolve! d v))
+     d)))
 
 #?(:clj
    (defmacro do!
-     "Execute potentially side effect-ful code and return a promise
+     "Execute potentially side effectful code and return a promise
      resolved to the last expression. Always awaiting the result of each
      expression."
      [& exprs]
@@ -429,7 +426,7 @@
      `(-> (exec/submit! (fn []
                           (c/let [f# (fn [] ~@body)]
                             (pt/-promise (f#)))))
-          (pt/-bind identity))))
+          (pt/-bind identity exec/current-thread-executor))))
 
 
 (defonce ^:private INTERNAL_LOOP_FN_NAME

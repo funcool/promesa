@@ -51,7 +51,7 @@
 
 (declare ->CurrentThreadExecutor)
 
-(defonce scheduler
+(defonce default-scheduler
   (delay #?(:clj (scheduled-pool)
             :cljs (->ScheduledExecutor))))
 
@@ -67,7 +67,7 @@
   ([executor] (if (delay? executor) @executor executor)))
 
 (defn resolve-scheduler
-  ([] (if (delay? scheduler) @scheduler scheduler))
+  ([] (if (delay? default-scheduler) @default-scheduler default-scheduler))
   ([scheduler] (if (delay? scheduler) @scheduler scheduler)))
 
 ;; --- Public Api
