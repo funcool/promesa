@@ -24,7 +24,9 @@
 
 (ns promesa.exec
   "Executors & Schedulers facilities."
+  (:refer-clojure :exclude [run!])
   (:require [promesa.protocols :as pt]
+            [promesa.util :as pu]
             #?(:cljs [goog.object :as gobj]))
   #?(:clj
      (:import
@@ -33,62 +35,69 @@
       java.util.concurrent.Future
       java.util.concurrent.CompletableFuture
       java.util.concurrent.ExecutorService
+      java.util.concurrent.Executor
       java.util.concurrent.TimeoutException
       java.util.concurrent.ThreadFactory
       java.util.concurrent.TimeUnit
       java.util.concurrent.ScheduledExecutorService
       java.util.concurrent.Executors)))
 
-;; --- Globals & Defaults
+;; --- Globals & Defaults (with CLJS Impl)
 
 #?(:clj (declare scheduled-pool)
    :cljs (declare ->ScheduledExecutor))
 
-#?(:cljs (declare ->Executor))
+#?(:cljs (declare ->MicrotaskExecutor))
 
-(defonce ^:dynamic *scheduler*
+(declare ->CurrentThreadExecutor)
+
+(defonce scheduler
   (delay #?(:clj (scheduled-pool)
             :cljs (->ScheduledExecutor))))
 
-(defonce ^:dynamic *executor*
+(defonce default-executor
   (delay #?(:clj (ForkJoinPool/commonPool)
-            :cljs (->Executor))))
+            :cljs (->MicrotaskExecutor))))
 
-(defn get-default-executor
-  []
-  (if (delay? *executor*)
-    (deref *executor*)
-    *executor*))
+(defonce current-thread-executor
+  (delay (->CurrentThreadExecutor)))
 
-(defn get-default-scheduler
-  []
-  (if (delay? *scheduler*)
-    (deref *scheduler*)
-    *scheduler*))
+(defn resolve-executor
+  ([] (if (delay? default-executor) @default-executor default-executor))
+  ([executor] (if (delay? executor) @executor executor)))
+
+(defn resolve-scheduler
+  ([] (if (delay? scheduler) @scheduler scheduler))
+  ([scheduler] (if (delay? scheduler) @scheduler scheduler)))
 
 ;; --- Public Api
 
-(defn submit
+(defn run!
+  "Run the task in the provided executor."
+  ([task] (pt/-run! (resolve-executor) task))
+  ([executor task] (pt/-run! (resolve-executor executor) task)))
+
+(defn submit!
   "Submit a task to be executed in a provided executor
   and return a promise that will be completed with
   the return value of a task.
 
   A task is a plain clojure function."
   ([task]
-   (pt/-submit (get-default-executor) task))
+   (pt/-submit! (resolve-executor) task))
   ([executor task]
-   (pt/-submit executor task)))
+   (pt/-submit! (resolve-executor executor) task)))
 
-(defn schedule
+(defn schedule!
   "Schedule a callable to be executed after the `ms` delay
   is reached.
 
   In JVM it uses a scheduled executor service and in JS
   it uses the `setTimeout` function."
   ([ms task]
-   (pt/-schedule (get-default-scheduler) ms task))
+   (pt/-schedule! (resolve-scheduler) ms task))
   ([scheduler ms task]
-   (pt/-schedule scheduler ms task)))
+   (pt/-schedule! (resolve-scheduler scheduler) ms task)))
 
 ;; --- Pool constructorls
 
@@ -134,27 +143,6 @@
 ;; --- Impl
 
 #?(:clj
-   (deftype RunnableWrapper [f bindings]
-     Runnable
-     (run [_]
-       (clojure.lang.Var/resetThreadBindingFrame bindings)
-       (f))))
-
-#?(:clj
-   (deftype SupplierWrapper [f bindings]
-     Supplier
-     (get [_]
-       (clojure.lang.Var/resetThreadBindingFrame bindings)
-       (f))))
-
-;; #?(:clj
-;;    (deftype FunctionWrapper [f bindings]
-;;      Function
-;;      (apply [_ v]
-;;        (clojure.lang.Var/resetThreadBindingFrame bindings)
-;;        (f v))))
-
-#?(:clj
    (defn- thread-factory-adapter
      "Adapt a simple clojure function into a
      ThreadFactory instance."
@@ -184,20 +172,56 @@
        (instance? ThreadFactory opts) opts
        :else (throw (ex-info "Invalid thread factory" {})))))
 
+#?(:cljs
+   (defn- queue-microtask!
+     [f]
+     (-> (resolved nil)
+         (pt/-then f)
+         (pt/-catch (fn [e] (js/setTimeout #(throw e)))))))
+
 #?(:clj
    (extend-protocol pt/IExecutor
-     ExecutorService
-     (-submit [this f]
-       (let [binds (clojure.lang.Var/getThreadBindingFrame)
-             supplier (->SupplierWrapper f binds)]
-         (CompletableFuture/supplyAsync supplier this))))
+     Executor
+     (-run! [this f]
+       (CompletableFuture/runAsync ^Runnable f
+                                   ^Executor this))
+     (-submit! [this f]
+       (CompletableFuture/supplyAsync ^Supplier (pu/->SupplierWrapper f)
+                                      ^Executor this))))
+
+
+
+;; Default executor that executes cljs/js tasks in the microtask
+;; queue.
+#?(:cljs
+   (deftype MicrotaskExecutor []
+     pt/IExecutor
+     (-run! [this f]
+       (-> (pt/-promise nil)
+           (pt/-map (fn [_] (f) nil)
+           (pt/-catch (fn [e] (js/setTimeout #(throw e)))))))
+
+     (-submit! [this f]
+       (-> (pt/-promise nil)
+           (pt/-map (fn [_] (f))
+           (pt/-catch (fn [e] (js/setTimeout #(throw e)))))))))
+
+;; Executor that executes the task in the calling thread
+#?(:clj
+   (deftype CurrentThreadExecutor []
+     Executor
+     (^void execute [_ ^Runnable f]
+       (.run f)))
 
    :cljs
-   (deftype Executor []
+   (deftype CurrentThreadExecutor []
      pt/IExecutor
+     (-run! [this f]
+       (f)
+       (pt/-promise nil))
+
      (-submit [this f]
-       (pt/-map (pt/-promise nil)
-                (fn [_] (f))))))
+       (pt/-promise (f)))))
 
 ;; --- Scheduler & ScheduledTask
 
@@ -220,7 +244,7 @@
      pt/ICancellable
      (-cancelled? [_]
        (.isCancelled fut))
-     (-cancel [_]
+     (-cancel! [_]
        (when-not (.isCancelled fut)
          (.cancel fut true)))
 
@@ -250,16 +274,14 @@
 #?(:clj
    (extend-type ScheduledExecutorService
      pt/IScheduler
-     (-schedule [this ms f]
-       (let [binds (clojure.lang.Var/getThreadBindingFrame)
-             runnable (->RunnableWrapper f binds)
-             fut (.schedule this runnable ms TimeUnit/MILLISECONDS)]
-         (ScheduledTask. fut))))
+     (-schedule! [this ms f]
+       (let [fut (.schedule this f ms TimeUnit/MILLISECONDS)]
+         (ScheduledTask. fut)))))
 
-   :cljs
+#?(:cljs
    (deftype ScheduledExecutor []
      pt/IScheduler
-     (-schedule [_ ms f]
+     (-schedule! [_ ms f]
        (let [done (volatile! false)
              task #(try
                      (f)

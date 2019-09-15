@@ -49,16 +49,46 @@
   [v]
   (impl/rejected v))
 
+(defn deferred
+  "Creates an empty or dynamicaly resolved or rejected promise from the
+  provided value.
+
+  If executor is specified, it will be used for promise resolution and
+  also will be used for subsequent steps until an other executor is
+  specified explicitly."
+  ([] (impl/empty-deferred))
+  ([v] (deferred v exec/current-thread-executor))
+  ([v executor]
+   (c/let [d (impl/empty-deferred)
+           v (pt/-promise v)]
+     (pt/-bind v #(pt/-resolve! d %) executor)
+     d)))
+
 (defn promise
   "The promise constructor."
-  ([] (impl/empty-promise))
-  ([v]
-   (if (fn? v)
-     (impl/promise-factory v)
-     (pt/-promise v))))
+  ([f]
+   (if (fn? f)
+     (promise f exec/current-thread-executor)
+     (pt/-promise f)))
+  ([f executor]
+   (c/let [d (impl/empty-deferred)
+           f (if (fn? f) f (fn [r r'] (r f)))]
+     (exec/run! executor (fn []
+                           (try
+                             (f #(pt/-resolve! d %)
+                                #(pt/-reject! d %))
+                             (catch #?(:clj Exception :cljs :default) e
+                               (pt/-reject! d e)))))
+     d)))
 
 (defn promise?
   "Return true if `v` is a promise instance."
+  [v]
+  #?(:clj (instance? CompletionStage v)
+     :cljs (instance? impl/*default-promise* v)))
+
+(defn deferred?
+  "Return true if `v` is a promise instance (alias to `promise?`."
   [v]
   #?(:clj (instance? CompletionStage v)
      :cljs (instance? impl/*default-promise* v)))
@@ -97,76 +127,63 @@
 
 ;; Chaining
 
-(defn map
-  "Apply a function to the promise value (in a separated microtask) and
-  return a new promise with the result."
-  [f p]
-  (pt/-map p f))
+(defn then
+  "Chains a computation `f` (function) to be executed when the promise
+  `p` is successfully resolved.
 
-(defn map'
-  "Apply a function to the promise value (in a calling thread) and
-  return a new promise with the result."
-  [f p]
-  #?(:clj (pt/-map' p f)
-     :cljs (pt/-map p f)))
+  The computation will be executed in the calling thread by default;
+  you also can provide a custom executor.
 
-(defn mapcat
-  "Same as `map` but removes one level of promise neesting. Useful
-  when the map function returns a promise instead of value.
-
-  The computation is executed in a separated microtask.
-
-  In JS environment this function is analogous
-  to `map` because the promise abstraction overloads
-  the `map` operator."
-  [f p]
-  #?(:clj (pt/-bind p f)
-     :cljs (pt/-map p f)))
-
-(defn mapcat'
-  "Same as `mapcat` but executes the computation in the calling thread;
-  in cljs behaves identically to `mapcat`."
-  [f p]
-  #?(:clj (pt/-bind' p f)
-     :cljs (pt/-map p f)))
+  If the function `f` returns a promise instance, it will be
+  automatically unwrapped."
+  ([p f] (then p f exec/current-thread-executor))
+  ([p f executor]
+   (letfn [(handle [v]
+             (c/let [out (f v)]
+               (if (promise? out)
+                 out
+                 (pt/-promise out))))]
+     (pt/-bind p handle executor))))
 
 (defn bind
-  "The same as `mapcat` with arguments order inverted."
-  [p f]
-  #?(:clj (pt/-bind p f)
-     :cljs (pt/-map p f)))
+  "Backward compatibility alias to `then`."
+  ([p f] (then p f))
+  ([p f e] (then p f e)))
 
-(defn bind'
-  "The same as `mapcat'` with arguments order inverted."
-  [p f]
-  #?(:clj (pt/-bind' p f)
-     :cljs (pt/-map p f)))
+(defn map
+  "Chains a computation `f` (function) to be executed when the promise
+  `p` is successfully resolved.
 
-(defn then
-  "Similar to `map` but with parameters inverted
-  for convenience and for familiarity with
-  javascript's promises `.then` operator.
+  Unlike `then` this does not performs automatic promise flattening.
+  This is designed to be used with `->>`."
+  ([f p] (pt/-map p f exec/current-thread-executor))
+  ([executor f p] (pt/-map p f executor)))
 
-  Unlike Clojure's `map`, will resolve any promises
-  returned  by `f`."
-  [p f]
-  #?(:cljs (pt/-map p f)
-     :clj  (pt/-bind p (fn promise-wrap [in]
-                         (c/let [out (f in)]
-                           (if (promise? out)
-                             out
-                             (promise out)))))))
+(defn mapcat
+  "Chains a computation `f` (function) to be executed when the promise
+  `p` is successfully resolved. always expecting that `f` returns a
+  promise that will be automatically unwrapped.
+
+  This is just a stricter version of `then` with reversed arguments in
+  the same way as `map`.
+
+  This is designed to be used with `->>`."
+  ([f p] (pt/-bind p f exec/current-thread-executor))
+  ([executor f p] (pt/-bind p f executor)))
 
 (defn chain
-  "Like then but accepts multiple parameters."
-  [p & funcs]
-  (reduce #(map' %2 %1) p funcs))
+  "Chain variable number of computations to be executed
+  serially. Analogous to `then` that accepts variable number of
+  functions."
+  ([p f] (then p f))
+  ([p f & fs] (reduce #(then %1 %2) p (cons f fs))))
 
-(defn branch
-  [p success failure]
-  (-> p
-      (pt/-map success)
-      (pt/-catch failure)))
+(defn chain'
+  "Chain variable number of computations to be executed serially. Unlike
+  `chain` does not flattens the return value of each step (probably
+  this is more performant than `chain`)."
+  ([p f] (then p f))
+  ([p f & fs] (reduce #(then %1 %2) p (cons f fs))))
 
 (defn catch
   "Catch all promise chain helper."
@@ -190,14 +207,19 @@
   "A short alias for `error` function."
   error)
 
+;; TODO: implement via protocols
+;; .whenCompleteAsync cf
+;; (f/biconsumer f)
+;; ^Executor executor)))
+
 (defn finally
   "Attach handler to promise that will be
   executed independently if promise is
   resolved or rejected."
-  [p callback]
+  [p f]
   (-> p
-      (then (fn [_] (callback)))
-      (catch (fn [_] (callback)))))
+      (then (fn [_] (f)))
+      (catch (fn [_] (f)))))
 
 (defn all
   "Given an array of promises, return a promise
@@ -266,19 +288,15 @@
 
 (defn run!
   "A promise aware run! function."
-  [f coll]
-  (reduce (fn [acc o]
-            (bind acc (fn [_]
-                          (pt/-promise (f o)))))
-          (pt/-promise nil)
-          coll))
+  ([f coll] (run! f coll exec/current-thread-executor))
+  ([f coll executor] (reduce #(then %1 (fn [_] (f %2))) (deferred nil executor) coll)))
 
 ;; Cancellation
 
 (defn cancel!
   "Cancel the promise."
   [p]
-  (pt/-cancel p)
+  (pt/-cancel! p)
   p)
 
 (defn cancelled?
@@ -290,13 +308,13 @@
 
 (defn resolve!
   "Resolve a completable promise with a value."
-  ([o] (resolve! o nil))
-  ([o v] (pt/-resolve o v)))
+  ([o] (pt/-resolve! o nil))
+  ([o v] (pt/-resolve! o v)))
 
 (defn reject!
   "Reject a completable promise with an error."
   [p e]
-  (pt/-reject p e))
+  (pt/-reject! p e))
 
 ;; --- Utils
 
@@ -330,7 +348,7 @@
   ([p t] (timeout p t ::default))
   ([p t v]
    (c/let [tp (promise (fn [resolve reject]
-                       (exec/schedule t (fn []
+                       (exec/schedule! t (fn []
                                           (if (= v ::default)
                                             (reject (TimeoutException. "Operation timed out."))
                                             (resolve v))))))]
@@ -344,10 +362,10 @@
   ([t] (delay t nil))
   ([t v]
    #?(:cljs (promise (fn [resolve reject]
-                       (exec/schedule t #(resolve v))))
+                       (exec/schedule! t #(resolve v))))
 
       :clj  (c/let [p (CompletableFuture.)]
-              (exec/schedule t #(.complete p v))
+              (exec/schedule! t #(.complete p v))
               p))))
 
 #?(:clj
@@ -364,10 +382,6 @@
                                  `(bind ~e (fn [_#] ~acc)))
                                `(pt/-promise ~(last exprs))
                                (reverse (butlast exprs))))))))
-
-(defn await
-  [v]
-  (pt/-promise v))
 
 #?(:clj
    (defmacro let
@@ -401,12 +415,13 @@
      instead of the `Future`. Usefull for execute synchronous code in a
      separate thread (also works in cljs)."
      [& body]
-     `(->> (exec/submit (fn []
+     `(-> (exec/submit! (fn []
                           (c/let [f# (fn [] ~@body)]
                             (pt/-promise (f#)))))
-           (mapcat' identity))))
+          (pt/-bind identity))))
 
-(def ^:private INTERNAL_LOOP_FN_NAME
+
+(defonce ^:private INTERNAL_LOOP_FN_NAME
   (gensym 'internal-loop-fn-name))
 
 (defmacro loop

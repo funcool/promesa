@@ -9,10 +9,10 @@ and macros that are not heavily used):
 
 - Remove the old `do*` macro.
 - Add `do!` macro (that should have been the `do*` from the
-   begining). It treats each individual expression as a expression
-   that evaluates to promise and executes serially awaiting each
-   expression. Returns a promise resolved to the result of the last
-   expression, ignoring all intermediate results.
+  begining). It treats each individual expression as a expression that
+  evaluates to promise and executes serially awaiting each
+  expression. Returns a promise resolved to the result of the last
+  expression, ignoring all intermediate results.
 
 ```clojure
 (require '[promesa.core :as p])
@@ -28,6 +28,34 @@ and macros that are not heavily used):
   (expr3))
 ```
 
+- Refactor execution strategy: before this change all the chained
+  callback functions (with `map`, `then`, etc..) they were running in
+  a separated (async) microtask (forkJoinPool on the jvm). Now
+  **promesa** does not makes any asumption about this and delegate
+  this decision to the user of this library.
+
+  **What are the implications for the end user?:** In terms of api
+  changes, **nothing**; all the public api is the same. The main
+  change consists in the execution semantics. Now all the chained
+  functions (by default) will be executed in the calling/resolver
+  thread instead of a new task for each step. This will leverage a
+  better performance and less latency on all chain execution.
+
+  Also, **promesa** exposes additional arities to `map`, `then`,
+  `bind` and `mapcat` for provide a custom executor service if you
+  need it.
+
+  The `promise` and `deferred` (read more below) promise constructors
+  also accepts a new arity for specify the executor where evaluate the
+  factory function or promise resolution (by default is in the calling
+  thread).
+
+- Add `deferred` promise constructor. The main purpose is to leave
+  `promise` constructor for building promises from a factory functions
+  (see docs) and `deferred` for create empty promise or promise resolved
+  to a plain value.
+- Remove 0 arity from `promise` function (now is delegated to `deferred`)
+
 - Rename `alet` to `let` (`alet` is stil awailable as alias for
   backward compatibility).
 - Add `plet` as syntactic abstraction/sugar for `all` composition
@@ -38,19 +66,16 @@ and macros that are not heavily used):
 - Add `future` macro (analogous to `clojure.core/future` that returns
   promise instance instead of Future, also works in cljs) that uses
   `promesa.exec` behind the schenes.
-- Removed `schedule` function from `promesa.core` (replaced by `promesa.exec/schedule`).
-- Removed `extend-promise!` from `promesa.core` (still available in `promesa.impl`).
-- Removed `set-default-promise!` helper (the user can do the same without the helper).
+- Remove `schedule` function from `promesa.core` (replaced by `promesa.exec/schedule`).
+- Remove `extend-promise!` from `promesa.core` (still available in `promesa.impl`).
+- Remove `set-default-promise!` helper (the user can do the same without the helper).
 - Remove `attempt` function (not useful).
+- Remove `branch` function (not useful).
 - Fix `finally` implementation on cljs.
 - Improve `let` macro making it safe to synchronos exception that can
   be raised from the first evaluated expression. Now all exception
   raised inside `let` returs properly rejected promise.
-- Add `map'`, `bind'` and `mapcat'` variants that uses inline
-  composition (wihtout microtasking, read more on docs).
-- Make `chain` use the `map'` variant for batch computations.
 - Add `loop/recur` syntax abstraction.
-
 
 
 ## Version 3.0.0 ##

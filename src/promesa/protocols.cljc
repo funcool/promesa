@@ -27,14 +27,10 @@
 
 (defprotocol IPromise
   "A basic promise abstraction."
-  (-map [_ callback] "Chain a computation to be executed in a microtask.")
-  (-bind [_ callback] "Chain a computation to be executed in a microtask.")
-  (-catch [_ callback] "Catch a error in a promise."))
-
-(defprotocol IPromise'
-  "A batched/inlined promise abstraction."
-  (-map' [_ callback] "Chain a computation to be executed inline.")
-  (-bind' [_ callback] "Chain a computation to be executed inline."))
+  (-map [_ f] [_ f executor] "Chain a computation to be executed in a microtask.")
+  (-bind [_ f] [_ f executor] "Chain a computation to be executed in a microtask.")
+  (-handle [_ f] [_ f executor] "Chain a computation when promise completes either normally or exceptionally.")
+  (-catch [_ f] "Catch a error in a promise."))
 
 (defprotocol IState
   "Additional state/introspection abstraction."
@@ -49,16 +45,17 @@
 
 (defprotocol ICancellable
   "A cancellation abstraction."
-  (-cancel [_])
+  (-cancel! [_])
   (-cancelled? [_]))
 
 (defprotocol ICompletable
-  (-resolve [o _] "Deliver a value to empty promise.")
-  (-reject [o _] "Deliver an error to empty promise."))
+  (-resolve! [_ v] "Deliver a value to empty promise.")
+  (-reject! [_ e] "Deliver an error to empty promise."))
 
 (defprotocol IExecutor
-  (-submit [_ task] "Submit a task and return a promise."))
+  (-run! [_ task] "Run a task and return a promise.")
+  (-submit! [_ task] "Submit a task and return a promise."))
 
 (defprotocol IScheduler
   "A generic abstraction for scheduler facilities."
-  (-schedule [_ ms func] "Schedule a function to be executed in future."))
+  (-schedule! [_ ms func] "Schedule a function to be executed in future."))

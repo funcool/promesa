@@ -25,6 +25,7 @@
 (ns promesa.impl
   "Implementation of promise protocols."
   (:require [promesa.protocols :as pt]
+            [promesa.util :as pu]
             [promesa.exec :as exec])
   #?(:clj (:import java.util.concurrent.CompletableFuture
                    java.util.concurrent.CompletionStage
@@ -41,34 +42,33 @@
 
 ;; --- Promise Impl
 
-(defn empty-promise
+(defn empty-deferred
   []
   #?(:clj (CompletableFuture.)
      :cljs
-     (let [state (volatile! {})
+     (let [state #js {}
            obj (new *default-promise*
-                  (fn [resolve reject]
-                    (vreset! state
-                             {:resolve resolve
-                              :reject reject})))]
+                    (fn [resolve reject]
+                      (set! (.-resolve state) resolve)
+                      (set! (.-reject state) reject)))]
        (specify! obj
          pt/ICompletable
-         (-resolve [_ v]
-           ((:resolve @state) v))
-         (-reject [_ v]
-           ((:reject @state) v))))))
+         (-resolve! [_ v]
+           (.resolve state v))
+         (-reject! [_ v]
+           (.reject state v))))))
 
-(defn promise-factory
-  [f]
-  #?(:cljs (new *default-promise* f)
-     :clj  (let [p (CompletableFuture.)
-                 reject #(.completeExceptionally p %)
-                 resolve #(.complete p %)]
-             (try
-               (f resolve reject)
-               (catch Throwable e
-                 (reject e)))
-             p)))
+;; (defn factory->promise
+;;   [f]
+;;   #?(:cljs (new *default-promise* f)
+;;      :clj  (let [p (CompletableFuture.)
+;;                  reject #(.completeExceptionally p %)
+;;                  resolve #(.complete p %)]
+;;              (try
+;;                (f resolve reject)
+;;                (catch Throwable e
+;;                  (reject e)))
+;;              p)))
 
 #?(:cljs
    (defn extend-promise!
@@ -78,12 +78,17 @@
        (-promise [p] p)
 
        pt/IPromise
-       (-map [it cb]
-         (.then it #(cb %)))
-       (-bind [it cb]
-         (.then it #(cb %)))
-       (-catch [it cb]
-         (.catch it #(cb %))))))
+       (-map
+         ([it f] (.then it #(f %)))
+         ([it f e] (.then it #(f %))))
+       (-bind
+         ([it f] (.then it #(f %)))
+         ([it f e] (.then it #(f %))))
+       (-handle
+         ([it f] (.then it #(f % nil) #(f nil %)))
+         ([it f e] (.then it #(f % nil) #(f nil %))))
+       (-catch [it f]
+         (.catch it #(f %))))))
 
 #?(:cljs
    (extend-promise! js/Promise))
@@ -91,90 +96,96 @@
 #?(:cljs
    (extend-type default
      pt/IPromise
-     (-map [it cb]
-       (pt/-map (pt/-promise it) cb))
-     (-bind [it cb]
-       (pt/-bind (pt/-promise it) cb))
-     (-catch [it cb]
-       (pt/-catch (pt/-promise it) cb))))
-
-#?(:clj
-   (deftype CallbackSuccessFunction [callback bindings]
-     Function
-     (apply [_ v]
-       (clojure.lang.Var/resetThreadBindingFrame bindings)
-       (callback v))))
-
-#?(:clj
-   (deftype CallbackFailureFunction [callback bindings]
-     Function
-     (apply [_ e]
-       (clojure.lang.Var/resetThreadBindingFrame bindings)
-       (if (instance? CompletionException e)
-         (callback (.getCause ^Exception e))
-         (callback e)))))
+     (-map
+       ([it f] (pt/-map (pt/-promise it) f))
+       ([it f e] (pt/-map (pt/-promise it) f e)))
+     (-bind
+       ([it f] (pt/-bind (pt/-promise it) f))
+       ([it f e] (pt/-bind (pt/-promise it) f e)))
+     (-handle
+       ([it f] (pt/-handle (pt/-promise it) f))
+       ([it f e] (pt/-handle (pt/-promise it) f e)))
+     (-catch [it f]
+       (pt/-catch (pt/-promise it) f))))
 
 #?(:clj
    (extend-protocol pt/IPromise
      CompletionStage
-     (-map [it cb]
-       (let [binds (clojure.lang.Var/getThreadBindingFrame)
-             func (CallbackSuccessFunction. cb binds)]
-         (.thenApplyAsync ^CompletionStage it
-                          ^Function func
-                          ^Executor (exec/get-default-executor))))
+     (-map
+       ([it f]
+        (.thenApplyAsync ^CompletionStage it
+                         ^Function (pu/->FunctionWrapper f)
+                         ^Executor (exec/resolve-executor)))
+       ([it f executor]
+        (.thenApplyAsync ^CompletionStage it
+                         ^Function (pu/->FunctionWrapper f)
+                         ^Executor (exec/resolve-executor executor))))
 
-     (-bind [it cb]
-       (let [binds (clojure.lang.Var/getThreadBindingFrame)
-             func (CallbackSuccessFunction. cb binds)]
-         (.thenComposeAsync ^CompletionStage it
-                            ^Function func
-                            ^Executor (exec/get-default-executor))))
+     (-bind
+       ([it f]
+        (.thenComposeAsync ^CompletionStage it
+                           ^Function (pu/->FunctionWrapper f)
+                           ^Executor (exec/resolve-executor)))
+       ([it f executor]
+        (.thenComposeAsync ^CompletionStage it
+                           ^Function (pu/->FunctionWrapper f)
+                           ^Executor (exec/resolve-executor executor))))
 
-     (-catch [it cb]
-       (let [binds (clojure.lang.Var/getThreadBindingFrame)
-             func (CallbackFailureFunction. cb binds)]
+     (-handle
+       ([it f]
+        (.handleAsync ^CompletionStage it
+                      ^BiFunction (pu/->BiFunctionWrapper f)
+                      ^Executor (exec/resolve-executor)))
+       ([it f executor]
+        (.handleAsync ^CompletionStage it
+                      ^BiFunction (pu/->BiFunctionWrapper f)
+                      ^Executor (exec/resolve-executor executor))))
+
+     (-catch [it f]
+       (letfn [(handler [e]
+                 (if (instance? CompletionException e)
+                   (f (.getCause ^Exception e))
+                   (f e)))]
          (.exceptionally ^CompletionStage it
-                         ^Function func)))
+                         ^Function (pu/->FunctionWrapper handler))))
 
      Object
-     (-map [it cb]
-       (pt/-map (pt/-promise it) cb))
-     (-bind [it cb]
-       (pt/-bind (pt/-promise it) cb))
-     (-catch [it cb]
-       (pt/-catch (pt/-promise it) cb))
+     (-map
+       ([it f] (pt/-map (pt/-promise it) f))
+       ([it f e] (pt/-map (pt/-promise it) f e)))
+     (-bind
+       ([it f] (pt/-bind (pt/-promise it) f))
+       ([it f e] (pt/-bind (pt/-promise it) f e)))
+     (-handle
+       ([it f] (pt/-handle (pt/-promise it) f))
+       ([it f e] (pt/-handle (pt/-promise it) f e)))
+     (-catch [it f]
+       (pt/-catch (pt/-promise it) f))
 
      nil
-     (-map [it cb]
-       (pt/-map (pt/-promise it) cb))
-     (-bind [it cb]
-       (pt/-bind (pt/-promise it) cb))
-     (-catch [it cb]
-       (pt/-catch (pt/-promise it) cb))))
-
-#?(:clj
-   (extend-protocol pt/IPromise'
-     CompletionStage
-     (-map' [it cb]
-       (let [binds (clojure.lang.Var/getThreadBindingFrame)
-             func (CallbackSuccessFunction. cb binds)]
-         (.thenApply ^CompletionStage it
-                     ^Function func)))
-
-     (-bind' [it cb]
-       (let [binds (clojure.lang.Var/getThreadBindingFrame)
-             func (CallbackSuccessFunction. cb binds)]
-         (.thenCompose ^CompletionStage it
-                       ^Function func)))))
+     (-map
+       ([it f] (pt/-map (pt/-promise it) f))
+       ([it f e] (pt/-map (pt/-promise it) f e)))
+     (-bind
+       ([it f] (pt/-bind (pt/-promise it) f))
+       ([it f e] (pt/-bind (pt/-promise it) f e)))
+     (-handle
+       ([it f] (pt/-handle (pt/-promise it) f))
+       ([it f e] (pt/-handle (pt/-promise it) f e)))
+     (-catch [it f]
+       (pt/-catch (pt/-promise it) f))))
 
 #?(:clj
    (extend-type CompletableFuture
      pt/ICancellable
-     (-cancel [it]
+     (-cancel! [it]
        (.cancel it true))
      (-cancelled? [it]
        (.isCancelled it))
+
+     pt/ICompletable
+     (-resolve! [f v] (.complete f v))
+     (-reject! [f v] (.completeExceptionally f v))
 
      pt/IState
      (-extract [it]
@@ -203,9 +214,7 @@
 (defn resolved
   [v]
   #?(:cljs (.resolve *default-promise* v)
-     :clj (let [p (CompletableFuture.)]
-            (.complete p v)
-            p)))
+     :clj (CompletableFuture/completedFuture v)))
 
 (defn rejected
   [v]
@@ -240,12 +249,6 @@
      default
      (-promise [v]
        (resolved v))))
-
-#?(:clj
-   (extend-protocol pt/ICompletable
-     CompletableFuture
-     (-resolve [f v] (.complete f v))
-     (-reject [f v] (.completeExceptionally f v))))
 
 ;; --- Pretty printing
 

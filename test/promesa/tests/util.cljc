@@ -6,14 +6,14 @@
 (defn promise-ok
   [sleep value]
   (p/promise (fn [resolve reject]
-               (e/schedule sleep #(resolve value)))))
+               (e/schedule! sleep #(resolve value)))))
 
 (defn promise-ko
   [sleep value]
   (p/promise (fn [_ reject]
                (let [error #?(:clj (if (instance? Throwable value) value (ex-info (pr-str value) {}))
                               :cljs (if (instance? js/Error value) value (ex-info (pr-str value) {})))]
-                 (e/schedule sleep #(reject error))))))
+                 (e/schedule! sleep #(reject error))))))
 
 (defn normalize-to-value
   [p]

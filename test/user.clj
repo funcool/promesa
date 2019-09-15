@@ -3,7 +3,9 @@
             [criterium.core :refer [quick-bench]]
             [clojure.walk :refer [macroexpand-all]]
             [clojure.pprint :refer [pprint]]
-            [clojure.test :as test]))
+            [clojure.test :as test]
+            [promesa.core :as p]
+            [promesa.exec :as exec]))
 
 (defn- run-test
   ([] (run-test #"^promesa.tests.*"))
@@ -26,5 +28,19 @@
     (if (pos? fail)
       (System/exit fail)
       (System/exit 0))))
+
+;; (def normal-var
+;;   (delay 1))
+
+;; (def ^:dynamic *dynamic-var*
+;;   (delay 1))
+
+;; (defn bench-fn1
+;;   []
+;;   (deref normal-var))
+
+;; (defn bench-fn2
+;;   []
+;;   (deref *dynamic-var*))
 
 
