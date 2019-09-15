@@ -146,6 +146,17 @@
                  (pt/-promise out))))]
      (pt/-bind p handle executor))))
 
+(defn then'
+  "Chains a computation `f` (function) to be executed when the promise
+  `p` is successfully resolved.
+
+  The computation will be executed in the calling thread by default;
+  you also can provide a custom executor.
+
+  Don't perform flatten on the result."
+  ([p f] (pt/-map p f exec/current-thread-executor))
+  ([p f executor] (pt/-map p f executor)))
+
 (defn bind
   "Backward compatibility alias to `then`."
   ([p f] (then p f))
