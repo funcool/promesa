@@ -62,6 +62,7 @@
    (c/let [d (impl/empty-deferred)
            v (pt/-promise v)]
      (pt/-bind v #(pt/-resolve! d %) executor)
+     (pt/-catch v #(pt/-reject! d %))
      d)))
 
 (defn promise
