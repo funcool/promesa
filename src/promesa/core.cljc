@@ -194,8 +194,8 @@
   "Chain variable number of computations to be executed serially. Unlike
   `chain` does not flattens the return value of each step (probably
   this is more performant than `chain`)."
-  ([p f] (then p f))
-  ([p f & fs] (reduce #(then %1 %2) p (cons f fs))))
+  ([p f] (then' p f))
+  ([p f & fs] (reduce #(then' %1 %2) p (cons f fs))))
 
 (defn catch
   "Catch all promise chain helper."
