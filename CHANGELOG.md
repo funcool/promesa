@@ -4,7 +4,7 @@
 
 Date: ---
 
-Relevant changes (minor **breaking changes** that affects functions
+Relevant changes (many **breaking changes** that affects functions
 and macros that are not heavily used):
 
 - Remove the old `do*` macro.
@@ -50,12 +50,35 @@ and macros that are not heavily used):
   factory function or promise resolution (by default is in the calling
   thread).
 
+- Rewrite `finally` function: now receives a promise and a function
+  (potentiall side-effectful) that will receive resolved value as
+  first argument if the promise is resolved or exception as second
+  argument if promise is rejected. The return value is ignored. It
+  always returns the same promise (like identity function).
+
+- Remove 0 arity from `promise` function (now is delegated to `deferred`)
+- Remove `schedule` function from `promesa.core` (replaced by `promesa.exec/schedule`).
+- Remove `extend-promise!` from `promesa.core` (still available in `promesa.impl`).
+- Remove `set-default-promise!` helper (the user can do the same without the helper).
+- Remove `attempt` function (not useful).
+- Remove `branch` function (not useful).
+
+New features and not breaking changes and fixes:
+
 - Add `deferred` promise constructor. The main purpose is to leave
   `promise` constructor for building promises from a factory functions
   (see docs) and `deferred` for create empty promise or promise resolved
   to a plain value.
-- Remove 0 arity from `promise` function (now is delegated to `deferred`)
-
+- Add `handle` chain function: is some kind of combination of `then'`
+  and `catch`. It chains a function to be executed when the promise is
+  either normally or rejected (with first argument with resolved value
+  (or nil) and second argument with the exception (or nil) if promise
+  is rejected). Returns the promise resolved with the return value of
+  the chained function. Does not flatten the result.
+- Add `then'` chain function. Is a variant of `then` function that
+  does not flatten the result (a more performant variant).
+- Add `chain'` chain function helper. Is a `chain` variant that does
+  not flatten the result (a more performant variant).
 - Rename `alet` to `let` (`alet` is stil awailable as alias for
   backward compatibility).
 - Add `plet` as syntactic abstraction/sugar for `all` composition
@@ -66,16 +89,12 @@ and macros that are not heavily used):
 - Add `future` macro (analogous to `clojure.core/future` that returns
   promise instance instead of Future, also works in cljs) that uses
   `promesa.exec` behind the schenes.
-- Remove `schedule` function from `promesa.core` (replaced by `promesa.exec/schedule`).
-- Remove `extend-promise!` from `promesa.core` (still available in `promesa.impl`).
-- Remove `set-default-promise!` helper (the user can do the same without the helper).
-- Remove `attempt` function (not useful).
-- Remove `branch` function (not useful).
-- Fix `finally` implementation on cljs.
 - Improve `let` macro making it safe to synchronos exception that can
   be raised from the first evaluated expression. Now all exception
   raised inside `let` returs properly rejected promise.
 - Add `loop/recur` syntax abstraction.
+  
+
 
 
 ## Version 3.0.0 ##
