@@ -42,7 +42,7 @@
 
 ;; --- Promise Impl
 
-(defn empty-deferred
+(defn deferred
   []
   #?(:clj (CompletableFuture.)
      :cljs

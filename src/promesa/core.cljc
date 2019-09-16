@@ -56,10 +56,10 @@
   If executor is specified, it will be used for promise resolution and
   also will be used for subsequent steps until an other executor is
   specified explicitly."
-  ([] (impl/empty-deferred))
+  ([] (impl/deferred))
   ([v] (deferred v exec/current-thread-executor))
   ([v executor]
-   (c/let [d (impl/empty-deferred)
+   (c/let [d (impl/deferred)
            v (pt/-promise v)]
      (pt/-bind v #(pt/-resolve! d %) executor)
      (pt/-catch v #(pt/-reject! d %))
@@ -72,7 +72,7 @@
      (promise f exec/current-thread-executor)
      (pt/-promise f)))
   ([f executor]
-   (c/let [d (impl/empty-deferred)
+   (c/let [d (impl/deferred)
            f (if (fn? f) f (fn [r r'] (r f)))]
      (exec/run! executor (fn []
                            (try
