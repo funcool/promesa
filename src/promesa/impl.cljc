@@ -58,18 +58,6 @@
          (-reject! [_ v]
            (.reject state v))))))
 
-;; (defn factory->promise
-;;   [f]
-;;   #?(:cljs (new *default-promise* f)
-;;      :clj  (let [p (CompletableFuture.)
-;;                  reject #(.completeExceptionally p %)
-;;                  resolve #(.complete p %)]
-;;              (try
-;;                (f resolve reject)
-;;                (catch Throwable e
-;;                  (reject e)))
-;;              p)))
-
 #?(:cljs
    (defn extend-promise!
      [t]
