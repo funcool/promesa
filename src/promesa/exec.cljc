@@ -139,6 +139,12 @@
       (let [factory (resolve-thread-factory opts)]
         (Executors/newScheduledThreadPool (int n) factory)))))
 
+#?(:clj
+   (defn work-stealing-pool
+     "Creates a work-stealing thread pool."
+     ([] (Executors/newWorkStealingPool))
+     ([n] (Executors/newWorkStealingPool (int n)))))
+
 ;; --- Impl
 
 #?(:clj
