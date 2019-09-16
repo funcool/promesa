@@ -130,7 +130,6 @@
       (let [factory (resolve-thread-factory opts)]
         (Executors/newSingleThreadExecutor factory)))))
 
-
 #?(:clj
    (defn scheduled-pool
      "A scheduled thread pool constructo."

@@ -200,17 +200,29 @@
   ([p f & fs] (reduce pt/-map p (cons f fs))))
 
 (defn handle
+  "Executes `f` when the promise `p` is resolved or is rejected. Returns
+  a promise resolved with the return value of `f` function."
   ([p f] (pt/-handle p f))
   ([p f executor] (pt/-handle p f executor)))
 
+(defn finally
+  "Attach a potentially side-effectful handler to promise that will be
+  executed independently if promise is resolved or rejected.
+
+  Returns the original promise and the return value of `f` function is
+  ignored."
+  ([p f] (pt/-finally p f))
+  ([p f executor] (pt/-finally p f executor)))
+
 (defn catch
-  "Catch all promise chain helper."
+  "Executes `f` when the promise `p` is rejected. Returns a promise
+  resolved with the return value of `f` function handler."
   ([p f]
    (pt/-catch p f))
   ([p pred-or-type f]
    (c/let [accept? (if (ifn? pred-or-type)
-                   pred-or-type
-                   #(instance? pred-or-type %))]
+                     pred-or-type
+                     #(instance? pred-or-type %))]
      (pt/-catch p (fn [e]
                     (if (accept? e)
                       (f e)
@@ -224,15 +236,6 @@
 (def err
   "A short alias for `error` function."
   error)
-
-(defn finally
-  "Attach handler to promise that will be
-  executed independently if promise is
-  resolved or rejected."
-  [p f]
-  (-> p
-      (then (fn [_] (f)))
-      (catch (fn [_] (f)))))
 
 (defn all
   "Given an array of promises, return a promise

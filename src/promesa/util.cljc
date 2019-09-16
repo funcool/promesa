@@ -47,3 +47,9 @@
      BiFunction
      (apply [_ a b]
        (f a b))))
+
+#?(:clj
+   (deftype BiConsumerWrapper [f]
+     BiConsumer
+     (accept [_ a b]
+       (f a b))))

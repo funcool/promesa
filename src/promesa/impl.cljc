@@ -87,6 +87,9 @@
        (-handle
          ([it f] (.then it #(f % nil) #(f nil %)))
          ([it f e] (.then it #(f % nil) #(f nil %))))
+       (-finally
+         ([it f] (-handle it f) it)
+         ([it f executor] (-handle it f executor) it))
        (-catch
          ([it f] (.catch it #(f %)))))))
 
@@ -105,6 +108,9 @@
      (-handle
        ([it f] (pt/-handle (pt/-promise it) f))
        ([it f e] (pt/-handle (pt/-promise it) f e)))
+     (-finally
+       ([it f] (pt/-finally (pt/-promise it) f))
+       ([it f e] (pt/-finally (pt/-promise it) f e)))
      (-catch
        ([it f] (pt/-catch (pt/-promise it) f)))))
 
@@ -141,6 +147,16 @@
                       ^BiFunction (pu/->BiFunctionWrapper f)
                       ^Executor (exec/resolve-executor executor))))
 
+     (-finally
+       ([it f]
+        (.whenComplete ^CompletionStage it
+                       ^BiConsumer (pu/->BiConsumerWrapper f)))
+
+       ([it f executor]
+        (.whenCompleteAsync ^CompletionStage it
+                            ^BiConsumer (pu/->BiConsumerWrapper f)
+                            ^Executor (exec/resolve-executor executor))))
+
      (-catch [it f]
        (letfn [(handler [e]
                  (if (instance? CompletionException e)
@@ -159,6 +175,9 @@
      (-handle
        ([it f] (pt/-handle (pt/-promise it) f))
        ([it f e] (pt/-handle (pt/-promise it) f e)))
+     (-finally
+       ([it f] (pt/-finally (pt/-promise it) f))
+       ([it f e] (pt/-finally (pt/-promise it) f e)))
      (-catch
        ([it f] (pt/-catch (pt/-promise it) f)))
 
@@ -172,6 +191,9 @@
      (-handle
        ([it f] (pt/-handle (pt/-promise it) f))
        ([it f e] (pt/-handle (pt/-promise it) f e)))
+     (-finally
+       ([it f] (pt/-finally (pt/-promise it) f))
+       ([it f e] (pt/-finally (pt/-promise it) f e)))
      (-catch
        ([it f] (pt/-catch (pt/-promise it) f)))))
 

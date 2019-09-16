@@ -219,14 +219,13 @@
     #?(:cljs (t/async done (p/do! (test) (done)))
        :clj @(test))))
 
-;; (t/deftest chaining-using-map'
-;;   (let [p1 (promise-ok 10 2)
-;;         p2 (p/map' inc p1)
-;;         p3 (p/map' inc p2)
-
-;;         test #(p/then p3 (fn [res] (t/is (= res 4))))]
-;;     #?(:cljs (t/async done (p/do! (test) (done)))
-;;        :clj @(test))))
+(t/deftest chaining-using-then'
+  (let [p1 (promise-ok 10 2)
+        p2 (p/then' p1 inc)
+        p3 (p/then' p2 inc)
+        test #(p/then p3 (fn [res] (t/is (= res 4))))]
+    #?(:cljs (t/async done (p/do! (test) (done)))
+       :clj @(test))))
 
 (t/deftest chaining-using-mapcat
   (let [p1 (promise-ok 100 2)
@@ -238,15 +237,27 @@
     #?(:cljs (t/async done (p/do! (test) (done)))
        :clj @(test))))
 
-;; (t/deftest chaining-using-mapcat'
-;;   (let [p1 (promise-ok 100 2)
-;;         inc #(p/resolved (inc %))
-;;         p2 (p/mapcat' inc p1)
-;;         p3 (p/mapcat' inc p2)
-;;         test #(p/then p3 (fn [v] (t/is (= v 4))))]
+(t/deftest chaining-using-finally
+  (let [p1 (promise-ok 100 2)
+        st (atom 0)
+        p2 (p/finally p1 (fn [v e] (swap! st inc) :foobar))
+        test #(p/then p2 (fn [v]
+                           (t/is (= v 2))
+                           (t/is (= @st 1))))]
 
-;;     #?(:cljs (t/async done (p/do! (test) (done)))
-;;        :clj @(test))))
+    #?(:cljs (t/async done (p/do! (test) (done)))
+       :clj @(test))))
+
+(t/deftest chaining-using-handle
+  (let [p1 (promise-ok 100 2)
+        st (atom 0)
+        p2 (p/handle p1 (fn [v e] (swap! st inc) :foobar))
+        test #(p/then p2 (fn [v]
+                           (t/is (= v :foobar))
+                           (t/is (= @st 1))))]
+
+    #?(:cljs (t/async done (p/do! (test) (done)))
+       :clj @(test))))
 
 (t/deftest cancel-scheduled-task
   #?(:cljs
@@ -313,34 +324,6 @@
      (let [p1 (promise-ok 100 2)
            p2 (p/chain p1 inc inc inc)]
        (t/is (= @p2 5)))))
-
-;; (t/deftest branching-using-branch-1
-;;   #?(:cljs
-;;      (t/async done
-;;        (let [p1 (promise-ok 100 2)
-;;              p2 (p/branch p1 #(inc %) (constantly nil))]
-;;          (p/then p2 #(do
-;;                        (t/is (= % 3))
-;;                        (done)))))
-;;      :clj
-;;      (let [p1 (promise-ok 100 2)
-;;            p2 (p/branch p1 #(inc %) (constantly nil))]
-;;        (t/is (= @p2 3)))))
-
-;; (t/deftest branching-using-branch-2
-;;   #?(:cljs
-;;      (t/async done
-;;        (let [e (ex-info "foobar" {})
-;;              p1 (promise-ko 100 e)
-;;              p2 (p/branch p1 (constantly nil) identity)]
-;;          (p/then p2 #(do
-;;                        (t/is (= % e))
-;;                        (done)))))
-;;      :clj
-;;      (let [e (ex-info "foobar" {})
-;;            p1 (promise-ko 100 e)
-;;            p2 (p/branch p1 (constantly nil) (constantly 1))]
-;;        (t/is (= @p2 1)))))
 
 (t/deftest promisify
   #?(:cljs

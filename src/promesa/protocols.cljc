@@ -27,10 +27,18 @@
 
 (defprotocol IPromise
   "A basic promise abstraction."
-  (-map [_ f] [_ f executor] "Chain a computation to be executed in a microtask.")
-  (-bind [_ f] [_ f executor] "Chain a computation to be executed in a microtask.")
-  (-handle [_ f] [_ f executor] "Chain a computation when promise completes either normally or exceptionally.")
-  (-catch [_ f] "Catch a error in a promise."))
+  (-map [_ f] [_ f executor]
+    "Chain a computation to be executed in a microtask.")
+  (-bind [_ f] [_ f executor]
+    "Chain a computation to be executed in a microtask.")
+  (-handle [_ f] [_ f executor]
+    "Chain a computation when promise completes either normally or
+    exceptionally.")
+  (-catch [_ f]
+    "Catch a error in a promise.")
+  (-finally [_ f] [_ f executor]
+    "Runs side-effectful code after completion or rejection, returns
+    the original promise."))
 
 (defprotocol IState
   "Additional state/introspection abstraction."
