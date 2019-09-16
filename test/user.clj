@@ -1,11 +1,19 @@
 (ns user
   (:require [clojure.tools.namespace.repl :as r]
-            [criterium.core :refer [quick-bench]]
+            [criterium.core :refer [quick-bench with-progress-reporting]]
             [clojure.walk :refer [macroexpand-all]]
             [clojure.pprint :refer [pprint]]
             [clojure.test :as test]
             [promesa.core :as p]
-            [promesa.exec :as exec]))
+            [promesa.protocols :as pt]))
+
+(defmacro bench
+  [& exprs]
+  `(with-progress-reporting (quick-bench (do ~@exprs) :verbose)))
+
+(defmacro bench'
+  [& exprs]
+  `(quick-bench (do ~@exprs)))
 
 (defn- run-test
   ([] (run-test #"^promesa.tests.*"))
