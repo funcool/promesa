@@ -27,9 +27,9 @@
 
 (defprotocol IPromise
   "A basic promise abstraction."
-  (-map [_ f executor] "Chain a computation to be executed in a microtask.")
-  (-bind [_ f executor] "Chain a computation to be executed in a microtask.")
-  (-handle [_ f executor] "Chain a computation when promise completes either normally or exceptionally.")
+  (-map [_ f] [_ f executor] "Chain a computation to be executed in a microtask.")
+  (-bind [_ f] [_ f executor] "Chain a computation to be executed in a microtask.")
+  (-handle [_ f] [_ f executor] "Chain a computation when promise completes either normally or exceptionally.")
   (-catch [_ f] "Catch a error in a promise."))
 
 (defprotocol IState

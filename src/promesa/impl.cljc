@@ -78,10 +78,17 @@
        (-promise [p] p)
 
        pt/IPromise
-       (-map [it f e] (.then it #(f %)))
-       (-bind [it f e] (.then it #(f %)))
-       (-handle [it f e] (.then it #(f % nil) #(f nil %)))
-       (-catch [it f] (.catch it #(f %))))))
+       (-map
+         ([it f] (.then it #(f %)))
+         ([it f e] (.then it #(f %))))
+       (-bind
+         ([it f] (.then it #(f %)))
+         ([it f e] (.then it #(f %))))
+       (-handle
+         ([it f] (.then it #(f % nil) #(f nil %)))
+         ([it f e] (.then it #(f % nil) #(f nil %))))
+       (-catch
+         ([it f] (.catch it #(f %)))))))
 
 #?(:cljs
    (extend-promise! js/Promise))
@@ -89,28 +96,50 @@
 #?(:cljs
    (extend-type default
      pt/IPromise
-     (-map [it f e] (pt/-map (pt/-promise it) f e))
-     (-bind [it f e] (pt/-bind (pt/-promise it) f e))
-     (-handle [it f e] (pt/-handle (pt/-promise it) f e))
-     (-catch [it f] (pt/-catch (pt/-promise it) f))))
+     (-map
+       ([it f] (pt/-map (pt/-promise it) f))
+       ([it f e] (pt/-map (pt/-promise it) f e)))
+     (-bind
+       ([it f] (pt/-bind (pt/-promise it) f))
+       ([it f e] (pt/-bind (pt/-promise it) f e)))
+     (-handle
+       ([it f] (pt/-handle (pt/-promise it) f))
+       ([it f e] (pt/-handle (pt/-promise it) f e)))
+     (-catch
+       ([it f] (pt/-catch (pt/-promise it) f)))))
 
 #?(:clj
    (extend-protocol pt/IPromise
      CompletionStage
-     (-map [it f executor]
-       (.thenApplyAsync ^CompletionStage it
-                        ^Function (pu/->FunctionWrapper f)
-                        ^Executor (exec/resolve-executor executor)))
+     (-map
+       ([it f]
+        (.thenApply ^CompletionStage it
+                    ^Function (pu/->FunctionWrapper f)))
 
-     (-bind [it f executor]
-       (.thenComposeAsync ^CompletionStage it
-                          ^Function (pu/->FunctionWrapper f)
-                          ^Executor (exec/resolve-executor executor)))
+       ([it f executor]
+        (.thenApplyAsync ^CompletionStage it
+                         ^Function (pu/->FunctionWrapper f)
+                         ^Executor (exec/resolve-executor executor))))
 
-     (-handle [it f executor]
-       (.handleAsync ^CompletionStage it
-                     ^BiFunction (pu/->BiFunctionWrapper f)
-                     ^Executor (exec/resolve-executor executor)))
+     (-bind
+       ([it f]
+        (.thenCompose ^CompletionStage it
+                      ^Function (pu/->FunctionWrapper f)))
+
+       ([it f executor]
+        (.thenComposeAsync ^CompletionStage it
+                           ^Function (pu/->FunctionWrapper f)
+                           ^Executor (exec/resolve-executor executor))))
+
+     (-handle
+       ([it f]
+        (.handle ^CompletionStage it
+                 ^BiFunction (pu/->BiFunctionWrapper f)))
+
+       ([it f executor]
+        (.handleAsync ^CompletionStage it
+                      ^BiFunction (pu/->BiFunctionWrapper f)
+                      ^Executor (exec/resolve-executor executor))))
 
      (-catch [it f]
        (letfn [(handler [e]
@@ -121,16 +150,30 @@
                          ^Function (pu/->FunctionWrapper handler))))
 
      Object
-     (-map [it f e] (pt/-map (pt/-promise it) f e))
-     (-bind [it f e] (pt/-bind (pt/-promise it) f e))
-     (-handle [it f e] (pt/-handle (pt/-promise it) f e))
-     (-catch [it f] (pt/-catch (pt/-promise it) f))
+     (-map
+       ([it f] (pt/-map (pt/-promise it) f))
+       ([it f e] (pt/-map (pt/-promise it) f e)))
+     (-bind
+       ([it f] (pt/-bind (pt/-promise it) f))
+       ([it f e] (pt/-bind (pt/-promise it) f e)))
+     (-handle
+       ([it f] (pt/-handle (pt/-promise it) f))
+       ([it f e] (pt/-handle (pt/-promise it) f e)))
+     (-catch
+       ([it f] (pt/-catch (pt/-promise it) f)))
 
      nil
-     (-map [it f e] (pt/-map (pt/-promise it) f e))
-     (-bind [it f e] (pt/-bind (pt/-promise it) f e))
-     (-handle [it f e] (pt/-handle (pt/-promise it) f e))
-     (-catch [it f] (pt/-catch (pt/-promise it) f))))
+     (-map
+       ([it f] (pt/-map (pt/-promise it) f))
+       ([it f e] (pt/-map (pt/-promise it) f e)))
+     (-bind
+       ([it f] (pt/-bind (pt/-promise it) f))
+       ([it f e] (pt/-bind (pt/-promise it) f e)))
+     (-handle
+       ([it f] (pt/-handle (pt/-promise it) f))
+       ([it f e] (pt/-handle (pt/-promise it) f e)))
+     (-catch
+       ([it f] (pt/-catch (pt/-promise it) f)))))
 
 #?(:clj
    (extend-type CompletableFuture

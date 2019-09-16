@@ -172,13 +172,6 @@
        (instance? ThreadFactory opts) opts
        :else (throw (ex-info "Invalid thread factory" {})))))
 
-#?(:cljs
-   (defn- queue-microtask!
-     [f]
-     (-> (resolved nil)
-         (pt/-then f)
-         (pt/-catch (fn [e] (js/setTimeout #(throw e)))))))
-
 #?(:clj
    (extend-protocol pt/IExecutor
      Executor
@@ -198,13 +191,13 @@
      pt/IExecutor
      (-run! [this f]
        (-> (pt/-promise nil)
-           (pt/-map (fn [_] (f) nil)
-           (pt/-catch (fn [e] (js/setTimeout #(throw e)))))))
+           (pt/-map (fn [_] (f) nil))
+           (pt/-catch (fn [e] (js/setTimeout #(throw e)) nil))))
 
      (-submit! [this f]
        (-> (pt/-promise nil)
-           (pt/-map (fn [_] (f))
-           (pt/-catch (fn [e] (js/setTimeout #(throw e)))))))))
+           (pt/-map (fn [_] (f)))
+           (pt/-catch (fn [e] (js/setTimeout #(throw e)) nil))))))
 
 ;; Executor that executes the task in the calling thread
 #?(:clj
@@ -220,7 +213,7 @@
        (f)
        (pt/-promise nil))
 
-     (-submit [this f]
+     (-submit! [this f]
        (pt/-promise (f)))))
 
 ;; --- Scheduler & ScheduledTask
@@ -265,7 +258,7 @@
      pt/ICancellable
      (-cancelled? [_]
        (gobj/get state "cancelled"))
-     (-cancel [self]
+     (-cancel! [self]
        (when-not (pt/-cancelled? self)
          (let [cancel-fn (gobj/get state "cancel-fn")]
            (gobj/set state "cancelled" true)

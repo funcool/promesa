@@ -128,6 +128,12 @@
 
 ;; Chaining
 
+(defn wrap
+  [v]
+  (if (promise? v)
+    v
+    (pt/-promise v)))
+
 (defn then
   "Chains a computation `f` (function) to be executed when the promise
   `p` is successfully resolved.
@@ -137,14 +143,10 @@
 
   If the function `f` returns a promise instance, it will be
   automatically unwrapped."
-  ([p f] (then p f exec/current-thread-executor))
+  ([p f]
+   (pt/-bind p (comp wrap f)))
   ([p f executor]
-   (letfn [(handle [v]
-             (c/let [out (f v)]
-               (if (promise? out)
-                 out
-                 (pt/-promise out))))]
-     (pt/-bind p handle executor))))
+   (pt/-bind p (comp wrap f) executor)))
 
 (defn then'
   "Chains a computation `f` (function) to be executed when the promise
@@ -154,7 +156,7 @@
   you also can provide a custom executor.
 
   Don't perform flatten on the result."
-  ([p f] (pt/-map p f exec/current-thread-executor))
+  ([p f] (pt/-map p f))
   ([p f executor] (pt/-map p f executor)))
 
 (defn bind
@@ -168,7 +170,7 @@
 
   Unlike `then` this does not performs automatic promise flattening.
   This is designed to be used with `->>`."
-  ([f p] (pt/-map p f exec/current-thread-executor))
+  ([f p] (pt/-map p f))
   ([executor f p] (pt/-map p f executor)))
 
 (defn mapcat
@@ -180,7 +182,7 @@
   the same way as `map`.
 
   This is designed to be used with `->>`."
-  ([f p] (pt/-bind p f exec/current-thread-executor))
+  ([f p] (pt/-bind p f))
   ([executor f p] (pt/-bind p f executor)))
 
 (defn chain
@@ -195,7 +197,11 @@
   `chain` does not flattens the return value of each step (probably
   this is more performant than `chain`)."
   ([p f] (then' p f))
-  ([p f & fs] (reduce #(then' %1 %2) p (cons f fs))))
+  ([p f & fs] (reduce pt/-map p (cons f fs))))
+
+(defn handle
+  ([p f] (pt/-handle p f))
+  ([p f executor] (pt/-handle p f executor)))
 
 (defn catch
   "Catch all promise chain helper."
@@ -218,10 +224,6 @@
 (def err
   "A short alias for `error` function."
   error)
-
-(defn handle
-  ([p f] (pt/-handle p f exec/current-thread-executor))
-  ([p f executor] (pt/-handle p f executor)))
 
 (defn finally
   "Attach handler to promise that will be
