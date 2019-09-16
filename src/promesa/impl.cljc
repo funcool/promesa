@@ -88,8 +88,8 @@
          ([it f] (.then it #(f % nil) #(f nil %)))
          ([it f e] (.then it #(f % nil) #(f nil %))))
        (-finally
-         ([it f] (-handle it f) it)
-         ([it f executor] (-handle it f executor) it))
+         ([it f] (.then it #(f % nil) #(f nil %)) it)
+         ([it f executor] (.then it #(f % nil) #(f nil %)) it))
        (-catch
          ([it f] (.catch it #(f %)))))))
 
