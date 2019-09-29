@@ -69,6 +69,22 @@ start by creating promise instances from plain values:
 ;; => #<Promise [~]>
 ----
 
+If you just want to create a promise with a value, you can use the
+`promise` function:
+
+[source, clojure]
+----
+;; creates a promise from value
+(p/promise 1)
+
+;; creates a rejected promise
+(p/promise (ex-info "error" {}))
+----
+
+The `promise` consturctor function automatcially coerce the value to
+the approprite promise, returning rejected promises for exceptions and
+resolved promises for the rest of values.
+
 Another option is to create an empty promise using the `deferred` function
 and provide the value asynchronously using `p/resolve!` and `p/reject!`:
 
@@ -81,24 +97,13 @@ and provide the value asynchronously using `p/resolve!` and `p/reject!`:
     p))
 ----
 
-The `deferred` function also accepts plain values and functions as arguments. If
-a value is provided, a resolved promise will be returned. If a function is
-provided, the function will be called and the return value will be used to
-resolve the promise.
-
-[source, clojure]
-----
-@(p/deferred (constantly 1))
-;; => 1
-----
-
-If you are familiar with JavaScript, there is a similar approach
-(internally called a factory).
+Another option is using a factory function. If you are familiar with
+JavaScript, there is a similar approach.
 
 .Example creating a promise instance using a factory.
 [source, clojure]
 ----
-@(p/promise (fn [resolve reject] (resolve 1)))
+@(p/create (fn [resolve reject] (resolve 1)))
 ;; => 1
 ----
 
@@ -109,7 +114,7 @@ if you want to execute it asynchronously, you can provide an executor:
 ----
 (require '[promesa.exec :as exec])
 
-@(p/promise (fn [resolve reject] (resolve 1)) exec/default-executor)
+@(p/create (fn [resolve reject] (resolve 1)) exec/default-executor)
 ;; => 1
 ----
 
@@ -451,8 +456,8 @@ Lets take this example as a context:
 [source, clojure]
 ----
 @(-> (p/delay 100 1)
-     (p/then inc)
-     (p/then inc))
+     (p/then' inc)
+     (p/then' inc))
 ;; => 3
 ----
 
