@@ -54,26 +54,26 @@
 (t/deftest promise-from-factory
   #?(:cljs
      (t/async done
-       (-> (p/promise (fn [resolve _] (resolve 1)))
+       (-> (p/create (fn [resolve _] (resolve 1)))
            (p/then (fn [v]
                      (t/is (= v 1))
                      (done)))))
      :clj
-     @(-> (p/promise (fn [resolve _] (resolve 1)))
+     @(-> (p/create (fn [resolve _] (resolve 1)))
           (p/then (fn [v]
                     (t/is (= v 1)))))))
 
 (t/deftest promise-async-factory
   #?(:cljs
      (t/async done
-       (let [p1 (p/promise (fn [resolve reject]
+       (let [p1 (p/create (fn [resolve reject]
                              (e/schedule! 50 #(resolve 1))))]
          ;; (t/is (p/pending? p1))
          (p/then p1 (fn [v]
                       (t/is (= v 1))
                       (done)))))
      :clj
-     (let [p1 (p/promise (fn [resolve reject]
+     (let [p1 (p/create (fn [resolve reject]
                            (e/schedule! 500 #(resolve 1))))]
        (t/is (p/pending? p1))
        (t/is (= @p1 1)))))
@@ -81,7 +81,7 @@
 (t/deftest promise-from-exception
   #?(:clj
      (let [e (ex-info "foo" {})
-           p1 (p/deferred e)]
+           p1 (p/promise e)]
        (t/is (p/rejected? p1))
        (t/is (= e @@(p/catch p1 (fn [x] (reduced x))))))
      :cljs
@@ -356,7 +356,7 @@
   (-> x ex-data :x))
 
 (t/deftest catch-with-ifn
-  (let [p (-> (p/promise
+  (let [p (-> (p/create
                (fn [_ reject] (reject (ex-info "foobar" {:x ::value}))))
               (p/catch unwrap-caught))]
     #?(:cljs

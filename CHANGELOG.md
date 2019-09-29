@@ -7,6 +7,9 @@ Date: ---
 Relevant changes (many **breaking changes** that affects functions
 and macros that are not heavily used):
 
+- Remove the ability to create a promise using factory function from
+  `promise` constructor (delegated to `create` function, see below).
+
 - Remove the old `do*` macro.
 - Add `do!` macro (that should have been the `do*` from the
   begining). It treats each individual expression as a expression that
@@ -65,10 +68,12 @@ and macros that are not heavily used):
 
 New features and not breaking changes and fixes:
 
-- Add `deferred` promise constructor. The main purpose is to leave
-  `promise` constructor for building promises from a factory functions
-  (see docs) and `deferred` for create empty promise or promise resolved
-  to a plain value.
+- Add `create` promise constructor, a facility for create a promise
+  using a factory function (before this is done passing a function to
+  `promise`).
+- Add `deferred` promise constructor. The main purpose of this
+  constructor is creating an empty promise ready to be resolved or
+  rejected externally (using `resolve!` and `reject!`).
 - Add `handle` chain function: is some kind of combination of `then'`
   and `catch`. It chains a function to be executed when the promise is
   either normally or rejected (with first argument with resolved value
@@ -93,8 +98,6 @@ New features and not breaking changes and fixes:
   be raised from the first evaluated expression. Now all exception
   raised inside `let` returs properly rejected promise.
 - Add `loop/recur` syntax abstraction.
-  
-
 
 
 ## Version 3.0.0 ##

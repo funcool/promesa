@@ -50,30 +50,35 @@
   (impl/rejected v))
 
 (defn deferred
-  "Creates an empty or dynamicaly resolved or rejected promise from the
-  provided value.
-
-  If executor is specified, it will be used for promise resolution and
-  also will be used for subsequent steps until an other executor is
-  specified explicitly."
-  ([] (impl/deferred))
-  ([v] (deferred v exec/current-thread-executor))
-  ([v executor]
-   (c/let [d (impl/deferred)
-           v (pt/-promise v)]
-     (pt/-bind v #(pt/-resolve! d %) executor)
-     (pt/-catch v #(pt/-reject! d %))
-     d)))
+  "Creates an empty promise instance."
+  []
+  (impl/deferred))
 
 (defn promise
-  "The promise constructor."
+  "The coerce based promise constructor. Creates a appropriate promise
+  instance depending on the provided value.
+
+  If an executor is provided, it will be used to resolve this
+  promise."
+  ([v] (pt/-promise v))
+  ([v executor]
+   (pt/-map v identity executor)))
+
+(defn create
+  "Create a promise instance from a factory function. If an executor is
+  provided, the factory will be executed in the provided executor.
+
+  A factory function looks like `(fn [resolve reject] (resolve 1))`."
   ([f]
-   (if (fn? f)
-     (promise f exec/current-thread-executor)
-     (pt/-promise f)))
+   (c/let [d (impl/deferred)]
+     (try
+       (f #(pt/-resolve! d %)
+          #(pt/-reject! d %))
+       (catch #?(:clj Exception :cljs :default) e
+         (pt/-reject! d e)))
+     d))
   ([f executor]
-   (c/let [d (impl/deferred)
-           f (if (fn? f) f (fn [r r'] (r f)))]
+   (c/let [d (impl/deferred)]
      (exec/run! executor (fn []
                            (try
                              (f #(pt/-resolve! d %)
@@ -278,7 +283,7 @@
    (c/let [state (atom {:resolved false
                       :counter (count promises)
                       :rejections []})]
-     (promise
+     (create
       (fn [resolve reject]
         (doseq [p promises]
           (-> (promise p)
@@ -304,7 +309,7 @@
 (defn run!
   "A promise aware run! function."
   ([f coll] (run! f coll exec/current-thread-executor))
-  ([f coll executor] (reduce #(then %1 (fn [_] (f %2))) (deferred nil executor) coll)))
+  ([f coll executor] (reduce #(then %1 (fn [_] (f %2))) (promise nil executor) coll)))
 
 ;; Cancellation
 
@@ -339,7 +344,7 @@
   parameter (result of a computation)."
   [callable]
   (fn [& args]
-    (promise (fn [resolve reject]
+    (create (fn [resolve reject]
                (c/let [args (-> (vec args) (conj resolve))]
                  (try
                    (apply callable args)
