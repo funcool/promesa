@@ -500,9 +500,77 @@ In some cases you may still want execute all chained functions
 together but all together in different executor. In this case you can
 use the `deferred` constructor to specify the executor.
 
+[source, clojure]
+----
 @(-> (p/delay 100 1)
      (p/deferred exec/default-executor)
-     (p/chain inc inc))
+     (p/chain' inc inc))
+----
+
+=== Performance overhead
+
+The **promesa** is a lightweight abstraction built on top of native
+abstractions (`CompletableFuture` in the jvm and `js/Promise` on
+cljs).
+
+Internaly we have heavy use of protocols in order to expose a
+polimorphic and user friendly api, but this have a little overhead on
+top of raw usage of `CompletableFuture` or `Promise`. This is the
+latest micro benchmark (2019-09-17) that shows the real overhead of
+this library in contrat to use plain native abstractions:
+
+[source, clojure]
+----
+(run-bench (simple-promise-chain-5-raw))
+;; => amd64 Linux 5.2.9-arch1-1-ARCH 4 cpu(s)
+;; => OpenJDK 64-Bit Server VM 12.0.2+10
+;; => Runtime arguments: -Dclojure.compiler.direct-linking=true
+;; => Evaluation count : 687647820 in 60 samples of 11460797 calls.
+;; =>       Execution time sample mean : 82.617649 ns
+;; =>              Execution time mean : 82.606811 ns
+;; => Execution time sample std-deviation : 2.348589 ns
+;; =>     Execution time std-deviation : 2.365164 ns
+;; =>    Execution time lower quantile : 78.787962 ns ( 2.5%)
+;; =>    Execution time upper quantile : 86.941501 ns (97.5%)
+;; =>                    Overhead used : 9.967315 ns
+;; =>
+
+(run-bench (simple-completable-chain-5-raw))
+;; => amd64 Linux 5.2.9-arch1-1-ARCH 4 cpu(s)
+;; => OpenJDK 64-Bit Server VM 12.0.2+10
+;; => Runtime arguments: -Dclojure.compiler.direct-linking=true
+;; => Evaluation count : 823532160 in 60 samples of 13725536 calls.
+;; =>       Execution time sample mean : 62.267034 ns
+;; =>              Execution time mean : 62.279349 ns
+;; => Execution time sample std-deviation : 1.967931 ns
+;; =>     Execution time std-deviation : 2.014908 ns
+;; =>    Execution time lower quantile : 59.663843 ns ( 2.5%)
+;; =>    Execution time upper quantile : 67.599822 ns (97.5%)
+;; =>                    Overhead used : 9.967315 ns
+----
+
+The benchmarked functions are:
+
+[source, clojure]
+----
+(defn simple-promise-chain-5-raw
+  []
+  @(as-> (CompletableFuture/completedFuture 1) $
+     (p/then' $ inc)
+     (p/then' $ inc)
+     (p/then' $ inc)
+     (p/then' $ inc)
+     (p/then' $ inc)))
+
+(defn simple-completable-chain-5-raw
+  []
+  @(as-> (CompletableFuture/completedFuture 1) $
+     (.thenApply ^CompletionStage $ ^Function (pu/->FunctionWrapper inc))
+     (.thenApply ^CompletionStage $ ^Function (pu/->FunctionWrapper inc))
+     (.thenApply ^CompletionStage $ ^Function (pu/->FunctionWrapper inc))
+     (.thenApply ^CompletionStage $ ^Function (pu/->FunctionWrapper inc))
+     (.thenApply ^CompletionStage $ ^Function (pu/->FunctionWrapper inc))))
+----
 
 
 == Developers Guide
