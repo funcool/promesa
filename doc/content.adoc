@@ -14,8 +14,8 @@ Andrey Antukh, <niwi@niwi.nz>
 A promise library for Clojure and ClojureScript.
 
 On the JVM paltform _promesa_ is built on top of *completable futures*
-(requires jdk>=8). On JS engines it is built on top of the built-in
-Promise implementation.
+(requires jdk>=8). On JS engines it is built on top of the execution
+environment built-in Promise implementation.
 
 
 === Project Maturity
@@ -32,7 +32,7 @@ Just include the following lines in your dependency vector on *_project.clj_*:
 [funcool/promesa "4.0.0"]
 ----
 
-This package requires JDK8 if you are using it on the JVM.
+This package requires JDK >= 8 if you are using it on the JVM.
 
 
 == User guide
@@ -53,8 +53,25 @@ The promise can be considered *done* when it is resolved or rejected.
 
 === Creating a promise
 
-There are several different ways to create a promise instance. Let's
-start by creating promise instances from plain values:
+There are several different ways to create a promise instance. If you
+just want to create a promise with a value, you can use the `promise`
+function:
+
+[source, clojure]
+----
+;; creates a promise from value
+(p/promise 1)
+
+;; creates a rejected promise
+(p/promise (ex-info "error" {}))
+----
+
+The `promise` consturctor function automatcially coerce the value to
+the approprite promise, returning rejected promises for exceptions and
+resolved promises for the rest of values.
+
+If you already known the value and want to create resolved or rejected
+promise instances, yo can use `resolved` and `rejected` functions:
 
 [source, clojure]
 ----
@@ -69,21 +86,9 @@ start by creating promise instances from plain values:
 ;; => #<Promise [~]>
 ----
 
-If you just want to create a promise with a value, you can use the
-`promise` function:
-
-[source, clojure]
-----
-;; creates a promise from value
-(p/promise 1)
-
-;; creates a rejected promise
-(p/promise (ex-info "error" {}))
-----
-
-The `promise` consturctor function automatcially coerce the value to
-the approprite promise, returning rejected promises for exceptions and
-resolved promises for the rest of values.
+They are more performant because they does not perform any polimorphic
+coercion on the value. They create the promise with the provided value
+as-is.
 
 Another option is to create an empty promise using the `deferred` function
 and provide the value asynchronously using `p/resolve!` and `p/reject!`:
@@ -118,9 +123,9 @@ if you want to execute it asynchronously, you can provide an executor:
 ;; => 1
 ----
 
-Another way to create a promise is to use the `do!` macro. The `do!` macro works
-similarly to the factory callback, except that we can return a value directly
-instead of calling `resolve`:
+Another way to create a promise is to use the `do!` macro. The `do!`
+macro works similarly to the factory callback, except that we can
+return a value directly instead of calling `resolve`:
 
 [source, clojure]
 ----
@@ -130,22 +135,22 @@ instead of calling `resolve`:
     (+ a b)))
 ----
 
-The `do!` expression work similarly to clojure's `do` block, so you can provide
-any expression, but only the last one will be returned. That expression can be a
-plain value or an other promise.
+The `do!` expression work similarly to clojure's `do` block, so you
+can provide any expression, but only the last one will be
+returned. That expression can be a plain value or an other promise.
 
 If an exception is raised inside the `do!` block, it will return the
 rejected promise instead of re-raising the exception on the stack.
 
-If the `do!` contains more than one expression, each expression will be treated
-as a promise expression and will be executed sequentially, each awaiting the
-resolution of the prior expression.
+If the `do!` contains more than one expression, each expression will
+be treated as a promise expression and will be executed sequentially,
+each awaiting the resolution of the prior expression.
 
 For example, this `do!` macro:
 
 [source, clojure]
 ----
-(p/do! (expr1nn)
+(p/do! (expr1)
        (expr2)
        (expr3))
 ----
@@ -168,9 +173,9 @@ Finally, **promesa** exposes a `future` macro very similar to the
 ;; => "result-of-complex-task"
 ----
 
-One difference from `clojure.core/future` is that if the return value of the
-future expression is itself a promise instance, then it will await and unwrap
-the inner promise:
+One difference from `clojure.core/future` is that if the return value
+of the future expression is itself a promise instance, then it will
+await and unwrap the inner promise:
 
 [source, clojure]
 ----
@@ -181,8 +186,8 @@ the inner promise:
 
 === Promise Chaining
 
-The most common way to apply a function to a promise (or in other words, to chain
-its execution) is using the well-known `map` function:
+The most common way to apply a function to a promise (or in other
+words, to chain its execution) is using the well-known `map` function:
 
 [source, clojure]
 ----
@@ -194,9 +199,9 @@ its execution) is using the well-known `map` function:
 ;; => 2
 ----
 
-For people coming from the JS world, there is also the `then` function that
-works in very similar way to `map` with the exception that the parameters have
-different order and flatten automatically.
+For people coming from the JS world, there is also the `then` function
+that works in very similar way to `map` with the exception that the
+parameters have different order and flatten automatically.
 
 [source, clojure]
 ----
@@ -223,11 +228,11 @@ If you want to apply multiple functions instead of using multiple
 ;; => 4
 ----
 
-The `chain` function uses `then` behind the scenes, so the same rules about
-flattening applies.
+The `chain` function uses `then` behind the scenes, so the same rules
+about flattening applies.
 
-NOTE: if you know that your chained functions do not return
-promises, you can use `chain'` instead for better performance.
+NOTE: if you know that your chained functions do not return promises,
+you can use `chain'` instead for better performance.
 
 
 === Promise Composition

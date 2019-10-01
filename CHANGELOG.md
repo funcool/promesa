@@ -1,14 +1,15 @@
 # Changelog #
 
-## Version 4.0.0-SNAPSHOT ##
+## Version 4.0.0 ##
 
-Date: ---
+Date: 2019-10-01
 
 Relevant changes (many **breaking changes** that affects functions
 and macros that are not heavily used):
 
-- Remove the ability to create a promise using factory function from
-  `promise` constructor (delegated to `create` function, see below).
+- Remove the ability to create a promise using factory function with
+  `promise` constructor (now this responsability is delegated to the
+  `create` function, see below).
 
 - Remove the old `do*` macro.
 - Add `do!` macro (that should have been the `do*` from the
@@ -52,6 +53,9 @@ and macros that are not heavily used):
   also accepts a new arity for specify the executor where evaluate the
   factory function or promise resolution (by default is in the calling
   thread).
+
+  **The execution semantic changes are only relevant on the JVM, on
+  cljs nothing is changed.**
 
 - Rewrite `finally` function: now receives a promise and a function
   (potentiall side-effectful) that will receive resolved value as

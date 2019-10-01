@@ -8,7 +8,7 @@
 (defmethod task "jar"
   [args]
   (badigeon.jar/jar 'funcool/promesa
-                    {:mvn/version "4.0.0-SNAPSHOT"}
+                    {:mvn/version "4.0.0"}
                     {:out-path "target/promesa.jar"
                      :mvn/repos '{"clojars" {:url "https://repo.clojars.org/"}}
                      :allow-all-dependencies? false}))
@@ -18,7 +18,7 @@
   (let [artifacts [{:file-path "target/promesa.jar" :extension "jar"}
                    {:file-path "pom.xml" :extension "pom"}]]
     (badigeon.deploy/deploy
-     'funcool/promesa "4.0.0-SNAPSHOT"
+     'funcool/promesa "4.0.0"
      artifacts
      {:id "clojars" :url "https://repo.clojars.org/"}
      {:allow-unsigned? true})))
