@@ -10,20 +10,9 @@ Latest stable release:
 
 ```clojure
 ;; deps.edn
-funcool/promesa {:mvn/version "3.0.0"}
+funcool/promesa {:mvn/version "4.0.0"}
 
 ;; lein
-[funcool/promesa "3.0.0"]
+[funcool/promesa "4.0.0"]
 ```
-
-Latest development snapshot:
-
-```clojure
-;; deps.edn
-funcool/promesa {:mvn/version "4.0.0-SNAPSHOT"}
-
-;; lein
-[funcool/promesa "4.0.0-SNAPSHOT"]
-```
-
 
