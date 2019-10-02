@@ -269,7 +269,11 @@
 #?(:clj
    (defmethod print-method java.util.concurrent.CompletionStage
      [p ^java.io.Writer writer]
-     (.write writer ^String (promise->str p))))
+     (let [status (cond
+                    (pt/-pending? p) "pending"
+                    (pt/-rejected? p) "rejected"
+                    :else "resolved")]
+       (.write writer ^String (format "#object[java.util.concurrent.CompletableFuture 0x%h \"%s\"]" (hash p) status)))))
 
 #?(:cljs
    (extend-type js/Promise
