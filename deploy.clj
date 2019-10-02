@@ -1,33 +1,18 @@
 (require '[clojure.java.shell :as shell]
          '[clojure.main])
-(require '[badigeon.jar]
-         '[badigeon.deploy])
 
 (defmulti task first)
 
-(defmethod task "jar"
-  [args]
-  (badigeon.jar/jar 'funcool/promesa
-                    {:mvn/version "4.0.0"}
-                    {:out-path "target/promesa.jar"
-                     :mvn/repos '{"clojars" {:url "https://repo.clojars.org/"}}
-                     :allow-all-dependencies? false}))
-
-(defmethod task "deploy"
-  [args]
-  (let [artifacts [{:file-path "target/promesa.jar" :extension "jar"}
-                   {:file-path "pom.xml" :extension "pom"}]]
-    (badigeon.deploy/deploy
-     'funcool/promesa "4.0.0"
-     artifacts
-     {:id "clojars" :url "https://repo.clojars.org/"}
-     {:allow-unsigned? true})))
-
 (defmethod task :default
   [args]
-  (task ["jar"])
-  (task ["deploy"]))
-
-;;; Build script entrypoint. This should be the last expression.
+  (let [result (shell/sh "mvn" "deploy:deploy-file"
+                         "-Dfile=target/promesa.jar"
+                         "-DpomFile=pom.xml"
+                         "-DrepositoryId=clojars"
+                         "-Durl=https://clojars.org/repo/")]
+    (println (:out result))
+    (binding [*out* *err*]
+      (println (:err result)))
+    (System/exit (:exit result))))
 
 (task *command-line-args*)
