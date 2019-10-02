@@ -18,21 +18,24 @@ On the JVM paltform _promesa_ is built on top of *completable futures*
 environment built-in Promise implementation.
 
 
-=== Project Maturity
-
-Since _promesa_ is a young project there may be some API breakage.
-
-
 === Install
 
-Just include the following lines in your dependency vector on *_project.clj_*:
+
+Leiningen:
 
 [source,clojure]
 ----
 [funcool/promesa "4.0.0"]
 ----
 
-This package requires JDK >= 8 if you are using it on the JVM.
+deps.edn:
+
+[source, clojure]
+----
+funcool/promesa {:mvn/version "4.0.0"}
+----
+
+NOTE: This package requires JDK >= 8 if you are using it on the JVM.
 
 
 == User guide
@@ -53,12 +56,14 @@ The promise can be considered *done* when it is resolved or rejected.
 
 === Creating a promise
 
-There are several different ways to create a promise instance. If you
-just want to create a promise with a value, you can use the `promise`
+There are several different ways to create a promise instance. If you just want
+to create a promise with a plain value, you can use the polimorhphic `promise`
 function:
 
 [source, clojure]
 ----
+(require '[promesa.core :as p])
+
 ;; creates a promise from value
 (p/promise 1)
 
@@ -66,29 +71,23 @@ function:
 (p/promise (ex-info "error" {}))
 ----
 
-The `promise` consturctor function automatcially coerce the value to
-the approprite promise, returning rejected promises for exceptions and
-resolved promises for the rest of values.
+It automatically coerces the provided value to the appropriate promise instance:
+rejected when the provided value is an excepcion and a resolved value in all
+other cases.
 
-If you already known the value and want to create resolved or rejected
-promise instances, yo can use `resolved` and `rejected` functions:
+If you already know that value is eigher resolved or rejected, you can skip the
+coercion and use the `resolved` and `rejected` functions:
 
 [source, clojure]
 ----
-(require '[promesa.core :as p])
-
 ;; Create a resolved promise
 (p/resoved 1)
-;; => #<Promise [~]>
+;; => #object[java.util.concurrent.CompletableFuture 0x3e133219 "resolved"]
 
 ;; Create a rejected promise
 (p/rejected (ex-info "error" {}))
-;; => #<Promise [~]>
+;; => #object[java.util.concurrent.CompletableFuture 0x3e563293 "rejected"]
 ----
-
-They are more performant because they does not perform any polimorphic
-coercion on the value. They create the promise with the provided value
-as-is.
 
 Another option is to create an empty promise using the `deferred` function
 and provide the value asynchronously using `p/resolve!` and `p/reject!`:
@@ -98,12 +97,12 @@ and provide the value asynchronously using `p/resolve!` and `p/reject!`:
 (defn sleep
   [ms]
   (let [p (p/deferred)]
-    (js/setTimeout #(p/resolve! p))
+    (future (p/resolve! p))
     p))
 ----
 
-Another option is using a factory function. If you are familiar with
-JavaScript, there is a similar approach.
+Another option is using a factory function. If you are familiar with JavaScript,
+this is a similar approach.
 
 .Example creating a promise instance using a factory.
 [source, clojure]
@@ -112,8 +111,8 @@ JavaScript, there is a similar approach.
 ;; => 1
 ----
 
-The factory will be executed synchronously (in the current thread) but
-if you want to execute it asynchronously, you can provide an executor:
+The factory will be executed synchronously (in the current thread) but if you
+want to execute it asynchronously, you can provide an executor:
 
 [source, clojure]
 ----
@@ -123,9 +122,7 @@ if you want to execute it asynchronously, you can provide an executor:
 ;; => 1
 ----
 
-Another way to create a promise is to use the `do!` macro. The `do!`
-macro works similarly to the factory callback, except that we can
-return a value directly instead of calling `resolve`:
+Another way to create a promise is using the `do!` macro:
 
 [source, clojure]
 ----
@@ -135,16 +132,16 @@ return a value directly instead of calling `resolve`:
     (+ a b)))
 ----
 
-The `do!` expression work similarly to clojure's `do` block, so you
-can provide any expression, but only the last one will be
-returned. That expression can be a plain value or an other promise.
+The `do!` macro work similarly to clojure's `do` block, so you can provide any
+expression, but only the last one will be returned. That expression can be a
+plain value or an other promise.
 
-If an exception is raised inside the `do!` block, it will return the
-rejected promise instead of re-raising the exception on the stack.
+If an exception is raised inside the `do!` block, it will return the rejected
+promise instead of re-raising the exception on the stack.
 
-If the `do!` contains more than one expression, each expression will
-be treated as a promise expression and will be executed sequentially,
-each awaiting the resolution of the prior expression.
+If the `do!` contains more than one expression, each expression will be treated
+as a promise expression and will be executed sequentially, each awaiting the
+resolution of the prior expression.
 
 For example, this `do!` macro:
 
@@ -173,9 +170,9 @@ Finally, **promesa** exposes a `future` macro very similar to the
 ;; => "result-of-complex-task"
 ----
 
-One difference from `clojure.core/future` is that if the return value
-of the future expression is itself a promise instance, then it will
-await and unwrap the inner promise:
+One difference from `clojure.core/future` is that if the return value of the
+future expression is itself a promise instance, then it will await and unwrap
+the inner promise:
 
 [source, clojure]
 ----
@@ -186,22 +183,8 @@ await and unwrap the inner promise:
 
 === Promise Chaining
 
-The most common way to apply a function to a promise (or in other
-words, to chain its execution) is using the well-known `map` function:
-
-[source, clojure]
-----
-(def result
-  (->> (p/resolved 1)
-       (p/map inc)))
-
-@result
-;; => 2
-----
-
-For people coming from the JS world, there is also the `then` function
-that works in very similar way to `map` with the exception that the
-parameters have different order and flatten automatically.
+The most common way to chain a transformation to a promise is using the general
+purpose `then` function:
 
 [source, clojure]
 ----
@@ -215,8 +198,28 @@ parameters have different order and flatten automatically.
 ;; => 2
 ----
 
-If you want to apply multiple functions instead of using multiple
-`then` or `map`s, you can use the `chain` function:
+As you can observe on the example, it handles either functions that return plain values and
+functions that return promise instances (which will be automaticalle flattened).
+
+NOTE: If you know that the chained function will return always plain values, you
+can use the `then'` more performant variant of this function.
+
+
+In the same line as `then'` function, there is a `map`. It works identically to
+it, the unique difference is the order of arguments:
+
+[source, clojure]
+----
+(def result
+  (->> (p/resolved 1)
+       (p/map inc)))
+
+@result
+;; => 2
+----
+
+If you have multiple transformations and you want to apply them in one step,
+there are the `chain` and `chain'` functions:
 
 [source, clojure]
 ----
@@ -228,25 +231,53 @@ If you want to apply multiple functions instead of using multiple
 ;; => 4
 ----
 
-The `chain` function uses `then` behind the scenes, so the same rules
-about flattening applies.
+NOTE: they are analogous to the `then` and `then'` but that accepts multiple
+transformation functions.
 
-NOTE: if you know that your chained functions do not return promises,
-you can use `chain'` instead for better performance.
+If you want to handle rejected and resolved callabacks in one unique callback,
+then you can use `handler` chain function:
+
+[source, clojure]
+----
+(def result
+  (-> (p/promise 1)
+      (p/handle (fn [result error]
+                  (if error :rejected :resolved)))))
+
+@result
+;; => :resolved
+----
+
+And finally if you want to attach a (potentially side-efectful) callback to be
+exectuted always independently if promise is rejected or resolved, there is a
+`finally` function (very similar to try/finally):
+
+[source, clojure]
+----
+(def result
+  (-> (p/promise 1)
+      (p/handle (fn []
+                  (println "finally")))))
+
+@result
+;; => 1
+;; => stdout: "finally"
+----
 
 
 === Promise Composition
 
 ==== `let`
 
-The _promesa_ library comes with convenient syntactic-sugar that allows
-you to create a composition that looks like synchronous code while
-using the clojure's familiar `let` syntax:
+The _promesa_ library comes with convenient syntactic-sugar that allows you to
+create a composition that looks like synchronous code while using the clojure's
+familiar `let` syntax:
 
 [source, clojure]
 ----
 (require '[promesa.exec :as exec])
 
+;; A function that emulates asynchronos behavior.
 (defn sleep-promise
   [wait]
   (p/promise (fn [resolve reject]
@@ -262,30 +293,24 @@ using the clojure's familiar `let` syntax:
 ;; => 85
 ----
 
-The `let` macro behaves identically to the `let` with the exception
-that it always return a promise.
+The `let` macro behaves identically to the `let` with the exception that it
+always return a promise. If an error occurs at any step, the entire composition
+will be short-circuited, returning exceptionally resolved promise.
 
-If an error occurs at any step, the entire composition will be
-short-circuited, returning exceptionally resolved promise.
-
-Under the hood, the previous `let` macro evalutes to something like
-this:
+Under the hood, the previous `let` macro evalutes to something like this:
 
 [source, clojure]
 ----
 (p/then (sleep-promise 42)
         (fn [x] (p/then (sleep-promise 41)
                         (fn [y] (p/then 2 (fn [z]
-                                            (p/resolved (do (+ x y z)))))))))
+                                            (p/promise (do (+ x y z)))))))))
 ----
 
 ==== `all`
 
 In some circumstances you will want wait for completion of several promises at
-the same time. To help with that, _promesa_ also provides helpers.
-
-Imagine that you have a collection of promises and you want to wait until all of
-them are resolved. This can be done using the `all` combinator:
+the same time. To help with that, _promesa_ also provides the `all` helper.
 
 [source, clojure]
 ----
@@ -298,10 +323,9 @@ them are resolved. This can be done using the `all` combinator:
 
 ==== `plet`
 
-The `plet` macro combines syntax of `let` with `all`. It enables a simple
-declaration of parallel operations followed by a body expression that
-will be executed when all parallel operations have successfully
-resolved.
+The `plet` macro combines syntax of `let` with `all`; and enables a simple
+declaration of parallel operations followed by a body expression that will be
+executed when all parallel operations have successfully resolved.
 
 [source, clojure]
 ----
@@ -341,9 +365,9 @@ promise. For this case, you can use the `any` combinator:
 
 ==== `race`
 
-The `race` function method returns a promise that fulfills or rejects
-as soon as one of the promises in an iterable fulfills or rejects,
-with the value or reason from that promise:
+The `race` function method returns a promise that fulfills or rejects as soon as
+one of the promises in an iterable fulfills or rejects, with the value or reason
+from that promise:
 
 [source, clojure]
 ----
@@ -355,10 +379,10 @@ with the value or reason from that promise:
 
 === Error handling
 
-One of the advantages of using the promise abstraction is that it natively has a notion
-of errors, so you don't need reinvent it. If some computation inside the composed
-promise chain/pipeline raises an exception, the pipeline short-circuits and propogates
-the exception to the last promise in the chain.
+One of the advantages of using the promise abstraction is that it natively has a
+notion of errors, so you don't need reinvent it. If some computation inside the
+composed promise chain/pipeline raises an exception, the pipeline short-circuits
+and propogates the exception to the last promise in the chain.
 
 Let see an example:
 
@@ -426,8 +450,8 @@ handler.
 === Scheduling Tasks
 
 In addition to the promise abstraction, this library also comes with a
-lightweight abstraction for scheduling task to be executed at some
-time in future:
+lightweight abstraction for scheduling task to be executed at some time in
+future:
 
 .Example using the `schedule` function.
 [source, clojure]
@@ -437,9 +461,8 @@ time in future:
                        (println "hello world")))
 ----
 
-This example shows you how you can schedule a function call to be
-executed 1 second in the future. It works the same way for both
-plaforms (clj and cljs).
+This example shows you how you can schedule a function call to be executed 1
+second in the future. It works the same way for both plaforms (clj and cljs).
 
 The tasks can be cancelled using its return value:
 
@@ -466,20 +489,19 @@ Lets take this example as a context:
 ;; => 3
 ----
 
-This will create a promise that will resolve to `1` in 100ms (in a
-separated thread); then the first `inc` will be executed (in the same
-thread) and then another `inc` is executed (in the same
-thread). In total only one thread is involved.
+This will create a promise that will resolve to `1` in 100ms (in a separated
+thread); then the first `inc` will be executed (in the same thread) and then
+another `inc` is executed (in the same thread). In total only one thread is
+involved.
 
-This default execution model is usually preferrable because it don't abuse
+This default execution model is usually preferrable because it don't abuse the
 task scheduling and leverages function inlining on the JVM.
 
-But it does have drawbacks: this approach will block the thread until
-all of the chained callbacks are executed. For small chains this is not a
-problem. However, if your chain has a lot of functions and requires a
-lot of computation time, this might cause unexpected latency. It may block
-other threads in the thread pool from doing other, maybe more important,
-tasks.
+But it does have drawbacks: this approach will block the thread until all of the
+chained callbacks are executed. For small chains this is not a problem. However,
+if your chain has a lot of functions and requires a lot of computation time,
+this might cause unexpected latency. It may block other threads in the thread
+pool from doing other, maybe more important, tasks.
 
 For such cases, **promesa** exposes an additional arity for provide a
 user-defined executor to control where the chained callbacks are executed:
@@ -494,35 +516,24 @@ user-defined executor to control where the chained callbacks are executed:
 ;; => 3
 ----
 
-This will schedule a separated task for each chained callback, making
-the whole system more responsive because you are no longer executing
-big blocking functions; instead you are executing many small tasks.
+This will schedule a separated task for each chained callback, making the whole
+system more responsive because you are no longer executing big blocking
+functions; instead you are executing many small tasks.
 
 The `exec/default-executor` is a `ForkJoinPool` instance that is highly
 optimized for lots of small tasks.
 
-In some cases you may still want execute all chained functions
-together but all together in different executor. In this case you can
-use the `deferred` constructor to specify the executor.
-
-[source, clojure]
-----
-@(-> (p/delay 100 1)
-     (p/deferred exec/default-executor)
-     (p/chain' inc inc))
-----
 
 === Performance overhead
 
-The **promesa** is a lightweight abstraction built on top of native
-abstractions (`CompletableFuture` in the jvm and `js/Promise` on
-cljs).
+The **promesa** is a lightweight abstraction built on top of native facilities
+(`CompletableFuture` in the jvm and `js/Promise` on cljs).
 
-Internaly we have heavy use of protocols in order to expose a
-polimorphic and user friendly api, but this have a little overhead on
-top of raw usage of `CompletableFuture` or `Promise`. This is the
-latest micro benchmark (2019-09-17) that shows the real overhead of
-this library in contrat to use plain native abstractions:
+Internaly we have heavy use of protocols in order to expose a polimorphic and
+user friendly api, and this have a little overhead on top of raw usage of
+`CompletableFuture` or `Promise`. This is the latest micro benchmark
+(2019-09-17) that shows the real overhead of this library in contrat to use
+plain native abstractions:
 
 [source, clojure]
 ----
