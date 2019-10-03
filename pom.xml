@@ -7,13 +7,14 @@
   <name>promesa</name>
   <description>Promise library for Clojure(Script)</description>
   <url>https://github.com/funcool/promesa</url>
-
   <scm>
     <connection>scm:git:git://github.com/funcool/promesa.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/funcool/promesa.git</developerConnection>
     <url>https://github.com/funcool/promesa</url>
   </scm>
-
+  <build>
+    <sourceDirectory>src</sourceDirectory>
+  </build>
   <dependencies>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -21,7 +22,6 @@
       <version>1.10.1</version>
     </dependency>
   </dependencies>
-
   <repositories>
     <repository>
       <id>clojars</id>
