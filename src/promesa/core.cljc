@@ -436,7 +436,7 @@
      `(-> (exec/submit! (fn []
                           (c/let [f# (fn [] ~@body)]
                             (pt/-promise (f#)))))
-          (pt/-bind identity exec/current-thread-executor))))
+          (pt/-bind identity))))
 
 
 (defonce ^:private INTERNAL_LOOP_FN_NAME
