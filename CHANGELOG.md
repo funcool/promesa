@@ -1,5 +1,12 @@
 # Changelog #
 
+## Version 4.0.2 ##
+
+Date: 2019-10-03
+
+- Invalid 4.0.1 release.
+
+
 ## Version 4.0.1 ##
 
 Date: 2019-10-03

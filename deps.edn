@@ -8,10 +8,12 @@
     org.clojure/clojurescript {:mvn/version "1.10.520"},
     org.clojure/clojure {:mvn/version "1.10.1"},
     org.clojure/tools.deps.alpha {:mvn/version "0.7.541"}
-    criterium/criterium {:mvn/version "0.4.5"}
-    seancorfield/depstar {:mvn/version "0.3.3"}}
+    criterium/criterium {:mvn/version "0.4.5"}}
    :extra-paths ["test"]},
   :ancient
   {:main-opts ["-m" "deps-ancient.deps-ancient"],
-   :extra-deps {deps-ancient/deps-ancient {:mvn/version "RELEASE"}}}}}
+   :extra-deps {deps-ancient/deps-ancient {:mvn/version "RELEASE"}}}
 
+  :jar
+  {:extra-deps {seancorfield/depstar {:mvn/version "0.3.3"}}
+   :main-opts ["-m" "hf.depstar.jar", "target/promesa.jar"]}}}

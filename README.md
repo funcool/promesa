@@ -12,9 +12,9 @@ Latest stable release:
 
 ```clojure
 ;; deps.edn
-funcool/promesa {:mvn/version "4.0.1"}
+funcool/promesa {:mvn/version "4.0.2"}
 
 ;; lein
-[funcool/promesa "4.0.1"]
+[funcool/promesa "4.0.2"]
 ```
 
