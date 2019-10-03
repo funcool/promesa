@@ -25,14 +25,14 @@ Leiningen:
 
 [source,clojure]
 ----
-[funcool/promesa "4.0.0"]
+[funcool/promesa "4.0.1"]
 ----
 
 deps.edn:
 
 [source, clojure]
 ----
-funcool/promesa {:mvn/version "4.0.0"}
+funcool/promesa {:mvn/version "4.0.1"}
 ----
 
 NOTE: This package requires JDK >= 8 if you are using it on the JVM.

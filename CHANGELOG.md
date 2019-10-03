@@ -1,5 +1,13 @@
 # Changelog #
 
+## Version 4.0.1 ##
+
+Date: 2019-10-03
+
+- Minor code simplication
+- cljdoc integration
+
+
 ## Version 4.0.0 ##
 
 Date: 2019-10-01

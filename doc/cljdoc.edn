@@ -1,1 +1,2 @@
-{:cljdoc.doc/tree [["User Guide" {:file "doc/content.adoc"}]]}
+{:cljdoc.doc/tree [["User Guide" {:file "doc/content.adoc"}]
+                   ["Changelog" {:file "CHANGELOG.md"}]]}
