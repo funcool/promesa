@@ -149,9 +149,16 @@
   If the function `f` returns a promise instance, it will be
   automatically unwrapped."
   ([p f]
-   (pt/-bind p (comp wrap f)))
+   (pt/-then p f))
   ([p f executor]
-   (pt/-bind p (comp wrap f) executor)))
+   (pt/-then p f executor)))
+
+(defn bind
+  "A convenient alias for `then`."
+  ([p f]
+   (pt/-then p f))
+  ([p f executor]
+   (pt/-then p f executor)))
 
 (defn then'
   "Chains a computation `f` (function) to be executed when the promise
@@ -163,11 +170,6 @@
   Don't perform flatten on the result."
   ([p f] (pt/-map p f))
   ([p f executor] (pt/-map p f executor)))
-
-(defn bind
-  "Backward compatibility alias to `then`."
-  ([p f] (then p f))
-  ([p f e] (then p f e)))
 
 (defn map
   "Chains a computation `f` (function) to be executed when the promise
@@ -223,15 +225,29 @@
   "Executes `f` when the promise `p` is rejected. Returns a promise
   resolved with the return value of `f` function handler."
   ([p f]
-   (pt/-catch p f))
+   (pt/-thenErr p f))
   ([p pred-or-type f]
    (c/let [accept? (if (ifn? pred-or-type)
                      pred-or-type
                      #(instance? pred-or-type %))]
-     (pt/-catch p (fn [e]
-                    (if (accept? e)
-                      (f e)
-                      (impl/rejected e)))))))
+     (pt/-thenErr p (fn [e]
+                      (if (accept? e)
+                        (f e)
+                        (impl/rejected e)))))))
+
+(defn catch'
+  "Executes `f` when the promise `p` is rejected. Returns a promise
+  resolved with the return value of `f` function handler."
+  ([p f]
+   (pt/-mapErr p f))
+  ([p pred-or-type f]
+   (c/let [accept? (if (ifn? pred-or-type)
+                     pred-or-type
+                     #(instance? pred-or-type %))]
+     (pt/-mapErr p (fn [e]
+                     (if (accept? e)
+                        (f e)
+                        (throw e)))))))
 
 (defn error
   "Same as `catch` but with parameters inverted."
@@ -392,25 +408,25 @@
      resolved to the last expression. Always awaiting the result of each
      expression."
      [& exprs]
-     `(p/bind nil (fn [_#]
-                    ~(condp = (count exprs)
-                       0 `(pt/-promise nil)
-                       1 `(pt/-promise ~(first exprs))
-                       (reduce (fn [acc e]
-                                 `(bind ~e (fn [_#] ~acc)))
-                               `(pt/-promise ~(last exprs))
-                               (reverse (butlast exprs))))))))
+     `(pt/-bind nil (fn [_#]
+                      ~(condp = (count exprs)
+                         0 `(pt/-promise nil)
+                         1 `(pt/-promise ~(first exprs))
+                         (reduce (fn [acc e]
+                                   `(pt/-bind ~e (fn [_#] ~acc)))
+                                 `(pt/-promise ~(last exprs))
+                                 (reverse (butlast exprs))))))))
 
 #?(:clj
    (defmacro let
      "A `let` alternative that always returns promise and waits for
      all the promises on the bindings."
      [bindings & body]
-     `(p/bind nil (fn [_#]
-                    ~(->> (reverse (partition 2 bindings))
-                          (reduce (fn [acc [l r]]
-                                    `(bind ~r (fn [~l] ~acc)))
-                                  `(pt/-promise (do ~@body))))))))
+     `(pt/-bind nil (fn [_#]
+                      ~(->> (reverse (partition 2 bindings))
+                            (reduce (fn [acc [l r]]
+                                      `(pt/-bind ~r (fn [~l] ~acc)))
+                                    `(pt/-promise (do ~@body))))))))
 
 #?(:clj (def #^{:macro true :doc "A backward compatibility alias for `let`."}
           alet #'let))
@@ -421,11 +437,11 @@
      "A parallel let; executes all the bindings in parallel and
      when all bindings are resolved, executes the body."
      [bindings & body]
-     `(p/bind nil (fn [_#]
-                    ~(c/let [bindings (partition 2 bindings)]
-                       `(all ~(mapv second bindings)
-                             (fn [[~@(mapv first bindings)]]
-                               ~@body)))))))
+     `(pt/-bind nil (fn [_#]
+                      ~(c/let [bindings (partition 2 bindings)]
+                         `(all ~(mapv second bindings)
+                               (fn [[~@(mapv first bindings)]]
+                                 ~@body)))))))
 
 #?(:clj
    (defmacro future

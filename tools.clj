@@ -9,7 +9,6 @@
 (require '[cljs.build.api :as api]
          '[cljs.repl :as repl]
          '[cljs.repl.node :as node])
-
 (require '[clojure.tools.deps.alpha.script.generate-manifest :as manifest]
          '[clojure.data.xml :as xml])
 
@@ -85,7 +84,6 @@
                 (Thread/sleep 2000)
                 start-watch)))]
     (trampoline start-watch)))
-
 
 ;;; Build script entrypoint. This should be the last expression.
 

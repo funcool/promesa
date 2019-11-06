@@ -40,6 +40,18 @@
 
 #?(:cljs (def ^:dynamic *default-promise* js/Promise))
 
+(defn resolved
+  [v]
+  #?(:cljs (.resolve *default-promise* v)
+     :clj (CompletableFuture/completedFuture v)))
+
+(defn rejected
+  [v]
+  #?(:cljs (.reject *default-promise* v)
+     :clj (let [p (CompletableFuture.)]
+            (.completeExceptionally ^CompletableFuture p v)
+            p)))
+
 ;; --- Promise Impl
 
 (defn deferred
@@ -72,14 +84,21 @@
        (-bind
          ([it f] (.then it #(f %)))
          ([it f e] (.then it #(f %))))
+       (-then
+         ([it f] (.then it #(f %)))
+         ([it f e] (.then it #(f %))))
+       (-mapErr
+         ([it f] (.catch it #(f %)))
+         ([it f e] (.catch it #(f %))))
+       (-thenErr
+         ([it f] (.catch it #(f %)))
+         ([it f e] (.catch it #(f %))))
        (-handle
          ([it f] (.then it #(f % nil) #(f nil %)))
          ([it f e] (.then it #(f % nil) #(f nil %))))
        (-finally
          ([it f] (.then it #(f % nil) #(f nil %)) it)
-         ([it f executor] (.then it #(f % nil) #(f nil %)) it))
-       (-catch
-         ([it f] (.catch it #(f %)))))))
+         ([it f executor] (.then it #(f % nil) #(f nil %)) it)))))
 
 #?(:cljs
    (extend-promise! js/Promise))
@@ -93,14 +112,20 @@
      (-bind
        ([it f] (pt/-bind (pt/-promise it) f))
        ([it f e] (pt/-bind (pt/-promise it) f e)))
+     (-mapErr
+       ([it f] (pt/-mapErr (pt/-promise it) f))
+       ([it f e] (pt/-mapErr (pt/-promise it) f e)))
+     (-thenErr
+       ([it f] (pt/-thenErr (pt/-promise it) f))
+       ([it f e] (pt/-thenErr (pt/-promise it) f e)))
      (-handle
        ([it f] (pt/-handle (pt/-promise it) f))
        ([it f e] (pt/-handle (pt/-promise it) f e)))
      (-finally
        ([it f] (pt/-finally (pt/-promise it) f))
-       ([it f e] (pt/-finally (pt/-promise it) f e)))
-     (-catch
-       ([it f] (pt/-catch (pt/-promise it) f)))))
+       ([it f e] (pt/-finally (pt/-promise it) f e)))))
+
+#?(:clj (def fw-identity (pu/->FunctionWrapper identity)))
 
 #?(:clj
    (extend-protocol pt/IPromise
@@ -125,15 +150,71 @@
                            ^Function (pu/->FunctionWrapper f)
                            ^Executor (exec/resolve-executor executor))))
 
-     (-handle
+     (-then
        ([it f]
-        (.handle ^CompletionStage it
-                 ^BiFunction (pu/->BiFunctionWrapper f)))
+        (.thenCompose ^CompletionStage it
+                      ^Function (pu/->FunctionWrapper (comp pt/-promise f))))
 
        ([it f executor]
-        (.handleAsync ^CompletionStage it
-                      ^BiFunction (pu/->BiFunctionWrapper f)
-                      ^Executor (exec/resolve-executor executor))))
+        (.thenComposeAsync ^CompletionStage it
+                           ^Function (pu/->FunctionWrapper (comp pt/-promise f))
+                           ^Executor (exec/resolve-executor executor))))
+
+     (-mapErr
+       ([it f]
+        (letfn [(handler [e]
+                  (if (instance? CompletionException e)
+                    (f (.getCause ^Exception e))
+                    (f e)))]
+          (.exceptionally ^CompletionStage it
+                          ^Function (pu/->FunctionWrapper handler))))
+
+       ([it f executor]
+        (letfn [(handler [e]
+                  (if (instance? CompletionException e)
+                    (f (.getCause ^Exception e))
+                    (f e)))]
+          (.exceptionally ^CompletionStage it
+                          ^Function (pu/->FunctionWrapper handler)
+                          ^Executor (exec/resolve-executor executor)))))
+
+     (-thenErr
+       ([it f]
+        (letfn [(handler [v e]
+                  (if e
+                    (if (instance? CompletionException e)
+                      (pt/-promise (f (.getCause ^Exception e)))
+                      (pt/-promise (f e)))
+                    it))]
+          (as-> ^CompletionStage it $$
+            (.handle $$ ^BiFunction (pu/->BiFunctionWrapper handler))
+            (.thenCompose $$ ^Function fw-identity))))
+
+       ([it f executor]
+        (letfn [(handler [v e]
+                  (if e
+                    (if (instance? CompletionException e)
+                      (pt/-promise (f (.getCause ^Exception e)))
+                      (pt/-promise (f e)))
+                    (pt/-promise v)))]
+          (as-> ^CompletionStage it $$
+            (.handleAsync $$
+                          ^BiFunction (pu/->BiFunctionWrapper handler)
+                          ^Executor (exec/resolve-executor executor))
+            (.thenCompose $$ ^Function fw-identity)))))
+
+     (-handle
+       ([it f]
+        (as-> ^CompletionStage it $$
+          (.handle $$ ^BiFunction (pu/->BiFunctionWrapper (comp pt/-promise f)))
+          (.thenCompose $$ ^Function fw-identity)))
+
+       ([it f executor]
+        (as-> ^CompletionStage it $$
+          (.handleAsync $$
+                        ^BiFunction (pu/->BiFunctionWrapper (comp pt/-promise f))
+                        ^Executor (exec/resolve-executor executor))
+          (.thenCompose $$ ^Function fw-identity))))
 
      (-finally
        ([it f]
@@ -145,13 +226,8 @@
                             ^BiConsumer (pu/->BiConsumerWrapper f)
                             ^Executor (exec/resolve-executor executor))))
 
-     (-catch [it f]
-       (letfn [(handler [e]
-                 (if (instance? CompletionException e)
-                   (f (.getCause ^Exception e))
-                   (f e)))]
-         (.exceptionally ^CompletionStage it
-                         ^Function (pu/->FunctionWrapper handler))))
+
+
 
      Object
      (-map
@@ -163,11 +239,15 @@
      (-handle
        ([it f] (pt/-handle (pt/-promise it) f))
        ([it f e] (pt/-handle (pt/-promise it) f e)))
+     (-mapErr
+       ([it f] (pt/-mapErr (pt/-promise it) f))
+       ([it f e] (pt/-mapErr (pt/-promise it) f e)))
+     (-thenErr
+       ([it f] (pt/-thenErr (pt/-promise it) f))
+       ([it f e] (pt/-thenErr (pt/-promise it) f e)))
      (-finally
        ([it f] (pt/-finally (pt/-promise it) f))
        ([it f e] (pt/-finally (pt/-promise it) f e)))
-     (-catch
-       ([it f] (pt/-catch (pt/-promise it) f)))
 
      nil
      (-map
@@ -176,14 +256,18 @@
      (-bind
        ([it f] (pt/-bind (pt/-promise it) f))
        ([it f e] (pt/-bind (pt/-promise it) f e)))
+     (-mapErr
+       ([it f] (pt/-mapErr (pt/-promise it) f))
+       ([it f e] (pt/-mapErr (pt/-promise it) f e)))
+     (-thenErr
+       ([it f] (pt/-thenErr (pt/-promise it) f))
+       ([it f e] (pt/-thenErr (pt/-promise it) f e)))
      (-handle
        ([it f] (pt/-handle (pt/-promise it) f))
        ([it f e] (pt/-handle (pt/-promise it) f e)))
      (-finally
        ([it f] (pt/-finally (pt/-promise it) f))
-       ([it f e] (pt/-finally (pt/-promise it) f e)))
-     (-catch
-       ([it f] (pt/-catch (pt/-promise it) f)))))
+       ([it f e] (pt/-finally (pt/-promise it) f e)))))
 
 #?(:clj
    (extend-type CompletableFuture
@@ -220,18 +304,6 @@
             (not (.isDone it))))))
 
 ;; --- Promise Factory Impl
-
-(defn resolved
-  [v]
-  #?(:cljs (.resolve *default-promise* v)
-     :clj (CompletableFuture/completedFuture v)))
-
-(defn rejected
-  [v]
-  #?(:cljs (.reject *default-promise* v)
-     :clj (let [p (CompletableFuture.)]
-            (.completeExceptionally p v)
-            p)))
 
 #?(:clj
    (extend-protocol pt/IPromiseFactory

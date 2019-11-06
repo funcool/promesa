@@ -117,12 +117,11 @@
 
 (t/deftest compose-with-race
   (let [p1 (-> (p/race [(promise-ok 100 :ok)
-                        (promise-ko 110 :fail)])
+                        (promise-ko 120 :fail)])
                (normalize-to-value))
         p2 (-> (p/race [(promise-ok 200 :ok)
                         (promise-ko 190 :fail)])
                (normalize-to-value))]
-
     #?(:clj
        (do
          (t/is (= :ok @p1))

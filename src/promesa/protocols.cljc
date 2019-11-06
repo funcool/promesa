@@ -26,19 +26,23 @@
   "A generic promise abstraction and related protocols.")
 
 (defprotocol IPromise
-  "A basic promise abstraction."
+  "A promise abstraction."
   (-map [_ f] [_ f executor]
-    "Chain a computation to be executed in a microtask.")
+    "Apply function to a computation")
   (-bind [_ f] [_ f executor]
-    "Chain a computation to be executed in a microtask.")
+    "Apply function to a computation and flatten.")
+  (-then [_ f] [_ f executor]
+    "Apply function to a computation and flatten if promise found.")
+  (-mapErr [_ f] [_ f executor]
+    "Apply function to a failed computation.")
+  (-thenErr [_ f] [_ f executor]
+    "Apply function to a failed computation. and flatten if promise found.")
   (-handle [_ f] [_ f executor]
-    "Chain a computation when promise completes either normally or
-    exceptionally.")
-  (-catch [_ f]
-    "Catch a error in a promise.")
+    "Apply function to a computation identpendently if is failed or
+    successful and flatten if promise found.")
   (-finally [_ f] [_ f executor]
-    "Runs side-effectful code after completion or rejection, returns
-    the original promise."))
+    "Apply function to a computation identpendently if is failed or
+    successful; the return value is ignored."))
 
 (defprotocol IState
   "Additional state/introspection abstraction."
