@@ -197,12 +197,12 @@
      (-run! [this f]
        (-> (pt/-promise nil)
            (pt/-map (fn [_] (f) nil))
-           (pt/-catch (fn [e] (js/setTimeout #(throw e)) nil))))
+           (pt/-mapErr (fn [e] (js/setTimeout #(throw e)) nil))))
 
      (-submit! [this f]
        (-> (pt/-promise nil)
            (pt/-map (fn [_] (f)))
-           (pt/-catch (fn [e] (js/setTimeout #(throw e)) nil))))))
+           (pt/-mapErr (fn [e] (js/setTimeout #(throw e)) nil))))))
 
 ;; Executor that executes the task in the calling thread
 #?(:clj
