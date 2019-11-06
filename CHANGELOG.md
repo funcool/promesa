@@ -1,5 +1,18 @@
 # Changelog #
 
+## Version 5.0.0-SNAPSHOT
+
+Date: --
+
+Relevant changes:
+
+- Internal protocol improvements.
+- Enable automatic flatten on `catch` and `handle` (enabling the same
+  semantic than `then` function).
+- Add `catch'` variant for cases when you sure that funcion always
+  return a plain value (and not promise).
+
+
 ## Version 4.0.2 ##
 
 Date: 2019-10-03

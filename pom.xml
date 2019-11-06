@@ -3,13 +3,14 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>funcool</groupId>
   <artifactId>promesa</artifactId>
-  <version>4.0.2</version>
+  <version>5.0.0-SNAPSHOT</version>
   <name>promesa</name>
   <description>Promise library for Clojure(Script)</description>
   <url>https://github.com/funcool/promesa</url>
   <scm>
     <connection>scm:git:git://github.com/funcool/promesa.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/funcool/promesa.git</developerConnection>
+    <tag>master</tag>
     <url>https://github.com/funcool/promesa</url>
   </scm>
   <build>
