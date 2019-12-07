@@ -27,16 +27,18 @@
 
 (defprotocol IPromise
   "A promise abstraction."
-  (-map [_ f] [_ f executor]
-    "Apply function to a computation")
   (-bind [_ f] [_ f executor]
     "Apply function to a computation and flatten.")
+
+  (-map [_ f] [_ f executor]
+    "Apply function to a computation")
   (-then [_ f] [_ f executor]
     "Apply function to a computation and flatten if promise found.")
   (-mapErr [_ f] [_ f executor]
     "Apply function to a failed computation.")
   (-thenErr [_ f] [_ f executor]
     "Apply function to a failed computation. and flatten if promise found.")
+
   (-handle [_ f] [_ f executor]
     "Apply function to a computation identpendently if is failed or
     successful and flatten if promise found.")

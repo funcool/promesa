@@ -27,14 +27,15 @@
   (:require [promesa.protocols :as pt]
             [promesa.util :as pu]
             [promesa.exec :as exec])
-  #?(:clj (:import java.util.concurrent.CompletableFuture
-                   java.util.concurrent.CompletionStage
-                   java.util.concurrent.TimeoutException
-                   java.util.concurrent.ExecutionException
-                   java.util.concurrent.CompletionException
-                   java.util.concurrent.Executor
-                   java.util.function.Function
-                   java.util.function.Supplier)))
+  #?(:clj (:import
+           java.util.concurrent.CompletableFuture
+           java.util.concurrent.CompletionStage
+           java.util.concurrent.TimeoutException
+           java.util.concurrent.ExecutionException
+           java.util.concurrent.CompletionException
+           java.util.concurrent.Executor
+           java.util.function.Function
+           java.util.function.Supplier)))
 
 ;; --- Global Constants
 

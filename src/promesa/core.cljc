@@ -26,16 +26,17 @@
   (:refer-clojure :exclude [delay spread promise
                             await map mapcat run!
                             future let loop recur])
-  (:require [promesa.protocols :as pt]
-            [clojure.core :as c]
-            [promesa.exec :as exec]
-            [promesa.impl :as impl])
-            ;; [promesa.impl.scheduler :as ps])
+  (:require
+   [promesa.protocols :as pt]
+   [clojure.core :as c]
+   [promesa.exec :as exec]
+   [promesa.impl :as impl])
   #?(:cljs (:require-macros [promesa.core]))
   #?(:clj
-     (:import java.util.concurrent.CompletableFuture
-              java.util.concurrent.CompletionStage
-              java.util.concurrent.TimeoutException)))
+     (:import
+      java.util.concurrent.CompletableFuture
+      java.util.concurrent.CompletionStage
+      java.util.concurrent.TimeoutException)))
 
 ;; --- Promise
 
@@ -426,7 +427,7 @@
                       ~(->> (reverse (partition 2 bindings))
                             (reduce (fn [acc [l r]]
                                       `(pt/-bind ~r (fn [~l] ~acc)))
-                                    `(pt/-promise (do ~@body))))))))
+                                    `(do! ~@body)))))))
 
 #?(:clj (def #^{:macro true :doc "A backward compatibility alias for `let`."}
           alet #'let))
@@ -439,9 +440,9 @@
      [bindings & body]
      `(pt/-bind nil (fn [_#]
                       ~(c/let [bindings (partition 2 bindings)]
-                         `(all ~(mapv second bindings)
-                               (fn [[~@(mapv first bindings)]]
-                                 ~@body)))))))
+                         `(-> (all ~(mapv second bindings))
+                              (then (fn [[~@(mapv first bindings)]]
+                                      (do! ~@body)))))))))
 
 #?(:clj
    (defmacro future
@@ -474,4 +475,3 @@
 (defmacro recur
   [& args]
   `(~INTERNAL_LOOP_FN_NAME ~@args))
-

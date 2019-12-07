@@ -11,6 +11,9 @@ Relevant changes:
   semantic than `then` function).
 - Add `catch'` variant for cases when you sure that funcion always
   return a plain value (and not promise).
+- Bug fix on `promesa.core/plet`.
+- Wrap the body of `promesa.core/let` with `promesa.core/do!` macro.
+- Wrap the body of `promesa.core/plet` with `promesa.core/do!` macro.
 
 
 ## Version 4.0.2 ##
