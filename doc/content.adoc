@@ -57,7 +57,7 @@ The promise can be considered *done* when it is resolved or rejected.
 === Creating a promise
 
 There are several different ways to create a promise instance. If you just want
-to create a promise with a plain value, you can use the polimorhphic `promise`
+to create a promise with a plain value, you can use the polymorphic `promise`
 function:
 
 [source, clojure]
@@ -72,16 +72,16 @@ function:
 ----
 
 It automatically coerces the provided value to the appropriate promise instance:
-rejected when the provided value is an excepcion and a resolved value in all
-other cases.
+`rejected` when the provided value is an exception and `resolved` in all other
+cases.
 
-If you already know that value is eigher resolved or rejected, you can skip the
-coercion and use the `resolved` and `rejected` functions:
+If you already know that the value is either `resolved` or `rejected`, you can
+skip the coercion and use the `resolved` and `rejected` functions:
 
 [source, clojure]
 ----
 ;; Create a resolved promise
-(p/resoved 1)
+(p/resolved 1)
 ;; => #object[java.util.concurrent.CompletableFuture 0x3e133219 "resolved"]
 
 ;; Create a rejected promise
@@ -104,7 +104,7 @@ and provide the value asynchronously using `p/resolve!` and `p/reject!`:
 Another option is using a factory function. If you are familiar with JavaScript,
 this is a similar approach.
 
-.Example creating a promise instance using a factory.
+Example creating a promise instance using a factory.
 [source, clojure]
 ----
 @(p/create (fn [resolve reject] (resolve 1)))
@@ -132,9 +132,9 @@ Another way to create a promise is using the `do!` macro:
     (+ a b)))
 ----
 
-The `do!` macro work similarly to clojure's `do` block, so you can provide any
+The `do!` macro works similarly to clojure's `do` block, so you can provide any
 expression, but only the last one will be returned. That expression can be a
-plain value or an other promise.
+plain value or another promise.
 
 If an exception is raised inside the `do!` block, it will return the rejected
 promise instead of re-raising the exception on the stack.
@@ -161,7 +161,7 @@ Is roughtly equivalent to:
   (expr3))
 ----
 
-Finally, **promesa** exposes a `future` macro very similar to the
+Finally, _promesa_ exposes a `future` macro very similar to the
 `clojure.core/future`:
 
 [source, clojure]
@@ -198,14 +198,15 @@ purpose `then` function:
 ;; => 2
 ----
 
-As you can observe on the example, it handles either functions that return plain values and
-functions that return promise instances (which will be automaticalle flattened).
+As you can observe in the example, it handles functions that return plain values as
+well as functions that return promise instances (which will automatically be
+flattened).
 
-NOTE: If you know that the chained function will return always plain values, you
+NOTE: If you know that the chained function will always return plain values, you
 can use the `then'` more performant variant of this function.
 
 
-In the same line as `then'` function, there is a `map`. It works identically to
+In the same line as the `then'` function, there is a `map`. It works identically to
 it, the unique difference is the order of arguments:
 
 [source, clojure]
@@ -231,11 +232,11 @@ there are the `chain` and `chain'` functions:
 ;; => 4
 ----
 
-NOTE: they are analogous to the `then` and `then'` but that accepts multiple
+NOTE: these are analogous to `then` and `then'` but accept multiple
 transformation functions.
 
 If you want to handle rejected and resolved callabacks in one unique callback,
-then you can use `handler` chain function:
+then you can use the `handler` chain function:
 
 [source, clojure]
 ----
@@ -248,8 +249,8 @@ then you can use `handler` chain function:
 ;; => :resolved
 ----
 
-And finally if you want to attach a (potentially side-efectful) callback to be
-exectuted always independently if promise is rejected or resolved, there is a
+And finally if you want to attach a (potentially side-effectful) callback to be
+always executed notwithstanding if the promise is rejected or resolved, there is a
 `finally` function (very similar to try/finally):
 
 [source, clojure]
@@ -503,7 +504,7 @@ if your chain has a lot of functions and requires a lot of computation time,
 this might cause unexpected latency. It may block other threads in the thread
 pool from doing other, maybe more important, tasks.
 
-For such cases, **promesa** exposes an additional arity for provide a
+For such cases, _promesa_ exposes an additional arity for provide a
 user-defined executor to control where the chained callbacks are executed:
 
 [source, clojure]
