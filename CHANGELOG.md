@@ -1,8 +1,8 @@
 # Changelog #
 
-## Version 5.0.0-SNAPSHOT
+## Version 5.0.0
 
-Date: --
+Date: 2020-01-10
 
 Relevant changes:
 
