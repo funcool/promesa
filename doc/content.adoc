@@ -25,7 +25,7 @@ Leiningen:
 
 [source,clojure]
 ----
-[funcool/promesa "5.0.0-SNAPSHOT"]
+[funcool/promesa "5.0.0"]
 ----
 
 deps.edn:
