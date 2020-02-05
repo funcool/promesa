@@ -1,5 +1,19 @@
 # Changelog #
 
+## Version 5.1.0
+
+Date: 2020-02-05
+
+Relevant changes:
+
+- Reimplement `loop/recur` (make its scheduling extensible and by
+  default it uses the common thread pool for scheduling body execution
+  for prevet stack overflow).
+- Add `promesa.core/*loop-run-fn*` dynamic var for cases when you need
+  customize where the loop/recur body exection is scheduled.
+- Fix many reflection warnings.
+
+
 ## Version 5.0.0
 
 Date: 2020-01-10
