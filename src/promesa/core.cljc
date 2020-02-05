@@ -38,8 +38,6 @@
       java.util.concurrent.CompletionStage
       java.util.concurrent.TimeoutException)))
 
-(def ^:dynamic *run-fn* exec/run!)
-
 ;; --- Promise
 
 (defn resolved
@@ -457,30 +455,37 @@
                             (pt/-promise (f#)))))
           (pt/-bind identity))))
 
+(def ^:dynamic *loop-run-fn* exec/run!)
+
 (defmacro loop
   [bindings & body]
   (c/let [bindings (partition 2 2 bindings)
           names (mapv first bindings)
           fvals (mapv second bindings)
           tsym (gensym "loop")
-          dsym (gensym "deferred")]
-    `(c/let [~dsym (promesa.core/deferred)
+          dsym (gensym "deferred")
+          rsym (gensym "run")]
+    `(c/let [~rsym *loop-run-fn*
+             ~dsym (promesa.core/deferred)
              ~tsym (fn ~tsym [params#]
                      (-> (promesa.core/all params#)
                          (promesa.core/then (fn [[~@names]]
+                                              ;; (prn "exec" ~@names)
                                               (do! ~@body)))
                          (promesa.core/handle
                           (fn [res# err#]
+                            ;; (prn "result" res# err#)
                             (cond
                               (not (nil? err#))
                               (promesa.core/reject! ~dsym err#)
 
                               (and (map? res#) (= (:type res#) :promesa.core/recur))
-                              (*run-fn* (fn [] (~tsym (:args res#))))
+                              (do (~rsym (fn [] (~tsym (:args res#))))
+                                  nil)
 
                               :else
                               (promesa.core/resolve! ~dsym res#))))))]
-       (*run-fn* (fn [] (~tsym ~fvals)))
+       (~rsym (fn [] (~tsym ~fvals)))
        ~dsym)))
 
 (defmacro recur
