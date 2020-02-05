@@ -38,6 +38,8 @@
       java.util.concurrent.CompletionStage
       java.util.concurrent.TimeoutException)))
 
+(def ^:dynamic *run-fn* exec/run!)
+
 ;; --- Promise
 
 (defn resolved
@@ -455,23 +457,32 @@
                             (pt/-promise (f#)))))
           (pt/-bind identity))))
 
-
-(defonce ^:private INTERNAL_LOOP_FN_NAME
-  (gensym 'internal-loop-fn-name))
-
 (defmacro loop
-  "Analogous to `clojure.core/loop`."
   [bindings & body]
   (c/let [bindings (partition 2 2 bindings)
           names (mapv first bindings)
           fvals (mapv second bindings)
-          syms (mapv gensym names)]
-    `(do!
-      (letfn [(~INTERNAL_LOOP_FN_NAME [~@syms]
-               (-> (p/all [~@syms])
-                   (p/then (fn [[~@names]] (do! ~@body)))))]
-        (~INTERNAL_LOOP_FN_NAME ~@fvals)))))
+          tsym (gensym "loop")
+          dsym (gensym "deferred")]
+    `(c/let [~dsym (promesa.core/deferred)
+             ~tsym (fn ~tsym [params#]
+                     (-> (promesa.core/all params#)
+                         (promesa.core/then (fn [[~@names]]
+                                              (do! ~@body)))
+                         (promesa.core/handle
+                          (fn [res# err#]
+                            (cond
+                              (not (nil? err#))
+                              (promesa.core/reject! ~dsym err#)
+
+                              (and (map? res#) (= (:type res#) :promesa.core/recur))
+                              (*run-fn* (fn [] (~tsym (:args res#))))
+
+                              :else
+                              (promesa.core/resolve! ~dsym res#))))))]
+       (*run-fn* (fn [] (~tsym ~fvals)))
+       ~dsym)))
 
 (defmacro recur
   [& args]
-  `(~INTERNAL_LOOP_FN_NAME ~@args))
+  `(array-map :type :promesa.core/recur :args [~@args]))
