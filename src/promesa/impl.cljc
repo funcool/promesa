@@ -175,9 +175,9 @@
                   (if (instance? CompletionException e)
                     (f (.getCause ^Exception e))
                     (f e)))]
-          (.exceptionally ^CompletionStage it
-                          ^Function (pu/->FunctionWrapper handler)
-                          ^Executor (exec/resolve-executor executor)))))
+          (.exceptionallyAsync ^CompletionStage it
+                               ^Function (pu/->FunctionWrapper handler)
+                               ^Executor (exec/resolve-executor executor)))))
 
      (-thenErr
        ([it f]

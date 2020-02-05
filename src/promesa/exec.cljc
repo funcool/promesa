@@ -30,17 +30,18 @@
             #?(:cljs [goog.object :as gobj]))
   #?(:clj
      (:import
-      java.util.function.Supplier
+      java.util.concurrent.Callable
+      java.util.concurrent.CompletableFuture
+      java.util.concurrent.Executor
+      java.util.concurrent.ExecutorService
+      java.util.concurrent.Executors
       java.util.concurrent.ForkJoinPool
       java.util.concurrent.Future
-      java.util.concurrent.CompletableFuture
-      java.util.concurrent.ExecutorService
-      java.util.concurrent.Executor
-      java.util.concurrent.TimeoutException
+      java.util.concurrent.ScheduledExecutorService
       java.util.concurrent.ThreadFactory
       java.util.concurrent.TimeUnit
-      java.util.concurrent.ScheduledExecutorService
-      java.util.concurrent.Executors)))
+      java.util.concurrent.TimeoutException
+      java.util.function.Supplier)))
 
 ;; --- Globals & Defaults (with CLJS Impl)
 
@@ -273,7 +274,7 @@
    (extend-type ScheduledExecutorService
      pt/IScheduler
      (-schedule! [this ms f]
-       (let [fut (.schedule this f ms TimeUnit/MILLISECONDS)]
+       (let [fut (.schedule this ^Callable f ^long ms TimeUnit/MILLISECONDS)]
          (ScheduledTask. fut)))))
 
 #?(:cljs
