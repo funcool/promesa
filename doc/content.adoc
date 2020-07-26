@@ -257,7 +257,7 @@ always executed notwithstanding if the promise is rejected or resolved, there is
 ----
 (def result
   (-> (p/promise 1)
-      (p/handle (fn []
+      (p/finally (fn []
                   (println "finally")))))
 
 @result
