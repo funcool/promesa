@@ -1,6 +1,7 @@
-# promesa [![cljdoc badge](https://cljdoc.org/badge/funcool/promesa)](https://cljdoc.org/d/funcool/promesa/CURRENT) #
+# promesa #
 
-A promise library for Clojure & ClojureScript.
+A promise/future library for Clojure & ClojureScript.
 
-**Documentation**: https://cljdoc.org/d/funcool/promesa/CURRENT
+See the [documentation](https://funcool.github.io/promesa/latest/) for
+more detailed information.
 
