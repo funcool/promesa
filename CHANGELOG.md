@@ -1,5 +1,15 @@
 # Changelog #
 
+## Version 5.1.1
+
+Date: 2020-10-01
+
+- Add missing `-then` impl for `default` object (fixes issues of
+  `promesa.core/then` chain function with promises that does not
+  inherito from `js/Promise`).
+
+
+
 ## Version 5.1.0
 
 Date: 2020-02-05

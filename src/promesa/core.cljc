@@ -392,10 +392,9 @@
      (race [p timeout]))))
 
 (defn delay
-  "Given a timeout in miliseconds and optional
-  value, returns a promise that will fulfilled
-  with provided value (or nil) after the
-  time is reached."
+  "Given a timeout in miliseconds and optional value, returns a promise
+  that will fulfilled with provided value (or nil) after the time is
+  reached."
   ([t] (delay t nil exec/default-scheduler))
   ([t v] (delay t v exec/default-scheduler))
   ([t v scheduler]

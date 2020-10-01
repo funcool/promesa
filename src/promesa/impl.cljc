@@ -104,6 +104,11 @@
 #?(:cljs
    (extend-promise! js/Promise))
 
+;; This code allows execute `then`, `map` and all the other promise
+;; chaining functions on any object if the object is a thenable but
+;; does not inherit from js/Promise, this code will automatically
+;; coerce it to a js/Promise instance.
+
 #?(:cljs
    (extend-type default
      pt/IPromise
@@ -113,6 +118,9 @@
      (-bind
        ([it f] (pt/-bind (pt/-promise it) f))
        ([it f e] (pt/-bind (pt/-promise it) f e)))
+     (-then
+       ([it f] (pt/-then (pt/-promise it) f))
+       ([it f e] (pt/-then (pt/-promise it) f e)))
      (-mapErr
        ([it f] (pt/-mapErr (pt/-promise it) f))
        ([it f e] (pt/-mapErr (pt/-promise it) f e)))
@@ -175,6 +183,8 @@
                   (if (instance? CompletionException e)
                     (f (.getCause ^Exception e))
                     (f e)))]
+          ;; ONLY on JDK >= 12 it is there but in jdk<12 will throw an
+          ;; error
           (.exceptionallyAsync ^CompletionStage it
                                ^Function (pu/->FunctionWrapper handler)
                                ^Executor (exec/resolve-executor executor)))))
@@ -226,8 +236,6 @@
         (.whenCompleteAsync ^CompletionStage it
                             ^BiConsumer (pu/->BiConsumerWrapper f)
                             ^Executor (exec/resolve-executor executor))))
-
-
 
 
      Object
@@ -304,7 +312,13 @@
             (not (.isCancelled it))
             (not (.isDone it))))))
 
-;; --- Promise Factory Impl
+;; --- Promise Factory
+
+;; This code is responsible of coercing the incoming value to a valid
+;; promise type. In some cases we will receive a valid promise object,
+;; in this case we return it as is. This is useful when you want to
+;; `then` or `map` over a plain value that can be o can not be a
+;; promise object
 
 #?(:clj
    (extend-protocol pt/IPromiseFactory

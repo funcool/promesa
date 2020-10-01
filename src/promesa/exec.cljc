@@ -1,4 +1,4 @@
-;; Copyright (c) 2019 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) 2019-2020 Andrey Antukh <niwi@niwi.nz>
 ;; All rights reserved.
 ;;
 ;; Redistribution and use in source and binary forms, with or without
