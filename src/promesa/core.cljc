@@ -402,57 +402,49 @@
      (exec/schedule! scheduler t #(resolve! d v))
      d)))
 
-#?(:clj
-   (defmacro do!
-     "Execute potentially side effectful code and return a promise
-     resolved to the last expression. Always awaiting the result of each
-     expression."
-     [& exprs]
-     `(pt/-bind nil (fn [_#]
-                      ~(condp = (count exprs)
-                         0 `(pt/-promise nil)
-                         1 `(pt/-promise ~(first exprs))
-                         (reduce (fn [acc e]
-                                   `(pt/-bind ~e (fn [_#] ~acc)))
-                                 `(pt/-promise ~(last exprs))
-                                 (reverse (butlast exprs))))))))
+(defmacro do!
+  "Execute potentially side effectful code and return a promise resolved
+  to the last expression. Always awaiting the result of each
+  expression."
+  [& exprs]
+  `(pt/-bind nil (fn [_#]
+                   ~(condp = (count exprs)
+                      0 `(pt/-promise nil)
+                      1 `(pt/-promise ~(first exprs))
+                      (reduce (fn [acc e]
+                                `(pt/-bind ~e (fn [_#] ~acc)))
+                              `(pt/-promise ~(last exprs))
+                              (reverse (butlast exprs)))))))
 
-#?(:clj
-   (defmacro let
-     "A `let` alternative that always returns promise and waits for
-     all the promises on the bindings."
-     [bindings & body]
-     `(pt/-bind nil (fn [_#]
-                      ~(->> (reverse (partition 2 bindings))
-                            (reduce (fn [acc [l r]]
-                                      `(pt/-bind ~r (fn [~l] ~acc)))
-                                    `(do! ~@body)))))))
+(defmacro let
+  "A `let` alternative that always returns promise and waits for all the
+  promises on the bindings."
+  [bindings & body]
+  `(pt/-bind nil (fn [_#]
+                   ~(->> (reverse (partition 2 bindings))
+                         (reduce (fn [acc [l r]]
+                                   `(pt/-bind ~r (fn [~l] ~acc)))
+                                 `(do! ~@body))))))
 
-#?(:clj (def #^{:macro true :doc "A backward compatibility alias for `let`."}
-          alet #'let))
+(defmacro plet
+  "A parallel let; executes all the bindings in parallel and when all
+  bindings are resolved, executes the body."
+  [bindings & body]
+  `(pt/-bind nil (fn [_#]
+                   ~(c/let [bindings (partition 2 bindings)]
+                      `(-> (all ~(mapv second bindings))
+                           (then (fn [[~@(mapv first bindings)]]
+                                   (do! ~@body))))))))
 
-
-#?(:clj
-   (defmacro plet
-     "A parallel let; executes all the bindings in parallel and
-     when all bindings are resolved, executes the body."
-     [bindings & body]
-     `(pt/-bind nil (fn [_#]
-                      ~(c/let [bindings (partition 2 bindings)]
-                         `(-> (all ~(mapv second bindings))
-                              (then (fn [[~@(mapv first bindings)]]
-                                      (do! ~@body)))))))))
-
-#?(:clj
-   (defmacro future
-     "Analogous to `clojure.core/future` that returns a promise instance
-     instead of the `Future`. Usefull for execute synchronous code in a
-     separate thread (also works in cljs)."
-     [& body]
-     `(-> (exec/submit! (fn []
-                          (c/let [f# (fn [] ~@body)]
-                            (pt/-promise (f#)))))
-          (pt/-bind identity))))
+(defmacro future
+  "Analogous to `clojure.core/future` that returns a promise instance
+  instead of the `Future`. Usefull for execute synchronous code in a
+  separate thread (also works in cljs)."
+  [& body]
+  `(-> (exec/submit! (fn []
+                       (c/let [f# (fn [] ~@body)]
+                         (pt/-promise (f#)))))
+       (pt/-bind identity)))
 
 (def ^:dynamic *loop-run-fn* exec/run!)
 

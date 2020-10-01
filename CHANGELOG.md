@@ -1,12 +1,20 @@
 # Changelog #
 
-## Version 5.1.1
+
+## Version 6.0.0
 
 Date: 2020-10-01
+
+Relevant changes:
 
 - Add missing `-then` impl for `default` object (fixes issues of
   `promesa.core/then` chain function with promises that does not
   inherito from `js/Promise`).
+
+- Remove already deprecated for a while the `alet` alias to `let`
+  macro (the migration should be a simple find-and-replace).
+
+
 
 
 
