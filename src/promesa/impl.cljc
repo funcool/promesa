@@ -22,7 +22,7 @@
 ;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ;; THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-(ns promesa.impl
+(ns ^:no-doc promesa.impl
   "Implementation of promise protocols."
   (:require [promesa.protocols :as pt]
             [promesa.util :as pu]

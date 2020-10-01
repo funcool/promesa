@@ -30,12 +30,15 @@
             #?(:cljs [goog.object :as gobj]))
   #?(:clj
      (:import
+      java.util.concurrent.atomic.AtomicLong
       java.util.concurrent.Callable
       java.util.concurrent.CompletableFuture
       java.util.concurrent.Executor
       java.util.concurrent.ExecutorService
       java.util.concurrent.Executors
       java.util.concurrent.ForkJoinPool
+      java.util.concurrent.ForkJoinPool
+      java.util.concurrent.ForkJoinPool$ForkJoinWorkerThreadFactory
       java.util.concurrent.Future
       java.util.concurrent.ScheduledExecutorService
       java.util.concurrent.ThreadFactory
@@ -70,6 +73,10 @@
 (defn resolve-scheduler
   ([] (if (delay? default-scheduler) @default-scheduler default-scheduler))
   ([scheduler] (if (delay? scheduler) @scheduler scheduler)))
+
+#?(:clj
+   (defonce processors
+     (delay (.availableProcessors (Runtime/getRuntime)))))
 
 ;; --- Public Api
 
@@ -146,6 +153,19 @@
      ([] (Executors/newWorkStealingPool))
      ([n] (Executors/newWorkStealingPool (int n)))))
 
+#?(:clj
+   (defn forkjoin-pool
+     [{:keys [factory async? parallelism]
+       :or {async? true}
+       :as opts}]
+     (let [parallelism (or parallelism @processors)
+           factory (cond
+                     (instance? ForkJoinPool$ForkJoinWorkerThreadFactory factory) factory
+                     (nil? factory) ForkJoinPool/defaultForkJoinWorkerThreadFactory
+                     :else (throw (ex-info "Unexpected thread factory" {:factory factory})))]
+       (ForkJoinPool. (or parallelism @processors) factory nil async?))))
+
+
 ;; --- Impl
 
 #?(:clj
@@ -156,6 +176,25 @@
      (reify ThreadFactory
        (^Thread newThread [_ ^Runnable runnable]
         (func runnable)))))
+
+#?(:clj
+   (defn counted-thread-factory
+     [name daemon]
+     (let [along (AtomicLong. 0)]
+       (reify ThreadFactory
+         (newThread [this runnable]
+           (doto (Thread. ^Runnable runnable)
+             (.setDaemon ^Boolean daemon)
+             (.setName (format name (.getAndIncrement along)))))))))
+
+#?(:clj
+   (defn forkjoin-named-thread-factory
+     [name]
+     (reify ForkJoinPool$ForkJoinWorkerThreadFactory
+       (newThread [this pool]
+         (let [wth (.newThread ForkJoinPool/defaultForkJoinWorkerThreadFactory pool)]
+           (.setName wth (str name ":" (.getPoolIndex wth)))
+           wth)))))
 
 #?(:clj
    (defn- thread-factory

@@ -22,7 +22,7 @@
 ;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ;; THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-(ns promesa.util
+(ns ^:no-doc promesa.util
   #?(:clj
      (:import
       java.util.function.Function
