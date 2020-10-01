@@ -366,11 +366,11 @@
        :clj
        (t/is (= @p ::value)))))
 
-;; --- alet (async let) tests
+;; --- let (async let) tests
 
 #?(:clj
    (t/deftest async-let
-     (let [result (p/alet [a (promise-ok 50 1)
+     (let [result (p/let [a (promise-ok 50 1)
                            b 2
                            c 3
                            d (promise-ok 100 4)]
@@ -380,7 +380,7 @@
 #?(:cljs
    (t/deftest async-let
      (t/async done
-       (let [result (p/alet [a (promise-ok 50 1)
+       (let [result (p/let [a (promise-ok 50 1)
                              b 2
                              c 3
                              d (promise-ok 100 4)

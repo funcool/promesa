@@ -45,10 +45,8 @@
    :output-to "out/tests.js"
    :output-dir "out/tests"
    :source-map "out/tests.js.map"
-   :language-in  :ecmascript5
-   :language-out :ecmascript5
    :target :nodejs
-   :optimizations :advanced
+   :optimizations :simple
    :pretty-print true
    :pseudo-names true
    :verbose true})
