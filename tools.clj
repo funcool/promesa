@@ -9,8 +9,6 @@
 (require '[cljs.build.api :as api]
          '[cljs.repl :as repl]
          '[cljs.repl.node :as node])
-(require '[clojure.tools.deps.alpha.script.generate-manifest :as manifest]
-         '[clojure.data.xml :as xml])
 
 (defmulti task first)
 
@@ -20,13 +18,6 @@
         interposed (->> all-tasks (interpose ", ") (apply str))]
     (println "Unknown or missing task. Choose one of:" interposed)
     (System/exit 1)))
-
-(defmethod task "update:pom"
-  [args]
-  (alter-var-root #'xml/event-seq (fn [f]
-                                    (fn [source opts]
-                                      (f source (merge {:skip-whitespace true} opts)))))
-  (manifest/-main "--gen" "pom" "--config-files" "deps.edn"))
 
 (defmethod task "repl:jvm"
   [args]
