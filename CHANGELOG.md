@@ -14,7 +14,7 @@ Relevant changes:
 - Remove already deprecated for a while the `alet` alias to `let`
   macro (the migration should be a simple find-and-replace).
 
-
+- Add forkjoin-pool and factory helpers to `promesa.exec` ns.
 
 
 
