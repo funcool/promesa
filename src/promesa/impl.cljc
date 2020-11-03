@@ -245,6 +245,9 @@
      (-bind
        ([it f] (pt/-bind (pt/-promise it) f))
        ([it f e] (pt/-bind (pt/-promise it) f e)))
+     (-then
+       ([it f] (pt/-then (pt/-promise it) f))
+       ([it f e] (pt/-then (pt/-promise it) f e)))
      (-handle
        ([it f] (pt/-handle (pt/-promise it) f))
        ([it f e] (pt/-handle (pt/-promise it) f e)))
@@ -265,6 +268,9 @@
      (-bind
        ([it f] (pt/-bind (pt/-promise it) f))
        ([it f e] (pt/-bind (pt/-promise it) f e)))
+     (-then
+       ([it f] (pt/-then (pt/-promise it) f))
+       ([it f e] (pt/-then (pt/-promise it) f e)))
      (-mapErr
        ([it f] (pt/-mapErr (pt/-promise it) f))
        ([it f e] (pt/-mapErr (pt/-promise it) f e)))
