@@ -140,9 +140,9 @@
 
 #?(:clj
    (defn scheduled-pool
-     "A scheduled thread pool constructo."
+     "A scheduled thread pool constructor."
      ([] (Executors/newScheduledThreadPool (int 0)))
-     ([n] (Executors/newScheduledThreadPool (int 0)))
+     ([n] (Executors/newScheduledThreadPool (int n)))
      ([n opts]
       (let [factory (resolve-thread-factory opts)]
         (Executors/newScheduledThreadPool (int n) factory)))))
