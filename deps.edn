@@ -4,20 +4,26 @@
   {:extra-deps
    {com.bhauman/rebel-readline-cljs {:mvn/version "0.1.4"},
     com.bhauman/rebel-readline {:mvn/version "0.1.4"},
-    org.clojure/tools.namespace {:mvn/version "1.0.0"},
-    org.clojure/clojurescript {:mvn/version "1.10.758"},
-    org.clojure/clojure {:mvn/version "1.10.1"},
+    org.clojure/tools.namespace {:mvn/version "RELEASE"},
+    org.clojure/clojurescript {:mvn/version "1.10.844"},
+    org.clojure/clojure {:mvn/version "1.10.3"},
     criterium/criterium {:mvn/version "0.4.5"}}
    :extra-paths ["test" "dev"]},
-  :ancient
-  {:main-opts ["-m" "deps-ancient.deps-ancient"],
-   :extra-deps {deps-ancient/deps-ancient {:mvn/version "RELEASE"}}}
+
+  :repl
+  {:main-opts  ["-m" "rebel-readline.main"]}
 
   :codox
-  {:extra-deps {codox/codox {:mvn/version "0.10.7"}
-                org.clojure/tools.reader {:mvn/version "1.1.0"}
-                codox-theme-rdash/codox-theme-rdash {:mvn/version "0.1.2"}}}
+  {:extra-deps {codox/codox {:mvn/version "RELEASE"}
+                org.clojure/tools.reader {:mvn/version "RELEASE"}
+                codox-theme-rdash/codox-theme-rdash {:mvn/version "RELEASE"}}}
+
+  :outdated
+  {:extra-deps {com.github.liquidz/antq {:mvn/version "RELEASE"}
+                org.slf4j/slf4j-nop {:mvn/version "RELEASE"}}
+   :main-opts ["-m" "antq.core"]}
 
   :jar
-  {:extra-deps {seancorfield/depstar {:mvn/version "RELEASE"}}
-   :main-opts ["-m" "hf.depstar.jar", "target/promesa.jar"]}}}
+  {:replace-deps {com.github.seancorfield/depstar {:mvn/version "RELEASE"}}
+   :exec-fn hf.depstar/jar
+   :exec-args {:jar "target/promesa.jar"}}}}

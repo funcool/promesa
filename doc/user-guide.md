@@ -9,13 +9,13 @@ A promise library for Clojure and ClojureScript.
 Leiningen:
 
 ```clojure
-[funcool/promesa "6.0.0"]
+[funcool/promesa "6.0.1"]
 ```
 
 deps.edn:
 
 ```clojure
-funcool/promesa {:mvn/version "6.0.0"}
+funcool/promesa {:mvn/version "6.0.1"}
 ```
 
 On the JVM paltform _promesa_ is built on top of *completable futures*
@@ -588,7 +588,7 @@ You will need to have nodejs installed on your system.
 _promesa_ is licensed under BSD (2-Clause) license:
 
 ```
-Copyright (c) 2015-2019 Andrey Antukh <niwi@niwi.nz>
+Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
 All rights reserved.
 

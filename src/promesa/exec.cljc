@@ -37,7 +37,6 @@
       java.util.concurrent.ExecutorService
       java.util.concurrent.Executors
       java.util.concurrent.ForkJoinPool
-      java.util.concurrent.ForkJoinPool
       java.util.concurrent.ForkJoinPool$ForkJoinWorkerThreadFactory
       java.util.concurrent.Future
       java.util.concurrent.ScheduledExecutorService
@@ -142,7 +141,7 @@
    (defn scheduled-pool
      "A scheduled thread pool constructo."
      ([] (Executors/newScheduledThreadPool (int 0)))
-     ([n] (Executors/newScheduledThreadPool (int 0)))
+     ([n] (Executors/newScheduledThreadPool (int n)))
      ([n opts]
       (let [factory (resolve-thread-factory opts)]
         (Executors/newScheduledThreadPool (int n) factory)))))

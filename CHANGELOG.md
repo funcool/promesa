@@ -1,5 +1,11 @@
 # Changelog #
 
+## Version 6.0.1
+
+Date: 2021-05-13
+
+- Fix wrong params handling on `scheduled-pool` function.
+
 
 ## Version 6.0.0
 
