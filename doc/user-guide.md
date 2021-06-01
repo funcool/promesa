@@ -9,18 +9,18 @@ A promise library for Clojure and ClojureScript.
 Leiningen:
 
 ```clojure
-[funcool/promesa "6.0.1"]
+[funcool/promesa "6.0.2"]
 ```
 
 deps.edn:
 
 ```clojure
-funcool/promesa {:mvn/version "6.0.1"}
+funcool/promesa {:mvn/version "6.0.2"}
 ```
 
-On the JVM paltform _promesa_ is built on top of *completable futures*
-(requires jdk>=8). On JS engines it is built on top of the execution
-environment built-in Promise implementation.
+On the JVM platform _promesa_ is built on top of *completable futures*
+(requires JDK >= 8). On JS engines it is built on top of the execution
+environment's built-in Promise implementation.
 
 
 
@@ -175,16 +175,16 @@ the general purpose `then` function:
 ;; => 2
 ```
 
-As you can observe in the example, it handles functions that return
+As you can observe in the example, `then` handles functions that return
 plain values as well as functions that return promise instances (which
 will automatically be flattened).
 
 **NOTE**: If you know that the chained function will always return
-plain values, you can use the `then'` more performant variant of this
+plain values, you can use the more performant `then'` variant of this
 function.
 
-In the same line as the `then'` function, there is a `map`. It works
-identically to it, the unique difference is the order of arguments:
+The `map` function works similarly to the `then'` function, the
+difference is the order of arguments:
 
 ```clojure
 (def result
@@ -210,8 +210,8 @@ step, there are the `chain` and `chain'` functions:
 **NOTE**: these are analogous to `then` and `then'` but accept
 multiple transformation functions.
 
-If you want to handle rejected and resolved callabacks in one unique
-callback, then you can use the `handler` chain function:
+If you want to handle rejected and resolved callbacks in one unique
+callback, then you can use the `handle` chain function:
 
 
 ```clojure
@@ -226,13 +226,16 @@ callback, then you can use the `handler` chain function:
 
 And finally if you want to attach a (potentially side-effectful)
 callback to be always executed notwithstanding if the promise is
-rejected or resolved, there is a `finally` function (very similar to
-try/finally):
+rejected or resolved, there is a executed regardless of whether the
+promise is rejected or resolved, there is a `finally` function (very
+similar to try/finally):
+
+
 
 ```clojure
 (def result
   (-> (p/promise 1)
-      (p/handle (fn []
+      (p/finally (fn [_ _]
                   (println "finally")))))
 
 @result
@@ -246,10 +249,11 @@ try/finally):
 
 The _promesa_ library comes with convenient syntactic-sugar that
 allows you to create a composition that looks like synchronous code
-while using the clojure's familiar `let` syntax:
+while using the Clojure's familiar `let` syntax:
 
 ```clojure
-(require '[promesa.exec :as exec])
+(require '[promesa.core :as p]
+         '[promesa.exec :as exec])
 
 ;; A function that emulates asynchronos behavior.
 (defn sleep-promise
@@ -267,13 +271,12 @@ while using the clojure's familiar `let` syntax:
 ;; => 85
 ```
 
-The `let` macro behaves identically to the `let` with the exception
-that it always return a promise. If an error occurs at any step, the
-entire composition will be short-circuited, returning exceptionally
-resolved promise.
+The `let` macro behaves identically to Clojure's `let` with the
+exception that it always returns a promise. If an error occurs at any
+step, the entire composition will be short-circuited, returning
+exceptionally resolved promise.
 
-Under the hood, the previous `let` macro evalutes to something like
-this:
+Under the hood, the `let` macro evalutes to something like this:
 
 ```clojure
 (p/then (sleep-promise 42)
@@ -306,8 +309,8 @@ successfully resolved.
 @(p/plet [a (p/delay 100 1)
           b (p/delay 200 2)
           c (p/delay 120 3)]
-   (+ na b c))
-;; => result: 6
+   (+ a b c))
+;; => 6
 ```
 
 The `plet` macro is just a syntactic sugar on top of `all`. The
@@ -350,7 +353,7 @@ with the value or reason from that promise:
 ## Error handling
 
 One of the advantages of using the promise abstraction is that it
-natively has a notion of errors, so you don't need reinvent it. If
+natively has a notion of errors, so you don't need toq reinvent it. If
 some computation inside the composed promise chain/pipeline raises an
 exception, the pipeline short-circuits and propogates the exception to
 the last promise in the chain.
@@ -366,10 +369,10 @@ Let see an example:
 The `catch` function adds a new handler to the promise chain that will
 be called when any of the previous promises in the chain are rejected
 or an exception is raised. The `catch` function also returns a promise
-that will be resolved or rejected depending on that will happen inside
-the catch handler.
+that will be resolved or rejected depending on what happens inside the
+catch handler.
 
-If you prefer `map`-like parameters order, the `err` function (and
+If you prefer `map`-like parameter ordering, the `err` function (and
 `error` alias) works in same way as `catch` but has parameters ordered
 like `map`:
 
@@ -381,7 +384,7 @@ like `map`:
 
 ## Delays and Timeouts.
 
-JavaScript, due its single-threaded nature, does not allow you to
+JavaScript, due to its single-threaded nature, does not allow you to
 block or sleep. But, with promises you can emulate that functionality
 using `delay` like so:
 
@@ -412,7 +415,7 @@ captured with the `catch` handler.
 ## Scheduling Tasks
 
 In addition to the promise abstraction, this library also comes with a
-lightweight abstraction for scheduling task to be executed at some time in
+lightweight abstraction for scheduling tasks to be executed at some time in
 future:
 
 ```clojure
@@ -423,7 +426,7 @@ future:
 
 This example shows you how you can schedule a function call to be
 executed 1 second in the future. It works the same way for both
-plaforms (clj and cljs).
+Clojure and ClojureScript.
 
 The tasks can be cancelled using its return value:
 
@@ -437,7 +440,7 @@ The tasks can be cancelled using its return value:
 
 **NOTE**: This section is mainly affects the **JVM**.
 
-Lets take this example as a context:
+Lets consider this example::
 
 ```clojure
 @(-> (p/delay 100 1)
@@ -447,8 +450,8 @@ Lets take this example as a context:
 ```
 
 This will create a promise that will resolve to `1` in 100ms (in a
-separated thread); then the first `inc` will be executed (in the same
-thread) and then another `inc` is executed (in the same thread). In
+separate thread); then the first `inc` will be executed (in the same
+thread), and then another `inc` is executed (in the same thread). In
 total only one thread is involved.
 
 This default execution model is usually preferrable because it don't
@@ -474,7 +477,7 @@ executed:
 ;; => 3
 ```
 
-This will schedule a separated task for each chained callback, making
+This will schedule a separate task for each chained callback, making
 the whole system more responsive because you are no longer executing
 big blocking functions; instead you are executing many small tasks.
 
@@ -484,14 +487,14 @@ highly optimized for lots of small tasks.
 
 ## Performance overhead
 
-The **promesa** is a lightweight abstraction built on top of native
-facilities (`CompletableFuture` in the jvm and `js/Promise` on cljs).
+_promesa_ is a lightweight abstraction built on top of native
+facilities (`CompletableFuture` in the JVM and `js/Promise` in JavaScript).
 
-Internaly we have heavy use of protocols in order to expose a
-polimorphic and user friendly api, and this have a little overhead on
-top of raw usage of `CompletableFuture` or `Promise`. This is the
-latest micro benchmark (2019-09-17) that shows the real overhead of
-this library in contrat to use plain native abstractions:
+Internally we make heavy use of protocols in order to expose a
+polymorphic and user friendly API, and this has little overhead on top
+of raw usage of `CompletableFuture` or `Promise`. This is the latest
+micro benchmark (2019-09-17) that shows the real overhead of this
+library in contrast to the use of native abstractions:
 
 ```clojure
 (run-bench (simple-promise-chain-5-raw))
@@ -548,8 +551,9 @@ The benchmarked functions are:
 
 ## Contributing
 
-Unlike Clojure and other Clojure contrib libs, this project does not have many restrictions for
-contributions. Just open a issue or pull request.
+Unlike Clojure and other Clojure contrib libs, this project does not
+have many restrictions for contributions. Just open an issue or pull
+request.
 
 
 ### Get the Code
@@ -580,7 +584,7 @@ And for JS platform:
 node out/tests.js
 ```
 
-You will need to have nodejs installed on your system.
+You will need to have Node.js installed on your system.
 
 
 ### License
