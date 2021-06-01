@@ -1,4 +1,4 @@
-(ns promesa.tests.test-core
+(ns promesa.tests.core-test
   (:require #?(:cljs [cljs.test :as t]
                :clj [clojure.test :as t])
             [promesa.tests.util :refer [promise-ok promise-ko normalize-to-value]]

@@ -5,13 +5,20 @@
    {com.bhauman/rebel-readline-cljs {:mvn/version "0.1.4"},
     com.bhauman/rebel-readline {:mvn/version "0.1.4"},
     org.clojure/tools.namespace {:mvn/version "RELEASE"},
-    org.clojure/clojurescript {:mvn/version "1.10.844"},
+    org.clojure/clojurescript {:mvn/version "1.10.866"},
     org.clojure/clojure {:mvn/version "1.10.3"},
     criterium/criterium {:mvn/version "0.4.5"}}
    :extra-paths ["test" "dev"]},
 
   :repl
   {:main-opts  ["-m" "rebel-readline.main"]}
+
+  :test
+  {:extra-paths ["test"]
+   :extra-deps {io.github.cognitect-labs/test-runner
+                {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                 :sha "705ad25bbf0228b1c38d0244a36001c2987d7337"}}
+   :exec-fn cognitect.test-runner.api/test}
 
   :codox
   {:extra-deps {codox/codox {:mvn/version "RELEASE"}

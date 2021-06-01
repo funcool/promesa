@@ -1,5 +1,14 @@
 # Changelog #
 
+## Version 6.0.2
+
+Date: 2021-06-01
+
+- Fix `timeout` internal timeout handling.
+- Fix nil and Object handling on JVM (make it work in the same way as
+  in CLJS)
+
+
 ## Version 6.0.1
 
 Date: 2021-05-13

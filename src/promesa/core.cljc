@@ -385,11 +385,11 @@
   ([p t] (timeout p t ::default exec/default-scheduler))
   ([p t v] (timeout p t v exec/default-scheduler))
   ([p t v scheduler]
-   (c/let [timeout (deferred)]
-     (exec/schedule! scheduler t #(if (= v ::default)
-                                    (reject! timeout (TimeoutException. "Operation timed out."))
-                                    (resolve! timeout v)))
-     (race [p timeout]))))
+   (c/let [timeout (deferred)
+           tid     (exec/schedule! scheduler t #(if (= v ::default)
+                                                  (reject! timeout (TimeoutException. "Operation timed out."))
+                                                  (resolve! timeout v)))]
+     (race [(finally p (fn [_ _] (pt/-cancel! tid))) timeout]))))
 
 (defn delay
   "Given a timeout in miliseconds and optional value, returns a promise

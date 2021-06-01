@@ -1,12 +1,12 @@
 (ns promesa.tests.main
   (:require [clojure.test :as t]
-            [promesa.tests.test-core]))
+            [promesa.tests.core-test]))
 
 #?(:cljs
    (do
      (enable-console-print!)
      (set! *main-cli-fn* #(t/run-tests
-                           'promesa.tests.test-core
+                           'promesa.tests.core-test
                            )))
    :clj
    (defn -main

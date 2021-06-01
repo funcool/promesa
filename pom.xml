@@ -3,10 +3,16 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>funcool</groupId>
   <artifactId>promesa</artifactId>
-  <version>6.0.1</version>
+  <version>6.0.2</version>
   <name>promesa</name>
   <description>Promise library for Clojure(Script)</description>
   <url>https://github.com/funcool/promesa</url>
+  <licenses>
+    <license>
+      <name>BSD-2-Clause</name>
+      <url>https://opensource.org/licenses/BSD-2-Clause</url>
+    </license>
+  </licenses>
   <scm>
     <connection>scm:git:git://github.com/funcool/promesa.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/funcool/promesa.git</developerConnection>
