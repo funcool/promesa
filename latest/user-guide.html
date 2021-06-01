@@ -4,12 +4,12 @@
 <p>A promise library for Clojure and ClojureScript.</p>
 <h2><a href="#install" name="install"></a>Install</h2>
 <p>Leiningen:</p>
-<pre><code class="clojure">[funcool/promesa "6.0.0"]
+<pre><code class="clojure">[funcool/promesa "6.0.2"]
 </code></pre>
 <p>deps.edn:</p>
-<pre><code class="clojure">funcool/promesa {:mvn/version "6.0.0"}
+<pre><code class="clojure">funcool/promesa {:mvn/version "6.0.2"}
 </code></pre>
-<p>On the JVM paltform <em>promesa</em> is built on top of <em>completable futures</em> (requires jdk&gt;=8). On JS engines it is built on top of the execution environment built-in Promise implementation.</p>
+<p>On the JVM platform <em>promesa</em> is built on top of <em>completable futures</em> (requires JDK &gt;= 8). On JS engines it is built on top of the execution environment’s built-in Promise implementation.</p>
 <h2><a href="#introduction" name="introduction"></a>Introduction</h2>
 <p>A promise is an abstraction that represents the result of an asynchronous operation that has the notion of error.</p>
 <p>This is a list of all possible states for a promise:</p>
@@ -95,9 +95,9 @@
      (p/then (fn [x] (p/resolved (inc x)))))
 ;; =&gt; 2
 </code></pre>
-<p>As you can observe in the example, it handles functions that return plain values as well as functions that return promise instances (which will automatically be flattened).</p>
-<p><strong>NOTE</strong>: If you know that the chained function will always return plain values, you can use the <code>then'</code> more performant variant of this function.</p>
-<p>In the same line as the <code>then'</code> function, there is a <code>map</code>. It works identically to it, the unique difference is the order of arguments:</p>
+<p>As you can observe in the example, <code>then</code> handles functions that return plain values as well as functions that return promise instances (which will automatically be flattened).</p>
+<p><strong>NOTE</strong>: If you know that the chained function will always return plain values, you can use the more performant <code>then'</code> variant of this function.</p>
+<p>The <code>map</code> function works similarly to the <code>then'</code> function, the difference is the order of arguments:</p>
 <pre><code class="clojure">(def result
   (-&gt;&gt; (p/resolved 1)
        (p/map inc)))
@@ -114,7 +114,7 @@
 ;; =&gt; 4
 </code></pre>
 <p><strong>NOTE</strong>: these are analogous to <code>then</code> and <code>then'</code> but accept multiple transformation functions.</p>
-<p>If you want to handle rejected and resolved callabacks in one unique callback, then you can use the <code>handler</code> chain function:</p>
+<p>If you want to handle rejected and resolved callbacks in one unique callback, then you can use the <code>handle</code> chain function:</p>
 <pre><code class="clojure">(def result
   (-&gt; (p/promise 1)
       (p/handle (fn [result error]
@@ -123,10 +123,10 @@
 @result
 ;; =&gt; :resolved
 </code></pre>
-<p>And finally if you want to attach a (potentially side-effectful) callback to be always executed notwithstanding if the promise is rejected or resolved, there is a <code>finally</code> function (very similar to try/finally):</p>
+<p>And finally if you want to attach a (potentially side-effectful) callback to be always executed notwithstanding if the promise is rejected or resolved, there is a executed regardless of whether the promise is rejected or resolved, there is a <code>finally</code> function (very similar to try/finally):</p>
 <pre><code class="clojure">(def result
   (-&gt; (p/promise 1)
-      (p/handle (fn []
+      (p/finally (fn [_ _]
                   (println "finally")))))
 
 @result
@@ -135,8 +135,9 @@
 </code></pre>
 <h2><a href="#promise-composition" name="promise-composition"></a>Promise Composition</h2>
 <h3><code>let</code></h3>
-<p>The <em>promesa</em> library comes with convenient syntactic-sugar that allows you to create a composition that looks like synchronous code while using the clojure’s familiar <code>let</code> syntax:</p>
-<pre><code class="clojure">(require '[promesa.exec :as exec])
+<p>The <em>promesa</em> library comes with convenient syntactic-sugar that allows you to create a composition that looks like synchronous code while using the Clojure’s familiar <code>let</code> syntax:</p>
+<pre><code class="clojure">(require '[promesa.core :as p]
+         '[promesa.exec :as exec])
 
 ;; A function that emulates asynchronos behavior.
 (defn sleep-promise
@@ -153,8 +154,8 @@
 @result
 ;; =&gt; 85
 </code></pre>
-<p>The <code>let</code> macro behaves identically to the <code>let</code> with the exception that it always return a promise. If an error occurs at any step, the entire composition will be short-circuited, returning exceptionally resolved promise.</p>
-<p>Under the hood, the previous <code>let</code> macro evalutes to something like this:</p>
+<p>The <code>let</code> macro behaves identically to Clojure’s <code>let</code> with the exception that it always returns a promise. If an error occurs at any step, the entire composition will be short-circuited, returning exceptionally resolved promise.</p>
+<p>Under the hood, the <code>let</code> macro evalutes to something like this:</p>
 <pre><code class="clojure">(p/then (sleep-promise 42)
         (fn [x] (p/then (sleep-promise 41)
                         (fn [y] (p/then 2 (fn [z]
@@ -172,8 +173,8 @@
 <pre><code class="clojure">@(p/plet [a (p/delay 100 1)
           b (p/delay 200 2)
           c (p/delay 120 3)]
-   (+ na b c))
-;; =&gt; result: 6
+   (+ a b c))
+;; =&gt; 6
 </code></pre>
 <p>The <code>plet</code> macro is just a syntactic sugar on top of <code>all</code>. The previous example can be written using <code>all</code> in this manner:</p>
 <pre><code class="clojure">(p/all [(p/delay 100 1)
@@ -196,20 +197,20 @@
 ;; =&gt; 1
 </code></pre>
 <h2><a href="#error-handling" name="error-handling"></a>Error handling</h2>
-<p>One of the advantages of using the promise abstraction is that it natively has a notion of errors, so you don’t need reinvent it. If some computation inside the composed promise chain/pipeline raises an exception, the pipeline short-circuits and propogates the exception to the last promise in the chain.</p>
+<p>One of the advantages of using the promise abstraction is that it natively has a notion of errors, so you don’t need toq reinvent it. If some computation inside the composed promise chain/pipeline raises an exception, the pipeline short-circuits and propogates the exception to the last promise in the chain.</p>
 <p>Let see an example:</p>
 <pre><code class="clojure">(-&gt; (p/rejected (ex-info "error" nil))
     (p/catch (fn [error]
                (.log js/console error))))
 </code></pre>
-<p>The <code>catch</code> function adds a new handler to the promise chain that will be called when any of the previous promises in the chain are rejected or an exception is raised. The <code>catch</code> function also returns a promise that will be resolved or rejected depending on that will happen inside the catch handler.</p>
-<p>If you prefer <code>map</code>-like parameters order, the <code>err</code> function (and <code>error</code> alias) works in same way as <code>catch</code> but has parameters ordered like <code>map</code>:</p>
+<p>The <code>catch</code> function adds a new handler to the promise chain that will be called when any of the previous promises in the chain are rejected or an exception is raised. The <code>catch</code> function also returns a promise that will be resolved or rejected depending on what happens inside the catch handler.</p>
+<p>If you prefer <code>map</code>-like parameter ordering, the <code>err</code> function (and <code>error</code> alias) works in same way as <code>catch</code> but has parameters ordered like <code>map</code>:</p>
 <pre><code class="clojure">(-&gt;&gt; (p/rejected (ex-info "error" nil))
      (p/error (fn [error]
                 (.log js/console error))))
 </code></pre>
 <h2><a href="#delays-and-timeouts-" name="delays-and-timeouts-"></a>Delays and Timeouts.</h2>
-<p>JavaScript, due its single-threaded nature, does not allow you to block or sleep. But, with promises you can emulate that functionality using <code>delay</code> like so:</p>
+<p>JavaScript, due to its single-threaded nature, does not allow you to block or sleep. But, with promises you can emulate that functionality using <code>delay</code> like so:</p>
 <pre><code class="clojure">(-&gt; (p/delay 1000 "foobar")
     (p/then (fn [v]
               (println "Received:" v))))
@@ -225,12 +226,12 @@
 </code></pre>
 <p>In this example, if the async task takes more that 200ms then the promise will be rejected with a timeout error and then successfully captured with the <code>catch</code> handler.</p>
 <h2><a href="#scheduling-tasks" name="scheduling-tasks"></a>Scheduling Tasks</h2>
-<p>In addition to the promise abstraction, this library also comes with a lightweight abstraction for scheduling task to be executed at some time in future:</p>
+<p>In addition to the promise abstraction, this library also comes with a lightweight abstraction for scheduling tasks to be executed at some time in future:</p>
 <pre><code class="clojure">(require '[promesa.exec :as exec])
 (exec/schedule! 1000 (fn []
                        (println "hello world")))
 </code></pre>
-<p>This example shows you how you can schedule a function call to be executed 1 second in the future. It works the same way for both plaforms (clj and cljs).</p>
+<p>This example shows you how you can schedule a function call to be executed 1 second in the future. It works the same way for both Clojure and ClojureScript.</p>
 <p>The tasks can be cancelled using its return value:</p>
 <pre><code class="clojure">(def task (exec/schedule! 1000 #(do-stuff)))
 
@@ -238,13 +239,13 @@
 </code></pre>
 <h2><a href="#execution-model" name="execution-model"></a>Execution model</h2>
 <p><strong>NOTE</strong>: This section is mainly affects the <strong>JVM</strong>.</p>
-<p>Lets take this example as a context:</p>
+<p>Lets consider this example::</p>
 <pre><code class="clojure">@(-&gt; (p/delay 100 1)
      (p/then' inc)
      (p/then' inc))
 ;; =&gt; 3
 </code></pre>
-<p>This will create a promise that will resolve to <code>1</code> in 100ms (in a separated thread); then the first <code>inc</code> will be executed (in the same thread) and then another <code>inc</code> is executed (in the same thread). In total only one thread is involved.</p>
+<p>This will create a promise that will resolve to <code>1</code> in 100ms (in a separate thread); then the first <code>inc</code> will be executed (in the same thread), and then another <code>inc</code> is executed (in the same thread). In total only one thread is involved.</p>
 <p>This default execution model is usually preferrable because it don’t abuse the task scheduling and leverages function inlining on the JVM.</p>
 <p>But it does have drawbacks: this approach will block the thread until all of the chained callbacks are executed. For small chains this is not a problem. However, if your chain has a lot of functions and requires a lot of computation time, this might cause unexpected latency. It may block other threads in the thread pool from doing other, maybe more important, tasks.</p>
 <p>For such cases, <em>promesa</em> exposes an additional arity for provide a user-defined executor to control where the chained callbacks are executed:</p>
@@ -255,11 +256,11 @@
      (p/then inc exec/default-executor))
 ;; =&gt; 3
 </code></pre>
-<p>This will schedule a separated task for each chained callback, making the whole system more responsive because you are no longer executing big blocking functions; instead you are executing many small tasks.</p>
+<p>This will schedule a separate task for each chained callback, making the whole system more responsive because you are no longer executing big blocking functions; instead you are executing many small tasks.</p>
 <p>The <code>exec/default-executor</code> is a <code>ForkJoinPool</code> instance that is highly optimized for lots of small tasks.</p>
 <h2><a href="#performance-overhead" name="performance-overhead"></a>Performance overhead</h2>
-<p>The <strong>promesa</strong> is a lightweight abstraction built on top of native facilities (<code>CompletableFuture</code> in the jvm and <code>js/Promise</code> on cljs).</p>
-<p>Internaly we have heavy use of protocols in order to expose a polimorphic and user friendly api, and this have a little overhead on top of raw usage of <code>CompletableFuture</code> or <code>Promise</code>. This is the latest micro benchmark (2019-09-17) that shows the real overhead of this library in contrat to use plain native abstractions:</p>
+<p><em>promesa</em> is a lightweight abstraction built on top of native facilities (<code>CompletableFuture</code> in the JVM and <code>js/Promise</code> in JavaScript).</p>
+<p>Internally we make heavy use of protocols in order to expose a polymorphic and user friendly API, and this has little overhead on top of raw usage of <code>CompletableFuture</code> or <code>Promise</code>. This is the latest micro benchmark (2019-09-17) that shows the real overhead of this library in contrast to the use of native abstractions:</p>
 <pre><code class="clojure">(run-bench (simple-promise-chain-5-raw))
 ;; =&gt; amd64 Linux 5.2.9-arch1-1-ARCH 4 cpu(s)
 ;; =&gt; OpenJDK 64-Bit Server VM 12.0.2+10
@@ -307,7 +308,7 @@
      (.thenApply ^CompletionStage $ ^Function (pu/-&gt;FunctionWrapper inc))))
 </code></pre>
 <h2><a href="#contributing" name="contributing"></a>Contributing</h2>
-<p>Unlike Clojure and other Clojure contrib libs, this project does not have many restrictions for contributions. Just open a issue or pull request.</p>
+<p>Unlike Clojure and other Clojure contrib libs, this project does not have many restrictions for contributions. Just open an issue or pull request.</p>
 <h3><a href="#get-the-code" name="get-the-code"></a>Get the Code</h3>
 <p><em>promesa</em> is open source and can be found on <a href="https://github.com/funcool/promesa">github</a>.</p>
 <p>You can clone the public repository with this command:</p>
@@ -322,10 +323,10 @@
 <pre><code>./scripts/build
 node out/tests.js
 </code></pre>
-<p>You will need to have nodejs installed on your system.</p>
+<p>You will need to have Node.js installed on your system.</p>
 <h3><a href="#license" name="license"></a>License</h3>
 <p><em>promesa</em> is licensed under BSD (2-Clause) license:</p>
-<pre><code>Copyright (c) 2015-2019 Andrey Antukh &lt;niwi@niwi.nz&gt;
+<pre><code>Copyright (c) Andrey Antukh &lt;niwi@niwi.nz&gt;
 
 All rights reserved.
 
