@@ -353,9 +353,9 @@ with the value or reason from that promise:
 ## Error handling
 
 One of the advantages of using the promise abstraction is that it
-natively has a notion of errors, so you don't need toq reinvent it. If
+natively has a notion of errors, so you don't need to reinvent it. If
 some computation inside the composed promise chain/pipeline raises an
-exception, the pipeline short-circuits and propogates the exception to
+exception, the pipeline short-circuits and propagates the exception to
 the last promise in the chain.
 
 Let see an example:
