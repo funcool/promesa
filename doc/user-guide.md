@@ -85,7 +85,7 @@ function and provide the value asynchronously using `p/resolve!` and
 ```
 
 Another option is using a factory function. If you are familiar with
-JavaScript, this is a similar approach.
+JavaScript, this is a similar approach:
 
 ```clojure
 @(p/create (fn [resolve reject] (resolve 1)))
