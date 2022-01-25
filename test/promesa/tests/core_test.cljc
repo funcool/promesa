@@ -303,13 +303,13 @@
        (let [prm (-> (p/delay 200 :value)
                      (p/timeout 300))]
          (p/then prm (fn [v]
-                        (t/is (= (v :value)))
+                        (t/is (= v :value))
                         (done)))))
      :clj
      (let [prm (-> (p/delay 200 :value)
                    (p/timeout 500))]
        @(p/then prm (fn [v]
-                     (t/is (= (v :value))))))))
+                     (t/is (= v :value)))))))
 
 (t/deftest chaining-using-chain
   #?(:cljs
