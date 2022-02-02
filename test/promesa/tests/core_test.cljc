@@ -432,3 +432,20 @@
                    (p/map (fn [res] (t/is (= res 5)))))]
     #?(:cljs (t/async done (p/do! (test) (done)))
        :clj @(test))))
+
+;; --- Threading tests
+
+(defn future-inc [x]
+  (p/future (inc x)))
+
+(t/deftest thread-first-macro
+  (let [p1   (p/-> (p/future (+ 1 2 3)) (* 2) future-inc)
+        test #(p/then p1 (fn [res] (t/is (= res 13))))]
+    #?(:cljs (t/async done (p/do! (test) (done)))
+       :clj @(test))))
+
+(t/deftest thread-last-macro
+  (let [p1   (p/->> (p/future [1 2 3]) (map inc))
+        test #(p/then p1 (fn [res] (t/is (= res [2 3 4]))))]
+    #?(:cljs (t/async done (p/do! (test) (done)))
+       :clj @(test))))

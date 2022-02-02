@@ -25,7 +25,8 @@
 (ns promesa.core
   (:refer-clojure :exclude [delay spread promise
                             await map mapcat run!
-                            future let loop recur])
+                            future let loop recur
+                            -> ->>])
   (:require
    [promesa.protocols :as pt]
    [clojure.core :as c]
@@ -277,19 +278,19 @@
   If at least one of the promises is rejected, the resulting promise will be
   rejected."
   [promises]
-  #?(:cljs (-> (.all impl/*default-promise* (into-array promises))
-               (then' vec))
+  #?(:cljs (c/-> (.all impl/*default-promise* (into-array promises))
+                 (then' vec))
      :clj (c/let [promises (clojure.core/map pt/-promise promises)]
-            (then' (->> (into-array CompletableFuture promises)
-                        (CompletableFuture/allOf))
+            (then' (c/->> (into-array CompletableFuture promises)
+                          (CompletableFuture/allOf))
                    (fn [_]
                      (mapv pt/-extract promises))))))
 
 (defn race
   [promises]
   #?(:cljs (.race impl/*default-promise* (into-array (cljs.core/map pt/-promise promises)))
-     :clj (CompletableFuture/anyOf (->> (clojure.core/map pt/-promise promises)
-                                        (into-array CompletableFuture)))))
+     :clj (CompletableFuture/anyOf (c/->> (clojure.core/map pt/-promise promises)
+                                          (into-array CompletableFuture)))))
 
 (defn any
   "Given an array of promises, return a promise that is fulfilled when
@@ -303,25 +304,25 @@
      (create
       (fn [resolve reject]
         (doseq [p promises]
-          (-> (promise p)
-              (then (fn [v]
-                      (when-not (:resolved @state)
-                        (swap! state (fn [state]
-                                       (-> state
-                                           (assoc :resolved true)
-                                           (update :counter dec))))
-                        (resolve v))))
-              (catch (fn [e]
-                       (swap! state (fn [state]
-                                      (-> state
-                                          (update  :counter dec)
-                                          (update :rejections conj e))))
-                       (c/let [{:keys [resolved counter rejections]} @state]
-                         (when (and (not resolved) (= counter 0))
-                           (if (= default ::default)
-                             (reject (ex-info "No promises resolved"
-                                              {:rejections rejections}))
-                             (resolve default)))))))))))))
+          (c/-> (promise p)
+                (then (fn [v]
+                        (when-not (:resolved @state)
+                          (swap! state (fn [state]
+                                         (c/-> state
+                                               (assoc :resolved true)
+                                               (update :counter dec))))
+                          (resolve v))))
+                (catch (fn [e]
+                         (swap! state (fn [state]
+                                        (c/-> state
+                                              (update  :counter dec)
+                                              (update :rejections conj e))))
+                         (c/let [{:keys [resolved counter rejections]} @state]
+                           (when (and (not resolved) (= counter 0))
+                             (if (= default ::default)
+                               (reject (ex-info "No promises resolved"
+                                                {:rejections rejections}))
+                               (resolve default)))))))))))))
 
 (defn run!
   "A promise aware run! function."
@@ -362,7 +363,7 @@
   [callable]
   (fn [& args]
     (create (fn [resolve reject]
-               (c/let [args (-> (vec args) (conj resolve))]
+               (c/let [args (c/-> (vec args) (conj resolve))]
                  (try
                    (apply callable args)
                    (catch #?(:clj Throwable :cljs js/Error) e
@@ -421,10 +422,10 @@
   promises on the bindings."
   [bindings & body]
   `(pt/-bind nil (fn [_#]
-                   ~(->> (reverse (partition 2 bindings))
-                         (reduce (fn [acc [l r]]
-                                   `(pt/-bind ~r (fn [~l] ~acc)))
-                                 `(do! ~@body))))))
+                   ~(c/->> (reverse (partition 2 bindings))
+                           (reduce (fn [acc [l r]]
+                                     `(pt/-bind ~r (fn [~l] ~acc)))
+                                   `(do! ~@body))))))
 
 (defmacro plet
   "A parallel let; executes all the bindings in parallel and when all
@@ -432,19 +433,19 @@
   [bindings & body]
   `(pt/-bind nil (fn [_#]
                    ~(c/let [bindings (partition 2 bindings)]
-                      `(-> (all ~(mapv second bindings))
-                           (then (fn [[~@(mapv first bindings)]]
-                                   (do! ~@body))))))))
+                      `(c/-> (all ~(mapv second bindings))
+                             (then (fn [[~@(mapv first bindings)]]
+                                     (do! ~@body))))))))
 
 (defmacro future
   "Analogous to `clojure.core/future` that returns a promise instance
   instead of the `Future`. Usefull for execute synchronous code in a
   separate thread (also works in cljs)."
   [& body]
-  `(-> (exec/submit! (fn []
-                       (c/let [f# (fn [] ~@body)]
-                         (pt/-promise (f#)))))
-       (pt/-bind identity)))
+  `(c/-> (exec/submit! (fn []
+                         (c/let [f# (fn [] ~@body)]
+                           (pt/-promise (f#)))))
+         (pt/-bind identity)))
 
 (def ^:dynamic *loop-run-fn* exec/run!)
 
@@ -459,26 +460,42 @@
     `(c/let [~rsym *loop-run-fn*
              ~dsym (promesa.core/deferred)
              ~tsym (fn ~tsym [params#]
-                     (-> (promesa.core/all params#)
-                         (promesa.core/then (fn [[~@names]]
-                                              ;; (prn "exec" ~@names)
-                                              (do! ~@body)))
-                         (promesa.core/handle
-                          (fn [res# err#]
-                            ;; (prn "result" res# err#)
-                            (cond
-                              (not (nil? err#))
-                              (promesa.core/reject! ~dsym err#)
+                     (c/-> (promesa.core/all params#)
+                           (promesa.core/then (fn [[~@names]]
+                                                ;; (prn "exec" ~@names)
+                                                (do! ~@body)))
+                           (promesa.core/handle
+                            (fn [res# err#]
+                              ;; (prn "result" res# err#)
+                              (cond
+                                (not (nil? err#))
+                                (promesa.core/reject! ~dsym err#)
 
-                              (and (map? res#) (= (:type res#) :promesa.core/recur))
-                              (do (~rsym (fn [] (~tsym (:args res#))))
-                                  nil)
+                                (and (map? res#) (= (:type res#) :promesa.core/recur))
+                                (do (~rsym (fn [] (~tsym (:args res#))))
+                                    nil)
 
-                              :else
-                              (promesa.core/resolve! ~dsym res#))))))]
+                                :else
+                                (promesa.core/resolve! ~dsym res#))))))]
        (~rsym (fn [] (~tsym ~fvals)))
        ~dsym)))
 
 (defmacro recur
   [& args]
   `(array-map :type :promesa.core/recur :args [~@args]))
+
+(defmacro -> [x & forms]
+  (c/let [fns (mapv (fn [arg]
+                      (c/let [[f & args] (if (sequential? arg)
+                                           arg
+                                           (list arg))]
+                        `(fn [p#] (~f p# ~@args)))) forms)]
+    `(chain (promise ~x) ~@fns)))
+
+(defmacro ->> [x & forms]
+  (c/let [fns (mapv (fn [arg]
+                      (c/let [[f & args] (if (sequential? arg)
+                                           arg
+                                           (list arg))]
+                        `(fn [p#] (~f ~@args p#)))) forms)]
+    `(chain (promise ~x) ~@fns)))
