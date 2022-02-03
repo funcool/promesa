@@ -1,5 +1,13 @@
 # Changelog #
 
+## Version 6.1.x
+
+Date: 2022-02-03
+
+- Add `->` and `->>` threading macros (thanks to @wilkerlucio)
+
+
+
 ## Version 6.0.2
 
 Date: 2021-06-01

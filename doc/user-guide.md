@@ -9,19 +9,18 @@ A promise library for Clojure and ClojureScript.
 Leiningen:
 
 ```clojure
-[funcool/promesa "6.0.2"]
+[funcool/promesa "6.1.431"]
 ```
 
 deps.edn:
 
 ```clojure
-funcool/promesa {:mvn/version "6.0.2"}
+funcool/promesa {:mvn/version "6.1.431"}
 ```
 
 On the JVM platform _promesa_ is built on top of *completable futures*
 (requires JDK >= 8). On JS engines it is built on top of the execution
 environment's built-in Promise implementation.
-
 
 
 ## Introduction
@@ -158,8 +157,9 @@ await and unwrap the inner promise:
 ;; => 1
 ```
 
-
 ## Promise Chaining
+
+### `then`
 
 The most common way to chain a transformation to a promise is using
 the general purpose `then` function:
@@ -183,6 +183,8 @@ will automatically be flattened).
 plain values, you can use the more performant `then'` variant of this
 function.
 
+### `map`
+
 The `map` function works similarly to the `then'` function, the
 difference is the order of arguments:
 
@@ -194,6 +196,8 @@ difference is the order of arguments:
 @result
 ;; => 2
 ```
+
+### `chain`
 
 If you have multiple transformations and you want to apply them in one
 step, there are the `chain` and `chain'` functions:
@@ -210,6 +214,37 @@ step, there are the `chain` and `chain'` functions:
 **NOTE**: these are analogous to `then` and `then'` but accept
 multiple transformation functions.
 
+
+### `->` and `->>`
+
+NOTE: introduced in 6.1.431
+
+This threading macros simplifices chaining operation, removing the
+need of using `then` all the time.
+
+Lets look an example using `then` and later see how it can be improved
+using the `->` threading macro:
+
+```clojure
+(-> (p/resolved {:a 1 :c 3})
+    (p/then #(assoc % :b 2))
+    (p/then #(dissoc % :c)))
+```
+
+Then, the same code can be simplified with:
+
+```clojure
+(p/-> (p/resolved {:a 1 :c 3})
+      (assoc :b 2))
+      (dissoc :c))
+```
+
+The threading macros hides all the accidental complexity of using
+promise chaining.
+
+
+### `handle`
+
 If you want to handle rejected and resolved callbacks in one unique
 callback, then you can use the `handle` chain function:
 
@@ -223,6 +258,9 @@ callback, then you can use the `handle` chain function:
 @result
 ;; => :resolved
 ```
+
+
+### `finally`
 
 And finally if you want to attach a (potentially side-effectful)
 callback to be always executed notwithstanding if the promise is
@@ -256,14 +294,14 @@ while using the Clojure's familiar `let` syntax:
          '[promesa.exec :as exec])
 
 ;; A function that emulates asynchronos behavior.
-(defn sleep-promise
+(defn sleep
   [wait]
-  (p/promise (fn [resolve reject]
-               (exec/schedule! wait #(resolve wait)))))
+  (p/create (fn [resolve reject]
+              (exec/schedule! wait #(resolve wait)))))
 
 (def result
-  (p/let [x (sleep-promise 42)
-          y (sleep-promise 41)
+  (p/let [x (sleep 42)
+          y (sleep 41)
           z 2]
     (+ x y z)))
 
@@ -279,8 +317,8 @@ exceptionally resolved promise.
 Under the hood, the `let` macro evalutes to something like this:
 
 ```clojure
-(p/then (sleep-promise 42)
-        (fn [x] (p/then (sleep-promise 41)
+(p/then (sleep 42)
+        (fn [x] (p/then (sleep 41)
                         (fn [y] (p/then 2 (fn [z]
                                             (p/promise (do (+ x y z)))))))))
 ```
@@ -574,14 +612,14 @@ To run the tests execute the following:
 For the JVM platform:
 
 ```
-lein test
+clojure -X:dev:test
 ```
 
 And for JS platform:
 
 ```
-./scripts/build
-node out/tests.js
+clojure -A:dev -T:build build-cljs-tests
+node target/tests.js
 ```
 
 You will need to have Node.js installed on your system.

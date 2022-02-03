@@ -2,35 +2,38 @@
  :aliases
  {:dev
   {:extra-deps
-   {com.bhauman/rebel-readline-cljs {:mvn/version "0.1.4"},
-    com.bhauman/rebel-readline {:mvn/version "0.1.4"},
+   {com.bhauman/rebel-readline-cljs {:mvn/version "RELEASE"},
+    com.bhauman/rebel-readline {:mvn/version "RELEASE"},
     org.clojure/tools.namespace {:mvn/version "RELEASE"},
-    org.clojure/clojurescript {:mvn/version "1.10.866"},
+    org.clojure/clojurescript {:mvn/version "RELEASE"},
     org.clojure/clojure {:mvn/version "1.10.3"},
-    criterium/criterium {:mvn/version "0.4.5"}}
-   :extra-paths ["test" "dev"]},
+    criterium/criterium {:mvn/version "RELEASE"}}
+   :extra-paths ["test" "dev" "src"]},
 
   :repl
   {:main-opts  ["-m" "rebel-readline.main"]}
 
   :test
   {:extra-paths ["test"]
-   :extra-deps {io.github.cognitect-labs/test-runner
-                {:git/url "https://github.com/cognitect-labs/test-runner.git"
-                 :sha "705ad25bbf0228b1c38d0244a36001c2987d7337"}}
-   :exec-fn cognitect.test-runner.api/test}
+   :extra-deps
+   {io.github.cognitect-labs/test-runner
+    {:git/tag "v0.5.0" :git/sha "b3fd0d2"}}
+   :exec-fn cognitect.test-runner.api/test
+   :exec-args {:patterns [".*-test.*"]}}
 
   :codox
-  {:extra-deps {codox/codox {:mvn/version "RELEASE"}
-                org.clojure/tools.reader {:mvn/version "RELEASE"}
-                codox-theme-rdash/codox-theme-rdash {:mvn/version "RELEASE"}}}
+  {:extra-deps
+   {codox/codox {:mvn/version "RELEASE"}
+    org.clojure/tools.reader {:mvn/version "RELEASE"}
+    codox-theme-rdash/codox-theme-rdash {:mvn/version "RELEASE"}}}
+
+  :build
+  {:extra-deps
+   {io.github.clojure/tools.build {:git/tag "v0.7.5" :git/sha "34727f7"}}
+   :ns-default build}
 
   :outdated
-  {:extra-deps {com.github.liquidz/antq {:mvn/version "RELEASE"}
-                org.slf4j/slf4j-nop {:mvn/version "RELEASE"}}
-   :main-opts ["-m" "antq.core"]}
-
-  :jar
-  {:replace-deps {com.github.seancorfield/depstar {:mvn/version "RELEASE"}}
-   :exec-fn hf.depstar/jar
-   :exec-args {:jar "target/promesa.jar"}}}}
+  {:extra-deps
+   {com.github.liquidz/antq {:mvn/version "RELEASE"}
+    org.slf4j/slf4j-nop {:mvn/version "RELEASE"}}
+   :main-opts ["-m" "antq.core"]}}}
