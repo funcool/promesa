@@ -484,7 +484,19 @@
   [& args]
   `(array-map :type :promesa.core/recur :args [~@args]))
 
-(defmacro -> [x & forms]
+(defmacro ->
+  "Like the clojure.core/->, but it will handle promises in values
+  and make sure the next form gets the value realized instead of
+  the promise. Example using to fetch data in the browser with CLJS:
+
+  Example:
+
+  (p/-> (js/fetch #js {...}) ; returns a promise
+        .-body)
+
+  The result of a thread is a promise that will resolve to the
+  end of the thread chain."
+  [x & forms]
   (c/let [fns (mapv (fn [arg]
                       (c/let [[f & args] (if (sequential? arg)
                                            arg
@@ -492,7 +504,21 @@
                         `(fn [p#] (~f p# ~@args)))) forms)]
     `(chain (promise ~x) ~@fns)))
 
-(defmacro ->> [x & forms]
+(defmacro ->>
+  "Like the clojure.core/->>, but it will handle promises in values
+  and make sure the next form gets the value realized instead of
+  the promise. Example using to fetch data in the browser with CLJS:
+
+  Example:
+
+  (p/->> (js/fetch #js {...}) ; returns a promise
+         .-body
+         read-string
+         (mapv inc)
+
+  The result of a thread is a promise that will resolve to the
+  end of the thread chain."
+  [x & forms]
   (c/let [fns (mapv (fn [arg]
                       (c/let [[f & args] (if (sequential? arg)
                                            arg
