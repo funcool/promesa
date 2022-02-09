@@ -26,7 +26,7 @@
   (:refer-clojure :exclude [delay spread promise
                             await map mapcat run!
                             future let loop recur
-                            -> ->>])
+                            -> ->> as->])
   (:require
    [promesa.protocols :as pt]
    [clojure.core :as c]
@@ -499,3 +499,14 @@
                                            (list arg))]
                         `(fn [p#] (~f ~@args p#)))) forms)]
     `(chain (promise ~x) ~@fns)))
+
+(defmacro as->
+  "Like clojure.core/as->, but it will handle promises in values
+   and make sure the next form gets the value realized instead of
+   the promise."
+  [expr name & forms]
+  `(let [~name ~expr
+         ~@(interleave (repeat name) (butlast forms))]
+     ~(if (empty? forms)
+        name
+        (last forms))))
