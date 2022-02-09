@@ -449,3 +449,12 @@
         test #(p/then p1 (fn [res] (t/is (= res [2 3 4]))))]
     #?(:cljs (t/async done (p/do! (test) (done)))
        :clj @(test))))
+
+(t/deftest thread-as-last-macro
+  (let [p1   (p/as-> (p/future [1 2 3]) <>
+               (reduce + 8 <>)
+               (/ <> 2)
+               (future-inc <>))
+        test #(p/then p1 (fn [res] (t/is (= res 8))))]
+    #?(:cljs (t/async done (p/do! (test) (done)))
+       :clj @(test))))
