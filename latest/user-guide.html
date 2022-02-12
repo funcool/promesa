@@ -4,10 +4,10 @@
 <p>A promise library for Clojure and ClojureScript.</p>
 <h2><a href="#install" id="install"></a>Install</h2>
 <p>Leiningen:</p>
-<pre><code class="language-clojure">[funcool/promesa "6.1.431"]
+<pre><code class="language-clojure">[funcool/promesa "6.1.434"]
 </code></pre>
 <p>deps.edn:</p>
-<pre><code class="language-clojure">funcool/promesa {:mvn/version "6.1.431"}
+<pre><code class="language-clojure">funcool/promesa {:mvn/version "6.1.434"}
 </code></pre>
 <p>On the JVM platform <em>promesa</em> is built on top of <em>completable futures</em> (requires JDK &gt;= 8). On JS engines it is built on top of the execution environment’s built-in Promise implementation.</p>
 <h2><a href="#introduction" id="introduction"></a>Introduction</h2>
@@ -117,8 +117,8 @@
 ;; =&gt; 4
 </code></pre>
 <p><strong>NOTE</strong>: these are analogous to <code>then</code> and <code>then'</code> but accept multiple transformation functions.</p>
-<h3><a href="#-and-" id="-and-"></a><code>-&gt;</code> and <code>-&gt;&gt;</code></h3>
-<p>NOTE: introduced in 6.1.431</p>
+<h3><a href="#-and-as-" id="-and-as-"></a><code>-&gt;</code>, <code>-&gt;&gt;</code> and <code>as-&gt;</code></h3>
+<p><strong>NOTE</strong>: <code>-&gt;</code> and <code>-&gt;&gt;</code> introduced in 6.1.431, <code>as-&gt;</code> introduced in 6.1.434.</p>
 <p>This threading macros simplifices chaining operation, removing the need of using <code>then</code> all the time.</p>
 <p>Lets look an example using <code>then</code> and later see how it can be improved using the <code>-&gt;</code> threading macro:</p>
 <pre><code class="language-clojure">(-&gt; (p/resolved {:a 1 :c 3})
@@ -131,6 +131,7 @@
       (dissoc :c))
 </code></pre>
 <p>The threading macros hides all the accidental complexity of using promise chaining.</p>
+<p>The <code>-&gt;&gt;</code> and <code>as-&gt;</code> are equivalent to the clojure.core macros, but they work with promises in the same way as <code>-&gt;</code> example shows.</p>
 <h3><a href="#handle" id="handle"></a><code>handle</code></h3>
 <p>If you want to handle rejected and resolved callbacks in one unique callback, then you can use the <code>handle</code> chain function:</p>
 <pre><code class="language-clojure">(def result
