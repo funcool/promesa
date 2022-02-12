@@ -1,6 +1,13 @@
 # Changelog #
 
-## Version 6.1.x
+## Version 6.1.434
+
+Date: 2022-02-12
+
+- Add `as->` threading macro (thanks to @wilkerlucio)
+
+
+## Version 6.1.431
 
 Date: 2022-02-03
 

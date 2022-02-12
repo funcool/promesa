@@ -9,13 +9,13 @@ A promise library for Clojure and ClojureScript.
 Leiningen:
 
 ```clojure
-[funcool/promesa "6.1.431"]
+[funcool/promesa "6.1.434"]
 ```
 
 deps.edn:
 
 ```clojure
-funcool/promesa {:mvn/version "6.1.431"}
+funcool/promesa {:mvn/version "6.1.434"}
 ```
 
 On the JVM platform _promesa_ is built on top of *completable futures*
@@ -215,9 +215,9 @@ step, there are the `chain` and `chain'` functions:
 multiple transformation functions.
 
 
-### `->` and `->>`
+### `->`, `->>` and `as->`
 
-NOTE: introduced in 6.1.431
+**NOTE**: `->` and `->>` introduced in 6.1.431, `as->` introduced in 6.1.434.
 
 This threading macros simplifices chaining operation, removing the
 need of using `then` all the time.
@@ -241,6 +241,9 @@ Then, the same code can be simplified with:
 
 The threading macros hides all the accidental complexity of using
 promise chaining.
+
+The `->>` and `as->` are equivalent to the clojure.core macros, but
+they work with promises in the same way as `->` example shows.
 
 
 ### `handle`
