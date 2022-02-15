@@ -1,4 +1,4 @@
-{:paths ["src"],
+{:paths ["src" "resources"],
  :aliases
  {:dev
   {:extra-deps
