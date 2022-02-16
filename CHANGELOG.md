@@ -1,5 +1,12 @@
 # Changelog #
 
+## Version 6.1.436
+
+Date: 2022-02-16
+
+- Add builtin clj-kondo config (thanks to @wilkerlucio)
+
+
 ## Version 6.1.434
 
 Date: 2022-02-12
