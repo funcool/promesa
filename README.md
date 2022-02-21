@@ -4,7 +4,7 @@
 
 A lightweight promise/future library for Clojure & ClojureScript built
 on top of native primitives (`js/Promise` on JS, and
-`ClompletableFuture` on JVM).
+`CompletableFuture` on JVM).
 
 This library exposes a bunch of usefull syntactic abstractions that
 will considerably simplify to work with promises (in a very similar
