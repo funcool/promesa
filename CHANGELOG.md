@@ -1,5 +1,14 @@
 # Changelog #
 
+## Version 7.0.437
+
+Date: 2022-02-21
+
+- Make the `bind` function behave as it should behave (like bind and
+  not being `then` alias). **This is technically a breaking change**,
+  the `bind` function should have been implemented in terms of `bind`
+  operation and not be an alias for `then`.
+
 ## Version 6.1.436
 
 Date: 2022-02-16

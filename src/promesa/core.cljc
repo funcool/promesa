@@ -156,11 +156,10 @@
    (pt/-then p f executor)))
 
 (defn bind
-  "A convenient alias for `then`."
   ([p f]
-   (pt/-then p f))
+   (pt/-bind p f))
   ([p f executor]
-   (pt/-then p f executor)))
+   (pt/-bind p f executor)))
 
 (defn then'
   "Chains a computation `f` (function) to be executed when the promise
