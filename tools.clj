@@ -40,11 +40,11 @@
    :pseudo-names true
    :verbose true})
 
-(defmethod task "build:tests"
+(defmethod task "build"
   [args]
   (api/build (api/inputs "src" "test") build-options))
 
-(defmethod task "watch:tests"
+(defmethod task "watch"
   [args]
   (println "Start watch loop...")
   (letfn [(run-tests []

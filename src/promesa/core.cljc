@@ -92,8 +92,7 @@
 (defn promise?
   "Return true if `v` is a promise instance."
   [v]
-  #?(:clj (instance? CompletionStage v)
-     :cljs (instance? impl/*default-promise* v)))
+  (satisfies? pt/IPromise v))
 
 (defn deferred?
   "Return true if `v` is a promise instance (alias to `promise?`."

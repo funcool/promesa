@@ -329,3 +329,11 @@
          (->ScheduledTask #js {:done done
                                :cancelled false
                                :cancel-fn cancel})))))
+
+(defmacro with-dispatch
+  "Helper marcro for dispatch execution of the body to an executor
+  service."
+  [executor & body]
+  `(submit! ~executor (^:once fn* [] ~@body)))
+
+

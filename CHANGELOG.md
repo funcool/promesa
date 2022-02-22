@@ -1,5 +1,15 @@
 # Changelog #
 
+## Version 7.0.443
+
+Date: 2022-02-22
+
+- Add better builtin clj-kondo config (thanks to @wilkerlucio)
+- Make `promise?` to check for IPromise protocol instead of concrete
+  types.
+- Add `promesa.exec/with-dispatch` macro.
+
+
 ## Version 7.0.437
 
 Date: 2022-02-21
