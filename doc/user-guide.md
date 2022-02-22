@@ -9,13 +9,13 @@ A promise library for Clojure and ClojureScript.
 Leiningen:
 
 ```clojure
-[funcool/promesa "7.0.443"]
+[funcool/promesa "7.0.444"]
 ```
 
 deps.edn:
 
 ```clojure
-funcool/promesa {:mvn/version "7.0.443"}
+funcool/promesa {:mvn/version "7.0.444"}
 ```
 
 On the JVM platform _promesa_ is built on top of *completable futures*

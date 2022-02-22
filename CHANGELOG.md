@@ -1,5 +1,13 @@
 # Changelog #
 
+## Version 7.0.444
+
+Date: 2022-02-22
+
+- REVERT: Make `promise?` to check for IPromise protocol instead of concrete
+  types. Because the impl was wrong.
+
+
 ## Version 7.0.443
 
 Date: 2022-02-22
