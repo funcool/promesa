@@ -26,7 +26,7 @@
   (:refer-clojure :exclude [delay spread promise
                             await map mapcat run!
                             future let loop recur
-                            -> ->> as->])
+                            -> ->> as-> with-redefs])
   (:require
    [promesa.protocols :as pt]
    [clojure.core :as c]
@@ -535,3 +535,23 @@
      ~(if (empty? forms)
         name
         (last forms))))
+
+(defmacro with-redefs
+  "Like clojure.core/with-redefs, but it will handle promises in
+   body and wait until they resolve or reject before restoring the
+   bindings. Useful for mocking async APIs."
+  [bindings & body]
+  (c/let [names (take-nth 2 bindings)
+          vals (take-nth 2 (drop 1 bindings))
+          orig-val-syms (map (comp gensym #(str % "-orig-val__") name) names)
+          temp-val-syms (map (comp gensym #(str % "-temp-val__") name) names)
+          binds (map vector names temp-val-syms)
+          resets (reverse (map vector names orig-val-syms))
+          bind-value (fn [[k v]] (list 'alter-var-root (list 'var k) (list 'constantly v)))]
+    `(c/let [~@(interleave orig-val-syms names)
+           ~@(interleave temp-val-syms vals)]
+       ~@(map bind-value binds)
+       (c/-> (do! ~@body)
+             (finally
+               (fn []
+                 ~@(map bind-value resets)))))))
