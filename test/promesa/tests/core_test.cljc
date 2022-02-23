@@ -458,3 +458,13 @@
         test #(p/then p1 (fn [res] (t/is (= res 8))))]
     #?(:cljs (t/async done (p/do! (test) (done)))
        :clj @(test))))
+
+(t/deftest with-redefs-macro
+  (let [a-fn (fn [] (p/resolved "original"))
+        a-var :original
+        p1   (p/with-redefs [a-fn (fn [] (p/resolved "mocked"))
+                             a-var :mocked]
+               (p/then (a-fn) #(vector % a-var)))
+        test #(p/then p1 (fn [res] (t/is (= res ["mocked" :mocked]))))]
+    #?(:cljs (t/async done (p/do! (test) (done)))
+       :clj @(test))))
