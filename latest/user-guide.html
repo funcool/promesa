@@ -4,10 +4,10 @@
 <p>A promise library for Clojure and ClojureScript.</p>
 <h2><a href="#install" id="install"></a>Install</h2>
 <p>Leiningen:</p>
-<pre><code class="language-clojure">[funcool/promesa "6.1.434"]
+<pre><code class="language-clojure">[funcool/promesa "8.0.446"]
 </code></pre>
 <p>deps.edn:</p>
-<pre><code class="language-clojure">funcool/promesa {:mvn/version "6.1.434"}
+<pre><code class="language-clojure">funcool/promesa {:mvn/version "8.0.446"}
 </code></pre>
 <p>On the JVM platform <em>promesa</em> is built on top of <em>completable futures</em> (requires JDK &gt;= 8). On JS engines it is built on top of the execution environment’s built-in Promise implementation.</p>
 <h2><a href="#introduction" id="introduction"></a>Introduction</h2>
@@ -57,17 +57,17 @@
 @(p/create (fn [resolve reject] (resolve 1)) exec/default-executor)
 ;; =&gt; 1
 </code></pre>
-<p>Another way to create a promise is using the <code>do!</code> macro:</p>
-<pre><code class="language-clojure">(p/do!
+<p>Another way to create a promise is using the <code>do</code> macro:</p>
+<pre><code class="language-clojure">(p/do
   (let [a (rand-int 10)
         b (rand-int 10)]
     (+ a b)))
 </code></pre>
-<p>The <code>do!</code> macro works similarly to clojure’s <code>do</code> block, so you can provide any expression, but only the last one will be returned. That expression can be a plain value or another promise.</p>
-<p>If an exception is raised inside the <code>do!</code> block, it will return the rejected promise instead of re-raising the exception on the stack.</p>
-<p>If the <code>do!</code> contains more than one expression, each expression will be treated as a promise expression and will be executed sequentially, each awaiting the resolution of the prior expression.</p>
-<p>For example, this <code>do!</code> macro:</p>
-<pre><code class="language-clojure">(p/do! (expr1)
+<p>The <code>do</code> macro works similarly to clojure’s <code>do</code> block, so you can provide any expression, but only the last one will be returned. That expression can be a plain value or another promise.</p>
+<p>If an exception is raised inside the <code>do</code> block, it will return the rejected promise instead of re-raising the exception on the stack.</p>
+<p>If the <code>do</code> contains more than one expression, each expression will be treated as a promise expression and will be executed sequentially, each awaiting the resolution of the prior expression.</p>
+<p>For example, this <code>do</code> macro:</p>
+<pre><code class="language-clojure">(p/do (expr1)
        (expr2)
        (expr3))
 </code></pre>
@@ -218,12 +218,12 @@
 </code></pre>
 <h2><a href="#error-handling" id="error-handling"></a>Error handling</h2>
 <p>One of the advantages of using the promise abstraction is that it natively has a notion of errors, so you don’t need to reinvent it. If some computation inside the composed promise chain/pipeline raises an exception, the pipeline short-circuits and propagates the exception to the last promise in the chain.</p>
+<p>The <code>catch</code> function adds a new handler to the promise chain that will be called when any of the previous promises in the chain are rejected or an exception is raised. The <code>catch</code> function also returns a promise that will be resolved or rejected depending on what happens inside the catch handler.</p>
 <p>Let see an example:</p>
 <pre><code class="language-clojure">(-&gt; (p/rejected (ex-info "error" nil))
     (p/catch (fn [error]
                (.log js/console error))))
 </code></pre>
-<p>The <code>catch</code> function adds a new handler to the promise chain that will be called when any of the previous promises in the chain are rejected or an exception is raised. The <code>catch</code> function also returns a promise that will be resolved or rejected depending on what happens inside the catch handler.</p>
 <p>If you prefer <code>map</code>-like parameter ordering, the <code>err</code> function (and <code>error</code> alias) works in same way as <code>catch</code> but has parameters ordered like <code>map</code>:</p>
 <pre><code class="language-clojure">(-&gt;&gt; (p/rejected (ex-info "error" nil))
      (p/error (fn [error]
