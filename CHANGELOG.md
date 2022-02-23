@@ -1,5 +1,17 @@
 # Changelog #
 
+
+## Version 8.0.446
+
+Date: 2022-02-23
+
+- Make `promise?` to check for IPromise protocol instead of concrete types. Now it should
+  more easy extend promise to other promise like types.
+- Rename `promise.core/do!` macro to `promise.core/do` (backward compatible, previous
+  macro still in the codebase)
+- Add promise aware `with-redefs` macro (thanks to @eccentric-j)
+
+
 ## Version 7.0.444
 
 Date: 2022-02-22

@@ -104,36 +104,6 @@
 #?(:cljs
    (extend-promise! js/Promise))
 
-;; This code allows execute `then`, `map` and all the other promise
-;; chaining functions on any object if the object is a thenable but
-;; does not inherit from js/Promise, this code will automatically
-;; coerce it to a js/Promise instance.
-
-#?(:cljs
-   (extend-type default
-     pt/IPromise
-     (-map
-       ([it f] (pt/-map (pt/-promise it) f))
-       ([it f e] (pt/-map (pt/-promise it) f e)))
-     (-bind
-       ([it f] (pt/-bind (pt/-promise it) f))
-       ([it f e] (pt/-bind (pt/-promise it) f e)))
-     (-then
-       ([it f] (pt/-then (pt/-promise it) f))
-       ([it f e] (pt/-then (pt/-promise it) f e)))
-     (-mapErr
-       ([it f] (pt/-mapErr (pt/-promise it) f))
-       ([it f e] (pt/-mapErr (pt/-promise it) f e)))
-     (-thenErr
-       ([it f] (pt/-thenErr (pt/-promise it) f))
-       ([it f e] (pt/-thenErr (pt/-promise it) f e)))
-     (-handle
-       ([it f] (pt/-handle (pt/-promise it) f))
-       ([it f e] (pt/-handle (pt/-promise it) f e)))
-     (-finally
-       ([it f] (pt/-finally (pt/-promise it) f))
-       ([it f e] (pt/-finally (pt/-promise it) f e)))))
-
 #?(:clj (def fw-identity (pu/->FunctionWrapper identity)))
 
 #?(:clj
@@ -237,52 +207,7 @@
                             ^BiConsumer (pu/->BiConsumerWrapper f)
                             ^Executor (exec/resolve-executor executor))))
 
-
-     Object
-     (-map
-       ([it f] (pt/-map (pt/-promise it) f))
-       ([it f e] (pt/-map (pt/-promise it) f e)))
-     (-bind
-       ([it f] (pt/-bind (pt/-promise it) f))
-       ([it f e] (pt/-bind (pt/-promise it) f e)))
-     (-then
-       ([it f] (pt/-then (pt/-promise it) f))
-       ([it f e] (pt/-then (pt/-promise it) f e)))
-     (-handle
-       ([it f] (pt/-handle (pt/-promise it) f))
-       ([it f e] (pt/-handle (pt/-promise it) f e)))
-     (-mapErr
-       ([it f] (pt/-mapErr (pt/-promise it) f))
-       ([it f e] (pt/-mapErr (pt/-promise it) f e)))
-     (-thenErr
-       ([it f] (pt/-thenErr (pt/-promise it) f))
-       ([it f e] (pt/-thenErr (pt/-promise it) f e)))
-     (-finally
-       ([it f] (pt/-finally (pt/-promise it) f))
-       ([it f e] (pt/-finally (pt/-promise it) f e)))
-
-     nil
-     (-map
-       ([it f] (pt/-map (pt/-promise it) f))
-       ([it f e] (pt/-map (pt/-promise it) f e)))
-     (-bind
-       ([it f] (pt/-bind (pt/-promise it) f))
-       ([it f e] (pt/-bind (pt/-promise it) f e)))
-     (-then
-       ([it f] (pt/-then (pt/-promise it) f))
-       ([it f e] (pt/-then (pt/-promise it) f e)))
-     (-mapErr
-       ([it f] (pt/-mapErr (pt/-promise it) f))
-       ([it f e] (pt/-mapErr (pt/-promise it) f e)))
-     (-thenErr
-       ([it f] (pt/-thenErr (pt/-promise it) f))
-       ([it f e] (pt/-thenErr (pt/-promise it) f e)))
-     (-handle
-       ([it f] (pt/-handle (pt/-promise it) f))
-       ([it f e] (pt/-handle (pt/-promise it) f e)))
-     (-finally
-       ([it f] (pt/-finally (pt/-promise it) f))
-       ([it f e] (pt/-finally (pt/-promise it) f e)))))
+     ))
 
 #?(:clj
    (extend-type CompletableFuture

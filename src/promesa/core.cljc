@@ -26,7 +26,7 @@
   (:refer-clojure :exclude [delay spread promise
                             await map mapcat run!
                             future let loop recur
-                            -> ->> as-> with-redefs])
+                            -> ->> as-> with-redefs do])
   (:require
    [promesa.protocols :as pt]
    [clojure.core :as c]
@@ -62,9 +62,16 @@
 
   If an executor is provided, it will be used to resolve this
   promise."
-  ([v] (pt/-promise v))
+  ([v]
+   (pt/-promise v))
   ([v executor]
-   (pt/-map v identity executor)))
+   (pt/-map (pt/-promise v) identity executor)))
+
+(defn wrap
+  "A convenience alias for `promise` coercion function that only accepts
+  a single argument."
+  [v]
+  (pt/-promise v))
 
 (defn create
   "Create a promise instance from a factory function. If an executor is
@@ -92,11 +99,13 @@
 (defn promise?
   "Return true if `v` is a promise instance."
   [v]
-  #?(:clj (instance? CompletionStage v)
-     :cljs (instance? impl/*default-promise* v)))
+  (satisfies? pt/IPromise v))
+
+  ;; #?(:clj (instance? CompletionStage v)
+  ;;    :cljs (instance? impl/*default-promise* v)))
 
 (defn deferred?
-  "Return true if `v` is a promise instance (alias to `promise?`."
+  "Return true if `v` is a promise instance (alias to `promise?`)."
   [v]
   #?(:clj (instance? CompletionStage v)
      :cljs (instance? impl/*default-promise* v)))
@@ -135,12 +144,6 @@
 
 ;; Chaining
 
-(defn wrap
-  [v]
-  (if (promise? v)
-    v
-    (pt/-promise v)))
-
 (defn then
   "Chains a computation `f` (function) to be executed when the promise
   `p` is successfully resolved.
@@ -151,15 +154,15 @@
   If the function `f` returns a promise instance, it will be
   automatically unwrapped."
   ([p f]
-   (pt/-then p f))
+   (pt/-then (pt/-promise p) f))
   ([p f executor]
-   (pt/-then p f executor)))
+   (pt/-then (pt/-promise p) f executor)))
 
 (defn bind
   ([p f]
-   (pt/-bind p f))
+   (pt/-bind (pt/-promise p) f))
   ([p f executor]
-   (pt/-bind p f executor)))
+   (pt/-bind (pt/-promise p) f executor)))
 
 (defn then'
   "Chains a computation `f` (function) to be executed when the promise
@@ -169,8 +172,10 @@
   you also can provide a custom executor.
 
   Don't perform flatten on the result."
-  ([p f] (pt/-map p f))
-  ([p f executor] (pt/-map p f executor)))
+  ([p f]
+   (pt/-map (pt/-promise p) f))
+  ([p f executor]
+   (pt/-map (pt/-promise p) f executor)))
 
 (defn map
   "Chains a computation `f` (function) to be executed when the promise
@@ -178,8 +183,10 @@
 
   Unlike `then` this does not performs automatic promise flattening.
   This is designed to be used with `->>`."
-  ([f p] (pt/-map p f))
-  ([executor f p] (pt/-map p f executor)))
+  ([f p]
+   (pt/-map (pt/-promise p) f))
+  ([executor f p]
+   (pt/-map (pt/-promise p) f executor)))
 
 (defn mapcat
   "Chains a computation `f` (function) to be executed when the promise
@@ -190,8 +197,10 @@
   the same way as `map`.
 
   This is designed to be used with `->>`."
-  ([f p] (pt/-bind p f))
-  ([executor f p] (pt/-bind p f executor)))
+  ([f p]
+   (pt/-bind (pt/-promise p) f))
+  ([executor f p]
+   (pt/-bind (pt/-promise p) f executor)))
 
 (defn chain
   "Chain variable number of computations to be executed
@@ -205,13 +214,15 @@
   `chain` does not flattens the return value of each step (probably
   this is more performant than `chain`)."
   ([p f] (then' p f))
-  ([p f & fs] (reduce pt/-map p (cons f fs))))
+  ([p f & fs] (reduce pt/-map (pt/-promise p) (cons f fs))))
 
 (defn handle
   "Executes `f` when the promise `p` is resolved or is rejected. Returns
   a promise resolved with the return value of `f` function."
-  ([p f] (pt/-handle p f))
-  ([p f executor] (pt/-handle p f executor)))
+  ([p f]
+   (pt/-handle (pt/-promise p) f))
+  ([p f executor]
+   (pt/-handle (pt/-promise p) f executor)))
 
 (defn finally
   "Attach a potentially side-effectful handler to promise that will be
@@ -219,36 +230,42 @@
 
   Returns the original promise and the return value of `f` function is
   ignored."
-  ([p f] (pt/-finally p f))
-  ([p f executor] (pt/-finally p f executor)))
+  ([p f]
+   (pt/-finally (pt/-promise p) f))
+  ([p f executor]
+   (pt/-finally (pt/-promise p) f executor)))
 
 (defn catch
   "Executes `f` when the promise `p` is rejected. Returns a promise
   resolved with the return value of `f` function handler."
   ([p f]
-   (pt/-thenErr p f))
+   (pt/-thenErr (pt/-promise p) f))
   ([p pred-or-type f]
    (c/let [accept? (if (ifn? pred-or-type)
                      pred-or-type
                      #(instance? pred-or-type %))]
-     (pt/-thenErr p (fn [e]
-                      (if (accept? e)
-                        (f e)
-                        (impl/rejected e)))))))
+     (pt/-thenErr
+      (pt/-promise p)
+      (fn [e]
+        (if (accept? e)
+          (f e)
+          (impl/rejected e)))))))
 
 (defn catch'
   "Executes `f` when the promise `p` is rejected. Returns a promise
   resolved with the return value of `f` function handler."
   ([p f]
-   (pt/-mapErr p f))
+   (pt/-mapErr (pt/-promise p) f))
   ([p pred-or-type f]
    (c/let [accept? (if (ifn? pred-or-type)
                      pred-or-type
                      #(instance? pred-or-type %))]
-     (pt/-mapErr p (fn [e]
-                     (if (accept? e)
-                        (f e)
-                        (throw e)))))))
+     (pt/-mapErr
+      (pt/-promise p)
+      (fn [e]
+        (if (accept? e)
+          (f e)
+          (impl/rejected e)))))))
 
 (defn error
   "Same as `catch` but with parameters inverted."
@@ -298,12 +315,12 @@
    (any promises ::default))
   ([promises default]
    (c/let [state (atom {:resolved false
-                      :counter (count promises)
-                      :rejections []})]
+                        :counter (count promises)
+                        :rejections []})]
      (create
       (fn [resolve reject]
         (doseq [p promises]
-          (c/-> (promise p)
+          (c/-> (pt/-promise p)
                 (then (fn [v]
                         (when-not (:resolved @state)
                           (swap! state (fn [state]
@@ -407,34 +424,46 @@
   to the last expression. Always awaiting the result of each
   expression."
   [& exprs]
-  `(pt/-bind nil (fn [_#]
-                   ~(condp = (count exprs)
-                      0 `(pt/-promise nil)
-                      1 `(pt/-promise ~(first exprs))
-                      (reduce (fn [acc e]
-                                `(pt/-bind ~e (fn [_#] ~acc)))
-                              `(pt/-promise ~(last exprs))
-                              (reverse (butlast exprs)))))))
+  `(pt/-bind
+    (pt/-promise nil)
+    (fn [_#]
+      ~(condp = (count exprs)
+         0 `(pt/-promise nil)
+         1 `(pt/-promise ~(first exprs))
+         (reduce (fn [acc e]
+                   `(pt/-bind (pt/-promise ~e) (fn [_#] ~acc)))
+                 `(pt/-promise ~(last exprs))
+                 (reverse (butlast exprs)))))))
+
+
+(defmacro do
+  "An alias for do!"
+  [& exprs]
+  `(do! ~@exprs))
 
 (defmacro let
   "A `let` alternative that always returns promise and waits for all the
   promises on the bindings."
   [bindings & body]
-  `(pt/-bind nil (fn [_#]
-                   ~(c/->> (reverse (partition 2 bindings))
-                           (reduce (fn [acc [l r]]
-                                     `(pt/-bind ~r (fn [~l] ~acc)))
-                                   `(do! ~@body))))))
+  `(pt/-bind
+    (pt/-promise nil)
+    (fn [_#]
+      ~(c/->> (reverse (partition 2 bindings))
+              (reduce (fn [acc [l r]]
+                        `(pt/-bind (pt/-promise ~r) (fn [~l] ~acc)))
+                      `(do! ~@body))))))
 
 (defmacro plet
   "A parallel let; executes all the bindings in parallel and when all
   bindings are resolved, executes the body."
   [bindings & body]
-  `(pt/-bind nil (fn [_#]
-                   ~(c/let [bindings (partition 2 bindings)]
-                      `(c/-> (all ~(mapv second bindings))
-                             (then (fn [[~@(mapv first bindings)]]
-                                     (do! ~@body))))))))
+  `(pt/-bind
+    (pt/-promise nil)
+    (fn [_#]
+      ~(c/let [bindings (partition 2 bindings)]
+         `(c/-> (all ~(mapv second bindings))
+                (then (fn [[~@(mapv first bindings)]]
+                        (do! ~@body))))))))
 
 (defmacro future
   "Analogous to `clojure.core/future` that returns a promise instance
@@ -541,17 +570,19 @@
    body and wait until they resolve or reject before restoring the
    bindings. Useful for mocking async APIs."
   [bindings & body]
-  (c/let [names (take-nth 2 bindings)
-          vals (take-nth 2 (drop 1 bindings))
-          orig-val-syms (map (comp gensym #(str % "-orig-val__") name) names)
-          temp-val-syms (map (comp gensym #(str % "-temp-val__") name) names)
-          binds (map vector names temp-val-syms)
-          resets (reverse (map vector names orig-val-syms))
-          bind-value (fn [[k v]] (list 'alter-var-root (list 'var k) (list 'constantly v)))]
+  (c/let [names         (take-nth 2 bindings)
+          vals          (take-nth 2 (drop 1 bindings))
+          orig-val-syms (c/map (comp gensym #(str % "-orig-val__") name) names)
+          temp-val-syms (c/map (comp gensym #(str % "-temp-val__") name) names)
+          binds         (c/map vector names temp-val-syms)
+          resets        (reverse (c/map vector names orig-val-syms))
+          bind-value    (if (:ns &env)
+                          (fn [[k v]] (list 'set! k v))
+                          (fn [[k v]] (list 'alter-var-root (list 'var k) (list 'constantly v))))]
     `(c/let [~@(interleave orig-val-syms names)
-           ~@(interleave temp-val-syms vals)]
-       ~@(map bind-value binds)
-       (c/-> (do! ~@body)
-             (finally
-               (fn []
-                 ~@(map bind-value resets)))))))
+             ~@(interleave temp-val-syms vals)]
+       ~@(c/map bind-value binds)
+       (c/-> (promesa.core/do! ~@body)
+             (promesa.core/finally
+               (fn [_# _#]
+                 ~@(c/map bind-value resets)))))))

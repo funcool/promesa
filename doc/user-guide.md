@@ -9,13 +9,13 @@ A promise library for Clojure and ClojureScript.
 Leiningen:
 
 ```clojure
-[funcool/promesa "7.0.444"]
+[funcool/promesa "8.0.446"]
 ```
 
 deps.edn:
 
 ```clojure
-funcool/promesa {:mvn/version "7.0.444"}
+funcool/promesa {:mvn/version "8.0.446"}
 ```
 
 On the JVM platform _promesa_ is built on top of *completable futures*
@@ -104,30 +104,30 @@ if you want to execute it asynchronously, you can provide an executor:
 ;; => 1
 ```
 
-Another way to create a promise is using the `do!` macro:
+Another way to create a promise is using the `do` macro:
 
 ```clojure
-(p/do!
+(p/do
   (let [a (rand-int 10)
         b (rand-int 10)]
     (+ a b)))
 ```
 
-The `do!` macro works similarly to clojure's `do` block, so you can
+The `do` macro works similarly to clojure's `do` block, so you can
 provide any expression, but only the last one will be returned. That
 expression can be a plain value or another promise.
 
-If an exception is raised inside the `do!` block, it will return the
+If an exception is raised inside the `do` block, it will return the
 rejected promise instead of re-raising the exception on the stack.
 
-If the `do!` contains more than one expression, each expression will
+If the `do` contains more than one expression, each expression will
 be treated as a promise expression and will be executed sequentially,
 each awaiting the resolution of the prior expression.
 
-For example, this `do!` macro:
+For example, this `do` macro:
 
 ```clojure
-(p/do! (expr1)
+(p/do (expr1)
        (expr2)
        (expr3))
 ```
@@ -399,6 +399,12 @@ some computation inside the composed promise chain/pipeline raises an
 exception, the pipeline short-circuits and propagates the exception to
 the last promise in the chain.
 
+The `catch` function adds a new handler to the promise chain that will
+be called when any of the previous promises in the chain are rejected
+or an exception is raised. The `catch` function also returns a promise
+that will be resolved or rejected depending on what happens inside the
+catch handler.
+
 Let see an example:
 
 ```clojure
@@ -406,12 +412,6 @@ Let see an example:
     (p/catch (fn [error]
                (.log js/console error))))
 ```
-
-The `catch` function adds a new handler to the promise chain that will
-be called when any of the previous promises in the chain are rejected
-or an exception is raised. The `catch` function also returns a promise
-that will be resolved or rejected depending on what happens inside the
-catch handler.
 
 If you prefer `map`-like parameter ordering, the `err` function (and
 `error` alias) works in same way as `catch` but has parameters ordered
