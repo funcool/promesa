@@ -1,5 +1,11 @@
 # Changelog #
 
+## Version 8.0.450
+
+Date: 2022-02-24
+
+- Add `with-redefs` macro to clj-kondo config (thanks to @eccentric-j)
+
 
 ## Version 8.0.446
 
