@@ -27,3 +27,20 @@ way as you will do it in JS with async/await).
 See the complete [documentation](https://funcool.github.io/promesa/latest/) for
 more detailed information.
 
+
+# Contributing
+
+## Testing
+
+Run the Clojure (.clj) tests:
+
+``` shell
+clojure -Adev -m promesa.tests.main
+```
+
+Run the ClojureScript (.cljs) tests:
+
+``` shell
+clj -Adev tools.clj build
+node out/tests.js
+```
