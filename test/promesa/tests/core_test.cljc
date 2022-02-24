@@ -474,17 +474,24 @@
     #?(:cljs (t/async done (p/do (test) (done)))
        :clj @(test))))
 
+;; Create some test variables and a test fn
+;; These must be defined here as locals do not work
 
-(defn test-fn
+(def redefs-var :original)
+(defn redefs-async-fn
   []
   (p/resolved "original"))
 
-(def test-var :original)
-
 (t/deftest with-redefs-macro
-  (let [p1 (p/with-redefs [test-fn  (fn [] (p/resolved "mocked"))
-                           test-var :mocked]
-             (p/then (test-fn) #(vector % test-var)))
-        test #(p/then p1 (fn [res] (t/is (= res ["mocked" :mocked]))))]
+  (let [original-fn redefs-async-fn
+        p1 (p/with-redefs [redefs-async-fn  (fn [] (p/resolved "mocked"))
+                           redefs-var :mocked]
+             (p/then (redefs-async-fn)
+                     (fn [v]
+                       (not= redefs-async-fn original-fn)
+                       [v redefs-var])))
+        test #(p/then p1 (fn [res]
+                           (t/is (= res ["mocked" :mocked]))
+                           (t/is (= redefs-async-fn original-fn))))]
     #?(:cljs (t/async done (p/do (test) (done)))
        :clj @(test))))
