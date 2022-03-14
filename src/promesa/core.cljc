@@ -57,7 +57,7 @@
   (impl/deferred))
 
 (defn promise
-  "The coerce based promise constructor. Creates a appropriate promise
+  "The coerce based promise constructor. Creates an appropriate promise
   instance depending on the provided value.
 
   If an executor is provided, it will be used to resolve this
@@ -181,7 +181,7 @@
   "Chains a computation `f` (function) to be executed when the promise
   `p` is successfully resolved.
 
-  Unlike `then` this does not performs automatic promise flattening.
+  Unlike `then`, this does not perform automatic promise flattening.
   This is designed to be used with `->>`."
   ([f p]
    (pt/-map (pt/-promise p) f))
@@ -190,7 +190,7 @@
 
 (defn mapcat
   "Chains a computation `f` (function) to be executed when the promise
-  `p` is successfully resolved. always expecting that `f` returns a
+  `p` is successfully resolved. `f` must return a
   promise that will be automatically unwrapped.
 
   This is just a stricter version of `then` with reversed arguments in
@@ -211,7 +211,7 @@
 
 (defn chain'
   "Chain variable number of computations to be executed serially. Unlike
-  `chain` does not flattens the return value of each step (probably
+  `chain` does not flatten the return value of each step (probably
   this is more performant than `chain`)."
   ([p f] (then' p f))
   ([p f & fs] (reduce pt/-map (pt/-promise p) (cons f fs))))
