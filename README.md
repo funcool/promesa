@@ -35,12 +35,12 @@ more detailed information.
 Run the Clojure (.clj) tests:
 
 ``` shell
-clojure -Adev -m promesa.tests.main
+clojure -Mdev -m promesa.tests.main
 ```
 
 Run the ClojureScript (.cljs) tests:
 
 ``` shell
-clj -Adev tools.clj build
+clj -Mdev tools.clj build
 node out/tests.js
 ```
