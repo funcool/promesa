@@ -1,0 +1,46 @@
+name: Test
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+  schedule:
+    # monthly
+    - cron: "0 0 1 * *"
+
+env:
+  #bump to clear caches
+  ACTION_CACHE_VERSION: 'v1'
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        java: ['8', '11', '17']
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ env.ACTION_CACHE_VERSION }}-${{ runner.os }}-maven-${{ hashFiles('**/deps.edn') }}
+      - name: Prepare java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java }}
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '16.14.0'
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@3.5
+        with:
+          cli: 1.10.3.1087
+      # Run trojansourcedetector
+      - name: Trojan Source Detector
+        uses: haveyoudebuggedit/trojansourcedetector@v1
+      - run: clojure -Mdev -m promesa.tests.main
+      - run: clojure -Mdev tools.clj build
+      - run: node out/tests.js

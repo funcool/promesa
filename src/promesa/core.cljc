@@ -57,7 +57,7 @@
   (impl/deferred))
 
 (defn promise
-  "The coerce based promise constructor. Creates a appropriate promise
+  "The coerce based promise constructor. Creates an appropriate promise
   instance depending on the provided value.
 
   If an executor is provided, it will be used to resolve this
@@ -181,7 +181,7 @@
   "Chains a computation `f` (function) to be executed when the promise
   `p` is successfully resolved.
 
-  Unlike `then` this does not performs automatic promise flattening.
+  Unlike `then`, this does not perform automatic promise flattening.
   This is designed to be used with `->>`."
   ([f p]
    (pt/-map (pt/-promise p) f))
@@ -190,7 +190,7 @@
 
 (defn mapcat
   "Chains a computation `f` (function) to be executed when the promise
-  `p` is successfully resolved. always expecting that `f` returns a
+  `p` is successfully resolved. `f` must return a
   promise that will be automatically unwrapped.
 
   This is just a stricter version of `then` with reversed arguments in
@@ -211,7 +211,7 @@
 
 (defn chain'
   "Chain variable number of computations to be executed serially. Unlike
-  `chain` does not flattens the return value of each step (probably
+  `chain` does not flatten the return value of each step (probably
   this is more performant than `chain`)."
   ([p f] (then' p f))
   ([p f & fs] (reduce pt/-map (pt/-promise p) (cons f fs))))
@@ -373,8 +373,8 @@
 ;; --- Utils
 
 (defn promisify
-  "Given a function that accepts a callback as the last argument return other
-  function that returns a promise. Callback is expected to take single
+  "Given a function that accepts a callback as the last argument, return a
+  function that returns a promise. Callback is expected to take one
   parameter (result of a computation)."
   [callable]
   (fn [& args]
@@ -398,7 +398,7 @@
   "Returns a cancellable promise that will be fulfilled with this
   promise's fulfillment value or rejection reason.  However, if this
   promise is not fulfilled or rejected within `ms` milliseconds, the
-  returned promise is cancelled with a TimeoutError"
+  returned promise is cancelled with a TimeoutError."
   ([p t] (timeout p t ::default exec/default-scheduler))
   ([p t v] (timeout p t v exec/default-scheduler))
   ([p t v scheduler]
@@ -410,7 +410,7 @@
 
 (defn delay
   "Given a timeout in miliseconds and optional value, returns a promise
-  that will fulfilled with provided value (or nil) after the time is
+  that will be fulfilled with provided value (or nil) after the time is
   reached."
   ([t] (delay t nil exec/default-scheduler))
   ([t v] (delay t v exec/default-scheduler))
@@ -421,7 +421,7 @@
 
 (defmacro do!
   "Execute potentially side effectful code and return a promise resolved
-  to the last expression. Always awaiting the result of each
+  to the last expression after awaiting the result of each
   expression."
   [& exprs]
   `(pt/-bind
@@ -467,7 +467,7 @@
 
 (defmacro future
   "Analogous to `clojure.core/future` that returns a promise instance
-  instead of the `Future`. Usefull for execute synchronous code in a
+  instead of the `Future`. Useful for executing synchronous code in a
   separate thread (also works in cljs)."
   [& body]
   `(c/-> (exec/submit! (fn []
@@ -515,9 +515,9 @@
 (defmacro ->
   "Like the clojure.core/->, but it will handle promises in values
   and make sure the next form gets the value realized instead of
-  the promise. Example using to fetch data in the browser with CLJS:
-
-  Example:
+  the promise.
+ 
+  Example fetching data in the browser with CLJS:
 
   (p/-> (js/fetch #js {...}) ; returns a promise
         .-body)
@@ -535,9 +535,9 @@
 (defmacro ->>
   "Like the clojure.core/->>, but it will handle promises in values
   and make sure the next form gets the value realized instead of
-  the promise. Example using to fetch data in the browser with CLJS:
+  the promise. 
 
-  Example:
+  Example fetching data in the browser with CLJS:
 
   (p/->> (js/fetch #js {...}) ; returns a promise
          .-body
