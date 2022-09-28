@@ -16,4 +16,5 @@ pom.xml.asc
 /dist
 /.cpcache
 /settings.xml
-/.rebel_readline_history
+/.rebel_readline_history.cache
+.cache
