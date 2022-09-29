@@ -488,10 +488,22 @@
                            redefs-var :mocked]
              (p/then (redefs-async-fn)
                      (fn [v]
+                       ;; NOTE: this value is unused - should it be removed?
+                       ;; Reported by clj-kondo
                        (not= redefs-async-fn original-fn)
                        [v redefs-var])))
         test #(p/then p1 (fn [res]
                            (t/is (= res ["mocked" :mocked]))
                            (t/is (= redefs-async-fn original-fn))))]
+    #?(:cljs (t/async done (p/do (test) (done)))
+       :clj @(test))))
+
+(t/deftest doseq-test
+  (let [test #(p/let [state (atom [])
+                      xs [10 20 30]]
+                (p/doseq [x xs]
+                  (p/delay (- 100 x))
+                  (swap! state conj x))
+                (t/is (= xs @state)))]
     #?(:cljs (t/async done (p/do (test) (done)))
        :clj @(test))))

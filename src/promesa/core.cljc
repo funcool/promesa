@@ -26,7 +26,8 @@
   (:refer-clojure :exclude [delay spread promise
                             await map mapcat run!
                             future let loop recur
-                            -> ->> as-> with-redefs do])
+                            -> ->> as-> with-redefs do
+                            doseq])
   (:require
    [promesa.protocols :as pt]
    [clojure.core :as c]
@@ -319,7 +320,7 @@
                         :rejections []})]
      (create
       (fn [resolve reject]
-        (doseq [p promises]
+        (c/doseq [p promises]
           (c/-> (pt/-promise p)
                 (then (fn [v]
                         (when-not (:resolved @state)
@@ -586,3 +587,11 @@
              (promesa.core/finally
                (fn [_# _#]
                  ~@(c/map bind-value resets)))))))
+
+(defmacro doseq
+  "Simplified version of `doseq` which takes one binding and a seq, and
+  runs over it using `promesa.core/run!`"
+  [[binding xs] & body]
+  `(run! (fn [~binding]
+             (promesa.core/do ~@body))
+           ~xs))
