@@ -56,16 +56,28 @@
 #?(:cljs (declare ->MicrotaskExecutor))
 (declare ->SameThreadExecutor)
 
-(defonce ^:dynamic default-scheduler
+(defonce ^:dynamic *default-scheduler*
   (delay #?(:clj (scheduled-pool)
             :cljs (->ScheduledExecutor))))
 
-(defonce ^:dynamic default-executor
+(defonce ^:dynamic *default-executor*
   (delay #?(:clj (ForkJoinPool/commonPool)
             :cljs (->MicrotaskExecutor))))
 
 (defonce same-thread-executor
   (delay (->SameThreadExecutor)))
+
+#?(:clj
+   (def vthreads-supported?
+     (try
+       (eval `(Thread/startVirtualThread (constantly nil)))
+       true
+       (catch UnsupportedOperationException _cause
+         false))))
+
+#?(:clj
+   (defonce ^:dynamic *vthread-executor*
+     (delay (Executors/newVirtualThreadPerTaskExecutor))))
 
 (defn executor?
   [o]
@@ -73,22 +85,46 @@
      :cljs (satisfies? pt/IExecutor o)))
 
 (defn resolve-executor
-  ([] (resolve-executor default-executor))
+  ([] (resolve-executor *default-executor*))
   ([executor]
-   (if (= :default executor)
-     (resolve-executor default-executor)
-     (cond-> executor (delay? executor) deref))))
+   (cond
+     (= :default executor) (resolve-executor *default-executor*)
+     (= :vthread executor) (resolve-executor *vthread-executor*)
+     :else                 (cond-> executor (delay? executor) deref))))
 
 (defn resolve-scheduler
-  ([] (resolve-scheduler default-scheduler))
+  ([] (resolve-scheduler *default-scheduler*))
   ([scheduler]
    (if (= :default scheduler)
-     (resolve-scheduler default-scheduler)
+     (resolve-scheduler *default-scheduler*)
      (cond-> scheduler (delay? scheduler) deref))))
 
 #?(:clj
-   (defonce processors
-     (delay (.availableProcessors (Runtime/getRuntime)))))
+   (defn- get-available-processors
+     []
+     (.availableProcessors (Runtime/getRuntime))))
+
+(defn wrap-bindings
+  [f]
+  #?(:cljs f
+     :clj
+     (let [frame (clojure.lang.Var/cloneThreadBindingFrame)]
+       (fn
+         ([]
+          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (f))
+         ([x]
+          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (f x))
+         ([x y]
+          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (f x y))
+         ([x y z]
+          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (f x y z))
+         ([x y z & args]
+          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (apply f x y z args))))))
 
 ;; --- Public Api
 
@@ -103,10 +139,10 @@
   the return value of a task.
 
   A task is a plain clojure function."
-  ([task]
-   (pt/-submit! (resolve-executor) task))
-  ([executor task]
-   (pt/-submit! (resolve-executor executor) task)))
+  ([f]
+   (pt/-submit! (resolve-executor) f))
+  ([executor f]
+   (pt/-submit! (resolve-executor executor) f)))
 
 (defn schedule!
   "Schedule a callable to be executed after the `ms` delay
@@ -114,10 +150,10 @@
 
   In JVM it uses a scheduled executor service and in JS
   it uses the `setTimeout` function."
-  ([ms task]
-   (pt/-schedule! (resolve-scheduler) ms task))
-  ([scheduler ms task]
-   (pt/-schedule! (resolve-scheduler scheduler) ms task)))
+  ([ms f]
+   (pt/-schedule! (resolve-scheduler) ms f))
+  ([scheduler ms f]
+   (pt/-schedule! (resolve-scheduler scheduler) ms f)))
 
 ;; --- Pool & Thread Factories
 
@@ -239,12 +275,12 @@
      [{:keys [factory async? parallelism]
        :or {async? true}
        :as opts}]
-     (let [parallelism (or parallelism @processors)
-           factory (cond
-                     (instance? ForkJoinPool$ForkJoinWorkerThreadFactory factory) factory
-                     (nil? factory) ForkJoinPool/defaultForkJoinWorkerThreadFactory
-                     :else (throw (ex-info "Unexpected thread factory" {:factory factory})))]
-       (ForkJoinPool. (or parallelism @processors) factory nil async?))))
+     (let [parallelism (or parallelism (get-available-processors))
+           factory     (cond
+                         (instance? ForkJoinPool$ForkJoinWorkerThreadFactory factory) factory
+                         (nil? factory) ForkJoinPool/defaultForkJoinWorkerThreadFactory
+                         :else (throw (ex-info "Unexpected thread factory" {:factory factory})))]
+       (ForkJoinPool. parallelism factory nil async?))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; --- END DEPRECATED
@@ -279,6 +315,17 @@
        (Executors/newScheduledThreadPool (int parallelism) factory))))
 
 #?(:clj
+   (defn thread-per-task-executor
+     [& {:keys [factory]}]
+     (let [factory (resolve-thread-factory factory)]
+       (Executors/newThreadPerTaskExecutor ^ThreadFactory factory))))
+
+#?(:clj
+   (defn vthread-per-task-executor
+     []
+     (Executors/newVirtualThreadPerTaskExecutor)))
+
+#?(:clj
    (defn work-stealing-executor
      "Creates a work-stealing thread pool."
      [& {:keys [parallelism]}]
@@ -287,12 +334,12 @@
 #?(:clj
    (defn forkjoin-executor
      [& {:keys [factory async? parallelism] :or {async? true}}]
-     (let [parallelism (or parallelism @processors)
+     (let [parallelism (or parallelism (get-available-processors))
            factory     (cond
                          (instance? ForkJoinPool$ForkJoinWorkerThreadFactory factory) factory
                          (nil? factory) (default-forkjoin-thread-factory)
                          :else (throw (ex-info "Unexpected thread factory" {:factory factory})))]
-       (ForkJoinPool. (int (or parallelism @processors)) factory nil async?))))
+       (ForkJoinPool. (int parallelism) factory nil async?))))
 
 #?(:clj
    (extend-protocol pt/IExecutor

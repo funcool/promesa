@@ -400,8 +400,8 @@
   promise's fulfillment value or rejection reason.  However, if this
   promise is not fulfilled or rejected within `ms` milliseconds, the
   returned promise is cancelled with a TimeoutError."
-  ([p t] (timeout p t ::default exec/default-scheduler))
-  ([p t v] (timeout p t v exec/default-scheduler))
+  ([p t] (timeout p t ::default :default))
+  ([p t v] (timeout p t v :default))
   ([p t v scheduler]
    (c/let [timeout (deferred)
            tid     (exec/schedule! scheduler t #(if (= v ::default)
@@ -413,8 +413,8 @@
   "Given a timeout in miliseconds and optional value, returns a promise
   that will be fulfilled with provided value (or nil) after the time is
   reached."
-  ([t] (delay t nil exec/default-scheduler))
-  ([t v] (delay t v exec/default-scheduler))
+  ([t] (delay t nil :default))
+  ([t v] (delay t v :default))
   ([t v scheduler]
    (c/let [d (deferred)]
      (exec/schedule! scheduler t #(resolve! d v))
@@ -466,12 +466,36 @@
                 (then (fn [[~@(mapv first bindings)]]
                         (do! ~@body))))))))
 
-(defmacro future
-  "Analogous to `clojure.core/future` that returns a promise instance
+(defn thread-call
+  "Analogous to `clojure.core.async/thread` that returns a promise
+  instance instead of the `Future`. Useful for executing synchronous
+  code in a separate thread (also works in cljs)."
+  ([f] (exec/submit! (exec/wrap-bindings f)))
+  ([executor f] (exec/submit! executor (exec/wrap-bindings f))))
+
+(defn vthread-call
+  [f]
+  (exec/submit! :vthread (exec/wrap-bindings f)))
+
+(defmacro thread
+  "Analogous to `clojure.core.async/thread` that returns a promise instance
+  instead of the `Future`."
+  [& body]
+  `(thread-call (^once fn [] ~@body)))
+
+(defmacro vthread
+  "Analogous to `clojure.core.async/thread` that returns a promise instance
   instead of the `Future`. Useful for executing synchronous code in a
   separate thread (also works in cljs)."
   [& body]
-  `(exec/submit! (^once fn [] ~@body)))
+  `(vthread-call (^once fn [] ~@body)))
+
+(defmacro future
+  "Analogous macro to `clojure.core/future` that returns promise
+  instance instead of the `Future`. Exposed just for convenience and
+  works as an alias to `thread`."
+  [& body]
+  `(thread-call (^once fn [] ~@body)))
 
 (def ^:dynamic *loop-run-fn* exec/run!)
 
@@ -514,7 +538,7 @@
   "Like the clojure.core/->, but it will handle promises in values
   and make sure the next form gets the value realized instead of
   the promise.
- 
+
   Example fetching data in the browser with CLJS:
 
   (p/-> (js/fetch #js {...}) ; returns a promise
@@ -533,7 +557,7 @@
 (defmacro ->>
   "Like the clojure.core/->>, but it will handle promises in values
   and make sure the next form gets the value realized instead of
-  the promise. 
+  the promise.
 
   Example fetching data in the browser with CLJS:
 

@@ -1,5 +1,24 @@
 # Changelog #
 
+## Version 9.0.x
+
+Date: Unreleased
+
+Changes `promesa.core` ns:
+
+- Add `thread-call` helper.
+- Add `thread` macro (analogous to the `clojure.core.async/thread`)
+- Add `thread-call` function (analogous to the `clojure.core.async/thread-call`)
+- Add `vthread` macro (only on JDK19 with Preview enabled).
+- Add `vthread-call` function (only on JDK19 with Preview enabled).
+- Make the `future` and `thread` macros aware of var bindings.
+- Make the `create` promise factory catch all exceptions.
+
+Changes to `promesa.exec` ns:
+
+- Add `thread-per-task-executor` executor factory functon (JDK19 with Preview).
+- Add `vthread-per-task-executor` executor factory functon (JDK19 with Preview).
+
 ## Version 9.0.462
 
 Date: 2022-10-02
