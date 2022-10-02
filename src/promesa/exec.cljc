@@ -30,7 +30,6 @@
             #?(:cljs [goog.object :as gobj]))
   #?(:clj
      (:import
-      java.util.concurrent.atomic.AtomicLong
       java.util.concurrent.Callable
       java.util.concurrent.CompletableFuture
       java.util.concurrent.Executor
@@ -38,12 +37,16 @@
       java.util.concurrent.Executors
       java.util.concurrent.ForkJoinPool
       java.util.concurrent.ForkJoinPool$ForkJoinWorkerThreadFactory
+      java.util.concurrent.ForkJoinWorkerThread
       java.util.concurrent.Future
       java.util.concurrent.ScheduledExecutorService
       java.util.concurrent.ThreadFactory
       java.util.concurrent.TimeUnit
       java.util.concurrent.TimeoutException
+      java.util.concurrent.atomic.AtomicLong
       java.util.function.Supplier)))
+
+(set! *warn-on-reflection* true)
 
 ;; --- Globals & Defaults (with CLJS Impl)
 
@@ -51,27 +54,37 @@
    :cljs (declare ->ScheduledExecutor))
 
 #?(:cljs (declare ->MicrotaskExecutor))
+(declare ->SameThreadExecutor)
 
-(declare ->CurrentThreadExecutor)
-
-(defonce default-scheduler
+(defonce ^:dynamic default-scheduler
   (delay #?(:clj (scheduled-pool)
             :cljs (->ScheduledExecutor))))
 
-(defonce default-executor
+(defonce ^:dynamic default-executor
   (delay #?(:clj (ForkJoinPool/commonPool)
             :cljs (->MicrotaskExecutor))))
 
-(defonce current-thread-executor
-  (delay (->CurrentThreadExecutor)))
+(defonce same-thread-executor
+  (delay (->SameThreadExecutor)))
+
+(defn executor?
+  [o]
+  #?(:clj (instance? Executor o)
+     :cljs (satisfies? pt/IExecutor o)))
 
 (defn resolve-executor
-  ([] (if (delay? default-executor) @default-executor default-executor))
-  ([executor] (if (delay? executor) @executor executor)))
+  ([] (resolve-executor default-executor))
+  ([executor]
+   (if (= :default executor)
+     (resolve-executor default-executor)
+     (cond-> executor (delay? executor) deref))))
 
 (defn resolve-scheduler
-  ([] (if (delay? default-scheduler) @default-scheduler default-scheduler))
-  ([scheduler] (if (delay? scheduler) @scheduler scheduler)))
+  ([] (resolve-scheduler default-scheduler))
+  ([scheduler]
+   (if (= :default scheduler)
+     (resolve-scheduler default-scheduler)
+     (cond-> scheduler (delay? scheduler) deref))))
 
 #?(:clj
    (defonce processors
@@ -106,13 +119,77 @@
   ([scheduler ms task]
    (pt/-schedule! (resolve-scheduler scheduler) ms task)))
 
-;; --- Pool constructorls
+;; --- Pool & Thread Factories
 
-(declare resolve-thread-factory)
+#?(:clj
+   (defn thread-factory?
+     [o]
+     (instance? ThreadFactory o)))
+
+#?(:clj
+   (defn- fn->thread-factory
+     "Adapt a simple clojure function into a ThreadFactory instance."
+     [func]
+     (reify ThreadFactory
+       (^Thread newThread [_ ^Runnable runnable]
+        (func runnable)))))
+
+#?(:clj
+   (defn default-thread-factory
+     [& {:keys [name daemon priority]
+         :or {daemon true priority Thread/NORM_PRIORITY}}]
+     (let [^AtomicLong along (AtomicLong. 0)]
+       (reify ThreadFactory
+         (newThread [this runnable]
+           (doto (Thread. ^Runnable runnable)
+             (.setPriority priority)
+             (.setDaemon ^Boolean daemon)
+             (.setName (format name (.getAndIncrement along)))))))))
+
+#(:clj
+  (defn default-forkjoin-thread-factory
+    ^ForkJoinPool$ForkJoinWorkerThreadFactory
+    [& {:keys [name daemon] :or {name "promesa/forkjoin/%s" daemon true}}]
+    (let [^AtomicLong counter (AtomicLong. 0)]
+      (reify ForkJoinPool$ForkJoinWorkerThreadFactory
+        (newThread [_ pool]
+          (let [thread (.newThread ForkJoinPool/defaultForkJoinWorkerThreadFactory pool)
+                tname  (format name (.getAndIncrement counter))]
+            (.setName ^ForkJoinWorkerThread thread ^String tname)
+            (.setDaemon ^ForkJoinWorkerThread thread ^Boolean daemon)
+            thread))))))
+
+#?(:clj
+   (defn- opts->thread-factory
+     [{:keys [daemon priority]
+       :or {daemon true priority Thread/NORM_PRIORITY}}]
+     (fn->thread-factory
+      (fn [runnable]
+        (let [thread (Thread. ^Runnable runnable)]
+          (.setDaemon thread daemon)
+          (.setPriority thread priority)
+          thread)))))
+
+#?(:clj
+   (defn- resolve-thread-factory
+     ^ThreadFactory
+     [opts]
+     (cond
+       (thread-factory? opts) opts
+       (= :default opts)      (default-thread-factory)
+       (nil? opts)            (default-thread-factory)
+       (map? opts)            (default-thread-factory opts)
+       (fn? opts)             (fn->thread-factory opts)
+       :else                  (throw (ex-info "Invalid thread factory" {})))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; --- DEPRECATED
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 #?(:clj
    (defn cached-pool
      "A cached thread pool constructor."
+     {:deprecated "9.0"}
      ([]
       (Executors/newCachedThreadPool))
      ([opts]
@@ -122,6 +199,7 @@
 #?(:clj
    (defn fixed-pool
      "A fixed thread pool constructor."
+     {:deprecated "9.0"}
      ([n]
       (Executors/newFixedThreadPool (int n)))
      ([n opts]
@@ -131,6 +209,7 @@
 #?(:clj
    (defn single-pool
      "A single thread pool constructor."
+     {:deprecated "9.0"}
      ([]
       (Executors/newSingleThreadExecutor))
      ([opts]
@@ -140,6 +219,7 @@
 #?(:clj
    (defn scheduled-pool
      "A scheduled thread pool constructor."
+     {:deprecated "9.0"}
      ([] (Executors/newScheduledThreadPool (int 0)))
      ([n] (Executors/newScheduledThreadPool (int n)))
      ([n opts]
@@ -149,11 +229,13 @@
 #?(:clj
    (defn work-stealing-pool
      "Creates a work-stealing thread pool."
+     {:deprecated "9.0"}
      ([] (Executors/newWorkStealingPool))
      ([n] (Executors/newWorkStealingPool (int n)))))
 
 #?(:clj
    (defn forkjoin-pool
+     {:deprecated "9.0"}
      [{:keys [factory async? parallelism]
        :or {async? true}
        :as opts}]
@@ -164,57 +246,53 @@
                      :else (throw (ex-info "Unexpected thread factory" {:factory factory})))]
        (ForkJoinPool. (or parallelism @processors) factory nil async?))))
 
-
-;; --- Impl
-
-#?(:clj
-   (defn- thread-factory-adapter
-     "Adapt a simple clojure function into a
-     ThreadFactory instance."
-     [func]
-     (reify ThreadFactory
-       (^Thread newThread [_ ^Runnable runnable]
-        (func runnable)))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; --- END DEPRECATED
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 #?(:clj
-   (defn counted-thread-factory
-     [name daemon]
-     (let [along (AtomicLong. 0)]
-       (reify ThreadFactory
-         (newThread [this runnable]
-           (doto (Thread. ^Runnable runnable)
-             (.setDaemon ^Boolean daemon)
-             (.setName (format name (.getAndIncrement along)))))))))
+   (defn cached-executor
+     "A cached thread executor pool constructor."
+     [& {:keys [factory]}]
+     (let [factory (resolve-thread-factory factory)]
+       (Executors/newCachedThreadPool factory))))
 
 #?(:clj
-   (defn forkjoin-named-thread-factory
-     [name]
-     (reify ForkJoinPool$ForkJoinWorkerThreadFactory
-       (newThread [this pool]
-         (let [wth (.newThread ForkJoinPool/defaultForkJoinWorkerThreadFactory pool)]
-           (.setName wth (str name ":" (.getPoolIndex wth)))
-           wth)))))
+   (defn fixed-executor
+     "A fixed thread executor pool constructor."
+     [& {:keys [parallelism factory]}]
+     (let [factory (resolve-thread-factory factory)]
+       (Executors/newFixedThreadPool (int parallelism) factory))))
 
 #?(:clj
-   (defn- thread-factory
-     [{:keys [daemon priority]
-       :or {daemon true
-            priority Thread/NORM_PRIORITY}}]
-     (thread-factory-adapter
-      (fn [runnable]
-        (let [thread (Thread. ^Runnable runnable)]
-          (.setDaemon thread daemon)
-          (.setPriority thread priority)
-          thread)))))
+   (defn single-executor
+     "A single thread executor pool constructor."
+     [& {:keys [factory]}]
+     (let [factory (resolve-thread-factory factory)]
+       (Executors/newSingleThreadExecutor factory))))
 
 #?(:clj
-   (defn- resolve-thread-factory
-     [opts]
-     (cond
-       (map? opts) (thread-factory opts)
-       (fn? opts) (thread-factory-adapter opts)
-       (instance? ThreadFactory opts) opts
-       :else (throw (ex-info "Invalid thread factory" {})))))
+   (defn scheduled-executor
+     "A scheduled thread pool constructor."
+     [& {:keys [parallelism factory] :or {parallelism 1}}]
+     (let [factory (resolve-thread-factory factory)]
+       (Executors/newScheduledThreadPool (int parallelism) factory))))
+
+#?(:clj
+   (defn work-stealing-executor
+     "Creates a work-stealing thread pool."
+     [& {:keys [parallelism]}]
+     (Executors/newWorkStealingPool (int parallelism))))
+
+#?(:clj
+   (defn forkjoin-executor
+     [& {:keys [factory async? parallelism] :or {async? true}}]
+     (let [parallelism (or parallelism @processors)
+           factory     (cond
+                         (instance? ForkJoinPool$ForkJoinWorkerThreadFactory factory) factory
+                         (nil? factory) (default-forkjoin-thread-factory)
+                         :else (throw (ex-info "Unexpected thread factory" {:factory factory})))]
+       (ForkJoinPool. (int (or parallelism @processors)) factory nil async?))))
 
 #?(:clj
    (extend-protocol pt/IExecutor
@@ -224,9 +302,8 @@
                                    ^Executor this))
      (-submit! [this f]
        (CompletableFuture/supplyAsync ^Supplier (pu/->SupplierWrapper f)
-                                      ^Executor this))))
-
-
+                                      ^Executor this)
+       )))
 
 ;; Default executor that executes cljs/js tasks in the microtask
 ;; queue.
@@ -245,13 +322,13 @@
 
 ;; Executor that executes the task in the calling thread
 #?(:clj
-   (deftype CurrentThreadExecutor []
+   (deftype SameThreadExecutor []
      Executor
      (^void execute [_ ^Runnable f]
        (.run f)))
 
    :cljs
-   (deftype CurrentThreadExecutor []
+   (deftype SameThreadExecutor []
      pt/IExecutor
      (-run! [this f]
        (f)
@@ -332,8 +409,8 @@
 
 (defmacro with-dispatch
   "Helper macro for dispatch execution of the body to an executor
-  service."
+  service. The returned promise is not cancellable (the body will be
+  executed independently of the cancellation)."
   [executor & body]
-  `(submit! ~executor (^:once fn* [] ~@body)))
-
-
+  `(-> (submit! ~executor (^:once fn* [] (pt/-promise (do ~@body))))
+       (pt/-bind identity)))

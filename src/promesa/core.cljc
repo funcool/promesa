@@ -343,7 +343,7 @@
 
 (defn run!
   "A promise aware run! function."
-  ([f coll] (run! f coll exec/current-thread-executor))
+  ([f coll] (run! f coll exec/same-thread-executor))
   ([f coll executor] (reduce #(then %1 (fn [_] (f %2))) (promise nil executor) coll)))
 
 ;; Cancellation
@@ -471,10 +471,7 @@
   instead of the `Future`. Useful for executing synchronous code in a
   separate thread (also works in cljs)."
   [& body]
-  `(c/-> (exec/submit! (fn []
-                         (c/let [f# (fn [] ~@body)]
-                           (pt/-promise (f#)))))
-         (pt/-bind identity)))
+  `(exec/submit! (^once fn [] ~@body)))
 
 (def ^:dynamic *loop-run-fn* exec/run!)
 

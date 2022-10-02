@@ -1,5 +1,32 @@
 # Changelog #
 
+## Version 9.0.x
+
+Date: Unreleased
+
+BREAKING CHANGES:
+
+- The `promesa.exec/counted-thread-factory` is renamed to
+  `promesa.exec/default-thread-factory` and the call signature is
+  changed.
+- The `promesa.exec/forkjoin-named-thread-factory` has is renamed to
+  `promesa.exec/default-forkjoin-thread-factory` and the call
+  signature is changed.
+
+Enhancements:
+
+- Deprecate all the `*-pool` executors constructors in favour of new
+  variants called with the same name and the `-executor` prefix. The
+  new constructor functions are all uniform with call signature.
+- Add promise aware, simplified version of `doseq` (thanks to @borkdude).
+- Add proper docstring for `with-dispatch` macro.
+
+Bug fixes:
+
+- Make the completable-future returned by `p/future` macro
+  trully cancellable.
+
+
 ## Version 8.0.450
 
 Date: 2022-02-24

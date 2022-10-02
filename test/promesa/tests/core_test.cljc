@@ -27,6 +27,35 @@
     (t/is (p/promise? p))
     (t/is (p/promise (p/catch p identity)))))
 
+
+(t/deftest with-dispatch-test-1
+  #?(:cljs
+     (t/async done
+       (-> (e/with-dispatch :default
+             (+ 1 1))
+           (p/then (fn [res]
+                     (t/is (= res 2))
+                     (done)))))
+     :clj
+     (let [o (e/with-dispatch :default
+               (+ 1 1))]
+       (t/is (= @o 2)))))
+
+
+(t/deftest with-dispatch-test-2
+  #?(:cljs
+     (t/async done
+       (-> (e/with-dispatch :default
+             (p/wrap (+ 1 1)))
+           (p/then (fn [res]
+                     (t/is (= res 2))
+                     (done)))))
+     :clj
+     (let [o (e/with-dispatch :default
+               (p/wrap (+ 1 1)))]
+       (t/is (= @o 2)))))
+
+
 (t/deftest promise-from-value
   #?(:cljs
      (t/async done
