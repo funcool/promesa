@@ -84,7 +84,7 @@
      (try
        (f #(pt/-resolve! d %)
           #(pt/-reject! d %))
-       (catch #?(:clj Exception :cljs :default) e
+       (catch #?(:clj Throwable :cljs :default) e
          (pt/-reject! d e)))
      d))
   ([f executor]
