@@ -182,18 +182,18 @@
              (.setDaemon ^Boolean daemon)
              (.setName (format name (.getAndIncrement along)))))))))
 
-#(:clj
-  (defn default-forkjoin-thread-factory
-    ^ForkJoinPool$ForkJoinWorkerThreadFactory
-    [& {:keys [name daemon] :or {name "promesa/forkjoin/%s" daemon true}}]
-    (let [^AtomicLong counter (AtomicLong. 0)]
-      (reify ForkJoinPool$ForkJoinWorkerThreadFactory
-        (newThread [_ pool]
-          (let [thread (.newThread ForkJoinPool/defaultForkJoinWorkerThreadFactory pool)
-                tname  (format name (.getAndIncrement counter))]
-            (.setName ^ForkJoinWorkerThread thread ^String tname)
-            (.setDaemon ^ForkJoinWorkerThread thread ^Boolean daemon)
-            thread))))))
+#?(:clj
+   (defn default-forkjoin-thread-factory
+     ^ForkJoinPool$ForkJoinWorkerThreadFactory
+     [& {:keys [name daemon] :or {name "promesa/forkjoin/%s" daemon true}}]
+     (let [^AtomicLong counter (AtomicLong. 0)]
+       (reify ForkJoinPool$ForkJoinWorkerThreadFactory
+         (newThread [_ pool]
+           (let [thread (.newThread ForkJoinPool/defaultForkJoinWorkerThreadFactory pool)
+                 tname  (format name (.getAndIncrement counter))]
+             (.setName ^ForkJoinWorkerThread thread ^String tname)
+             (.setDaemon ^ForkJoinWorkerThread thread ^Boolean daemon)
+             thread))))))
 
 #?(:clj
    (defn- opts->thread-factory
