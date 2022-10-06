@@ -476,7 +476,7 @@
 (defn vthread-call
   "A shortcut for `(p/thread-call :vthread f)`."
   [f]
-  (exec/submit! :vthread (exec/wrap-bindings f)))
+  (thread-call :vthread f))
 
 (defmacro thread
   "Analogous to `clojure.core.async/thread` that returns a promise instance
@@ -489,7 +489,7 @@
   instead of the `Future`. Useful for executing synchronous code in a
   separate thread (also works in cljs)."
   [& body]
-  `(thread-call :vthread (^once fn [] ~@body)))
+  `(vthread-call (^once fn [] ~@body)))
 
 (defmacro future
   "Analogous macro to `clojure.core/future` that returns promise
