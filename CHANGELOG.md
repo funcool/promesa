@@ -1,5 +1,14 @@
 # Changelog #
 
+## Version 9.0.470
+
+Date: 20220-10-06
+
+Bug fixes:
+
+- Fix reader conditional typo that prevents
+  `default-forkjoin-thread-factory` to be defined (thansk to @mainej).
+
 ## Version 9.0.466
 
 Date: 20220-10-06
