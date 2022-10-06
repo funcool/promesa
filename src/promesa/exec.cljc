@@ -69,15 +69,17 @@
 
 #?(:clj
    (def vthreads-supported?
-     (try
-       (eval `(Thread/startVirtualThread (constantly nil)))
-       true
-       (catch UnsupportedOperationException _cause
-         false))))
+     (and (pu/has-method? Thread "startVirtualThread")
+          (try
+            (eval '(Thread/startVirtualThread (constantly nil)))
+            true
+            (catch Throwable cause
+              false)))))
 
-#?(:clj
-   (defonce ^:dynamic *vthread-executor*
-     (delay (Executors/newVirtualThreadPerTaskExecutor))))
+(defonce ^:dynamic *vthread-executor*
+  #?(:clj (when vthreads-supported?
+            (delay (eval '(java.util.concurrent.Executors/newVirtualThreadPerTaskExecutor))))
+     :cljs (delay (->MicrotaskExecutor))))
 
 (defn executor?
   [o]
@@ -85,19 +87,24 @@
      :cljs (satisfies? pt/IExecutor o)))
 
 (defn resolve-executor
-  ([] (resolve-executor *default-executor*))
+  ([] (resolve-executor :default))
   ([executor]
-   (cond
-     (= :default executor) (resolve-executor *default-executor*)
-     (= :vthread executor) (resolve-executor *vthread-executor*)
-     :else                 (cond-> executor (delay? executor) deref))))
+   (case executor
+     :default (pu/maybe-deref *default-executor*)
+     :thread  (pu/maybe-deref *default-executor*)
+     :vthread (do
+                #?(:clj
+                   (when (nil? *vthread-executor*)
+                     (throw (UnsupportedOperationException. "vthreads not available"))))
+                (pu/maybe-deref *vthread-executor*))
+     (pu/maybe-deref executor))))
 
 (defn resolve-scheduler
-  ([] (resolve-scheduler *default-scheduler*))
+  ([] (resolve-scheduler :default))
   ([scheduler]
    (if (= :default scheduler)
-     (resolve-scheduler *default-scheduler*)
-     (cond-> scheduler (delay? scheduler) deref))))
+     (pu/maybe-deref *default-scheduler*)
+     (pu/maybe-deref scheduler))))
 
 #?(:clj
    (defn- get-available-processors
@@ -315,15 +322,19 @@
        (Executors/newScheduledThreadPool (int parallelism) factory))))
 
 #?(:clj
-   (defn thread-per-task-executor
-     [& {:keys [factory]}]
-     (let [factory (resolve-thread-factory factory)]
-       (Executors/newThreadPerTaskExecutor ^ThreadFactory factory))))
+   (when vthreads-supported?
+     (eval
+      '(defn thread-per-task-executor
+         [& {:keys [factory]}]
+         (let [factory (resolve-thread-factory factory)]
+           (Executors/newThreadPerTaskExecutor ^ThreadFactory factory))))))
 
 #?(:clj
-   (defn vthread-per-task-executor
-     []
-     (Executors/newVirtualThreadPerTaskExecutor)))
+   (when vthreads-supported?
+     (eval
+      '(defn vthread-per-task-executor
+         []
+         (Executors/newVirtualThreadPerTaskExecutor)))))
 
 #?(:clj
    (defn work-stealing-executor

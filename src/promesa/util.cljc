@@ -25,6 +25,7 @@
 (ns ^:no-doc promesa.util
   #?(:clj
      (:import
+      java.lang.reflect.Method
       java.util.function.Function
       java.util.function.BiFunction
       java.util.function.BiConsumer
@@ -53,3 +54,16 @@
      BiConsumer
      (accept [_ a b]
        (f a b))))
+
+(defn has-method?
+  [klass name]
+  (let [methods (into #{}
+                      (map (fn [method] (.getName ^Method method)))
+                      (.getDeclaredMethods ^Class klass))]
+    (contains? methods name)))
+
+(defn maybe-deref
+  [o]
+  (if (delay? o)
+    (deref o)
+    o))

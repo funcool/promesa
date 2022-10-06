@@ -470,10 +470,11 @@
   "Analogous to `clojure.core.async/thread` that returns a promise
   instance instead of the `Future`. Useful for executing synchronous
   code in a separate thread (also works in cljs)."
-  ([f] (exec/submit! (exec/wrap-bindings f)))
+  ([f] (exec/submit! :thread (exec/wrap-bindings f)))
   ([executor f] (exec/submit! executor (exec/wrap-bindings f))))
 
 (defn vthread-call
+  "A shortcut for `(p/thread-call :vthread f)`."
   [f]
   (exec/submit! :vthread (exec/wrap-bindings f)))
 
@@ -481,21 +482,21 @@
   "Analogous to `clojure.core.async/thread` that returns a promise instance
   instead of the `Future`."
   [& body]
-  `(thread-call (^once fn [] ~@body)))
+  `(thread-call :thread (^once fn [] ~@body)))
 
 (defmacro vthread
   "Analogous to `clojure.core.async/thread` that returns a promise instance
   instead of the `Future`. Useful for executing synchronous code in a
   separate thread (also works in cljs)."
   [& body]
-  `(vthread-call (^once fn [] ~@body)))
+  `(thread-call :vthread (^once fn [] ~@body)))
 
 (defmacro future
   "Analogous macro to `clojure.core/future` that returns promise
   instance instead of the `Future`. Exposed just for convenience and
   works as an alias to `thread`."
   [& body]
-  `(thread-call (^once fn [] ~@body)))
+  `(thread-call :thread (^once fn [] ~@body)))
 
 (def ^:dynamic *loop-run-fn* exec/run!)
 
