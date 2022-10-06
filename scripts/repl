@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 set -ex
 # clojure -M:dev -e "(set! *warn-on-reflection* true)" -m rebel-readline.main
-clojure -M:dev -m rebel-readline.main
+# clojure -M:dev -m rebel-readline.main
+clojure -J--enable-preview -M:dev -m rebel-readline.main

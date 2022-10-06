@@ -24,11 +24,16 @@ way as you will do it in JS with async/await).
   (p/-> (js/fetch "https://httpbin.org/uuid") .json))
 ```
 
-See the complete [documentation](https://funcool.github.io/promesa/latest/) for
-more detailed information.
+Here you have the [User
+Guide](https://funcool.github.io/promesa/latest/user-guide.html) and
+the [API documentation](https://funcool.github.io/promesa/latest/).
 
 
 # Contributing
+
+If you miss something, feel free to open an issue for a discussion. If
+there is a clear use case for the proposed enhacement, the PR will be
+more thank welcome.
 
 ## Testing
 
