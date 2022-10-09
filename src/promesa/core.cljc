@@ -482,7 +482,7 @@
   "Analogous to `clojure.core.async/thread` that returns a promise instance
   instead of the `Future`."
   [& body]
-  `(thread-call :thread (^once fn [] ~@body)))
+  `(thread-call (^once fn [] ~@body)))
 
 (defmacro vthread
   "Analogous to `clojure.core.async/thread` that returns a promise instance
@@ -496,7 +496,7 @@
   instance instead of the `Future`. Exposed just for convenience and
   works as an alias to `thread`."
   [& body]
-  `(thread-call :thread (^once fn [] ~@body)))
+  `(thread-call :default (^once fn [] ~@body)))
 
 (def ^:dynamic *loop-run-fn* exec/run!)
 

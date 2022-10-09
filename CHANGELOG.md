@@ -1,8 +1,17 @@
 # Changelog #
 
+## Version 9.0.471
+
+Date: 2022-10-09
+
+- Fix warnings on cljs compilation
+- Fix issues with 0 arg on thread factory functions
+- Minor fix on `p/thread` macro, now it uses unbounded cached thread
+  pool instead of the default one.
+
 ## Version 9.0.470
 
-Date: 20220-10-06
+Date: 2022-10-06
 
 Bug fixes:
 

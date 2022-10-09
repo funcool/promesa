@@ -30,6 +30,7 @@
             #?(:cljs [goog.object :as gobj]))
   #?(:clj
      (:import
+      java.lang.AutoCloseable
       java.util.concurrent.Callable
       java.util.concurrent.CompletableFuture
       java.util.concurrent.Executor
@@ -46,14 +47,16 @@
       java.util.concurrent.atomic.AtomicLong
       java.util.function.Supplier)))
 
-(set! *warn-on-reflection* true)
+#?(:clj (set! *warn-on-reflection* true))
 
 ;; --- Globals & Defaults (with CLJS Impl)
 
 #?(:clj (declare scheduled-pool)
    :cljs (declare ->ScheduledExecutor))
 
-#?(:cljs (declare ->MicrotaskExecutor))
+#?(:clj (declare cached-executor)
+   :cljs (declare ->MicrotaskExecutor))
+
 (declare ->SameThreadExecutor)
 
 (defonce ^:dynamic *default-scheduler*
@@ -67,18 +70,22 @@
 (defonce same-thread-executor
   (delay (->SameThreadExecutor)))
 
-#?(:clj
-   (def vthreads-supported?
-     (and (pu/has-method? Thread "startVirtualThread")
-          (try
-            (eval '(Thread/startVirtualThread (constantly nil)))
-            true
-            (catch Throwable cause
-              false)))))
+(def vthreads-supported?
+  #?(:clj (and (pu/has-method? Thread "startVirtualThread")
+               (try
+                 (eval '(Thread/startVirtualThread (constantly nil)))
+                 true
+                 (catch Throwable cause
+                   false)))
+     :cljs false))
 
 (defonce ^:dynamic *vthread-executor*
   #?(:clj (when vthreads-supported?
             (delay (eval '(java.util.concurrent.Executors/newVirtualThreadPerTaskExecutor))))
+     :cljs (delay (->MicrotaskExecutor))))
+
+(defonce ^:dynamic *thread-executor*
+  #?(:clj  (delay (cached-executor))
      :cljs (delay (->MicrotaskExecutor))))
 
 (defn executor?
@@ -91,7 +98,7 @@
   ([executor]
    (case executor
      :default (pu/maybe-deref *default-executor*)
-     :thread  (pu/maybe-deref *default-executor*)
+     :thread  (pu/maybe-deref *thread-executor*)
      :vthread (do
                 #?(:clj
                    (when (nil? *vthread-executor*)
@@ -177,17 +184,20 @@
        (^Thread newThread [_ ^Runnable runnable]
         (func runnable)))))
 
+#?(:clj (def counter (AtomicLong. 0)))
+
 #?(:clj
    (defn default-thread-factory
      [& {:keys [name daemon priority]
-         :or {daemon true priority Thread/NORM_PRIORITY}}]
-     (let [^AtomicLong along (AtomicLong. 0)]
-       (reify ThreadFactory
-         (newThread [this runnable]
-           (doto (Thread. ^Runnable runnable)
-             (.setPriority priority)
-             (.setDaemon ^Boolean daemon)
-             (.setName (format name (.getAndIncrement along)))))))))
+         :or {daemon true
+              priority Thread/NORM_PRIORITY
+              name "promesa/thread/%s"}}]
+     (reify ThreadFactory
+       (newThread [this runnable]
+         (doto (Thread. ^Runnable runnable)
+           (.setPriority priority)
+           (.setDaemon ^Boolean daemon)
+           (.setName (format name (.getAndIncrement ^AtomicLong counter))))))))
 
 #?(:clj
    (defn default-forkjoin-thread-factory
@@ -297,28 +307,32 @@
    (defn cached-executor
      "A cached thread executor pool constructor."
      [& {:keys [factory]}]
-     (let [factory (resolve-thread-factory factory)]
+     (let [factory (or (some-> factory resolve-thread-factory)
+                       (default-thread-factory :name "promesa/cached/%s"))]
        (Executors/newCachedThreadPool factory))))
 
 #?(:clj
    (defn fixed-executor
      "A fixed thread executor pool constructor."
      [& {:keys [parallelism factory]}]
-     (let [factory (resolve-thread-factory factory)]
+     (let [factory (or (some-> factory resolve-thread-factory)
+                       (default-thread-factory :name "promesa/fixed/%s"))]
        (Executors/newFixedThreadPool (int parallelism) factory))))
 
 #?(:clj
    (defn single-executor
      "A single thread executor pool constructor."
      [& {:keys [factory]}]
-     (let [factory (resolve-thread-factory factory)]
+     (let [factory (or (some-> factory resolve-thread-factory)
+                       (default-thread-factory :name "promesa/single/%s"))]
        (Executors/newSingleThreadExecutor factory))))
 
 #?(:clj
    (defn scheduled-executor
      "A scheduled thread pool constructor."
      [& {:keys [parallelism factory] :or {parallelism 1}}]
-     (let [factory (resolve-thread-factory factory)]
+     (let [factory (or (some-> factory resolve-thread-factory)
+                       (default-thread-factory :name "promesa/scheduled/%s"))]
        (Executors/newScheduledThreadPool (int parallelism) factory))))
 
 #?(:clj
@@ -326,7 +340,8 @@
      (eval
       '(defn thread-per-task-executor
          [& {:keys [factory]}]
-         (let [factory (resolve-thread-factory factory)]
+         (let [factory (or (some-> factory resolve-thread-factory)
+                           (default-thread-factory :name "promesa/thread-per-task/%s"))]
            (Executors/newThreadPerTaskExecutor ^ThreadFactory factory))))))
 
 #?(:clj
@@ -337,12 +352,6 @@
          (Executors/newVirtualThreadPerTaskExecutor)))))
 
 #?(:clj
-   (defn work-stealing-executor
-     "Creates a work-stealing thread pool."
-     [& {:keys [parallelism]}]
-     (Executors/newWorkStealingPool (int parallelism))))
-
-#?(:clj
    (defn forkjoin-executor
      [& {:keys [factory async? parallelism] :or {async? true}}]
      (let [parallelism (or parallelism (get-available-processors))
@@ -351,6 +360,23 @@
                          (nil? factory) (default-forkjoin-thread-factory)
                          :else (throw (ex-info "Unexpected thread factory" {:factory factory})))]
        (ForkJoinPool. (int parallelism) factory nil async?))))
+
+#?(:clj
+   (defn work-stealing-executor
+     "An alias for the `forkjoin-executor`."
+     [& params]
+     (apply forkjoin-executor params)))
+
+#?(:clj
+   (defn configure-default-executor!
+     [& params]
+     (alter-var-root #'*default-executor*
+                     (fn [executor]
+                       (when (and (delay? executor) (realized? executor))
+                         (.close ^AutoCloseable @executor))
+                       (when (instance? AutoCloseable executor)
+                         (.close ^AutoCloseable executor))
+                       (apply forkjoin-executor params)))))
 
 #?(:clj
    (extend-protocol pt/IExecutor
