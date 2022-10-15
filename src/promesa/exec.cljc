@@ -140,7 +140,7 @@
           (clojure.lang.Var/resetThreadBindingFrame frame)
           (apply f x y z args))))))
 
-;; --- Public Api
+;; --- Public API
 
 (defn run!
   "Run the task in the provided executor."
