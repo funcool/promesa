@@ -239,9 +239,7 @@
        (.isCompletedExceptionally it))
 
      (-pending? [it]
-       (and (not (.isCompletedExceptionally it))
-            (not (.isCancelled it))
-            (not (.isDone it))))))
+       (not (.isDone it)))))
 
 ;; --- Promise Factory
 
