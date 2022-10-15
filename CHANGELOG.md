@@ -1,5 +1,17 @@
 # Changelog #
 
+## Version 9.0.477
+
+Date: 2022-10-15
+
+- Change the license from BSD-2 to MPL-2.0
+- Remove from CLJS: IState protocol and all related public API; that
+  functions already does not works on cljs becuase of platform promise
+  limitations, so we decided to just exclude them from cljs and saves
+  some bytes
+- Simplify `pending?` impl in JVM
+- Add experimental (JVM only) ConcurrencyLimiter class
+
 ## Version 9.0.471
 
 Date: 2022-10-09
