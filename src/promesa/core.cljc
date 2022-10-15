@@ -101,29 +101,34 @@
 
 ;; Predicates
 
-(defn resolved?
-  "Returns true if promise `p` is already fulfilled."
-  [p]
-  (pt/-resolved? p))
+#?(:clj
+   (defn resolved?
+     "Returns true if promise `p` is already fulfilled."
+     [p]
+     (pt/-resolved? p)))
 
-(defn rejected?
-  "Returns true if promise `p` is already rejected."
-  [p]
-  (pt/-rejected? p))
+#?(:clj
+   (defn rejected?
+     "Returns true if promise `p` is already rejected."
+     [p]
+     (pt/-rejected? p)))
 
-(defn pending?
-  "Returns true if promise `p` is stil pending."
-  [p]
-  (pt/-pending? p))
+#?(:clj
+   (defn pending?
+     "Returns true if promise `p` is stil pending."
+     [p]
+     (pt/-pending? p)))
 
-(defn extract
-  "Returns the current promise value."
-  [p]
-  (pt/-extract p))
+#?(:clj
+   (defn extract
+     "Returns the current promise value."
+     [p]
+     (pt/-extract p)))
 
-(def done?
-  "Returns true if promise `p` is already done."
-  (complement pending?))
+#?(:clj
+   (def done?
+     "Returns true if promise `p` is already done."
+     (complement pending?)))
 
 ;; Chaining
 
