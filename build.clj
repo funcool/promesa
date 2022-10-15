@@ -29,6 +29,12 @@
    {:class-dir class-dir
     :jar-file jar-file}))
 
+(defn compile [_]
+  (b/javac {:src-dirs ["src"]
+            :class-dir class-dir
+            :basis basis
+            :javac-opts ["-source" "11" "-target" "11" "-Xlint:unchecked"]}))
+
 (defn clojars [_]
   (b/process
    {:command-args ["mvn"
