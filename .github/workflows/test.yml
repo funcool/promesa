@@ -41,6 +41,7 @@ jobs:
       # Run trojansourcedetector
       - name: Trojan Source Detector
         uses: haveyoudebuggedit/trojansourcedetector@v1
+      - run: clojure -T:dev:build compile
       - run: clojure -Mdev -m promesa.tests.main
       - run: clojure -Mdev tools.clj build
       - run: node out/tests.js
