@@ -125,10 +125,14 @@
 
 ;; --- Public API
 
+(def noop (constantly nil))
+
 (defn run!
   "Run the task in the provided executor."
-  ([task] (pt/-run! (resolve-executor) task))
-  ([executor task] (pt/-run! (resolve-executor executor) task)))
+  ([f]
+   (pt/-submit! (resolve-executor) (comp noop f)))
+  ([executor f]
+   (pt/-submit! (resolve-executor executor) (comp noop f))))
 
 (defn submit!
   "Submit a task to be executed in a provided executor
@@ -364,24 +368,14 @@
 #?(:clj
    (extend-protocol pt/IExecutor
      Executor
-     (-run! [this f]
-       (CompletableFuture/runAsync ^Runnable f
-                                   ^Executor this))
      (-submit! [this f]
-       (CompletableFuture/supplyAsync ^Supplier (pu/->SupplierWrapper f)
-                                      ^Executor this)
-       )))
+       (CompletableFuture/supplyAsync ^Supplier (pu/->SupplierWrapper f) ^Executor this))))
 
 ;; Default executor that executes cljs/js tasks in the microtask
 ;; queue.
 #?(:cljs
    (deftype MicrotaskExecutor []
      pt/IExecutor
-     (-run! [this f]
-       (-> (pt/-promise nil)
-           (pt/-map (fn [_] (f) nil))
-           (pt/-mapErr (fn [e] (js/setTimeout #(throw e)) nil))))
-
      (-submit! [this f]
        (-> (pt/-promise nil)
            (pt/-map (fn [_] (f)))
@@ -397,10 +391,6 @@
    :cljs
    (deftype SameThreadExecutor []
      pt/IExecutor
-     (-run! [this f]
-       (f)
-       (pt/-promise nil))
-
      (-submit! [this f]
        (pt/-promise (f)))))
 
