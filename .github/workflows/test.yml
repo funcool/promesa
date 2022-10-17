@@ -17,7 +17,7 @@ jobs:
   test:
     strategy:
       matrix:
-        java: ['8', '11', '17']
+        java: ['11', '18', '19']
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -33,11 +33,11 @@ jobs:
           java-version: ${{ matrix.java }}
       - uses: actions/setup-node@v2
         with:
-          node-version: '16.14.0'
+          node-version: '16.18.0'
       - name: Install clojure tools
         uses: DeLaGuardo/setup-clojure@3.5
         with:
-          cli: 1.10.3.1087
+          cli: 1.11.1.1165
       # Run trojansourcedetector
       - name: Trojan Source Detector
         uses: haveyoudebuggedit/trojansourcedetector@v1

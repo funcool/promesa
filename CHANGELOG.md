@@ -1,5 +1,14 @@
 # Changelog #
 
+## Version 9.0.481
+
+Date: 2022-10-17
+
+- Rewrite ConcurrencyLimiter for make it more clojure frendly.
+- Expose the **experimental** API forthe ConcurrencyLimiter class.
+- Officially drop support for JDK <= 8
+
+
 ## Version 9.0.477
 
 Date: 2022-10-15
