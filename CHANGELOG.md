@@ -1,5 +1,14 @@
 # Changelog #
 
+## Version 9.0.485
+
+Date: 2022-10-17
+
+- Exclude limiter from CLJS.
+- Make `-run!` protocol method be implemented in terms of `-submit!`.
+- Make ConcurrencyLimiter implement the IExecutor protocol.
+
+
 ## Version 9.0.481
 
 Date: 2022-10-17
