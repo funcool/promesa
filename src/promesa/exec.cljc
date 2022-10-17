@@ -475,17 +475,16 @@
 #?(:clj
    (defn concurrency-limiter
      "Create an instance of concurrencly limiter. EXPERIMENTAL"
-     [& {:keys [executor concurrency queue]
+     [& {:keys [executor concurrency queue-size on-run on-poll]
          :or {executor *default-executor*
               concurrency 1
-              queue Integer/MAX_VALUE}}]
-     (let [executor (resolve-executor executor)]
-       (ConcurrencyLimiter/create ^ExecutorService executor
-                                  (int concurrency)
-                                  (int queue)))))
+              queue-size Integer/MAX_VALUE}}]
+     (let [^ExecutorService executor (resolve-executor executor)]
+       (doto (ConcurrencyLimiter. executor (int concurrency) (int queue-size))
+         (cond-> (fn? on-run) (.setOnRunCallback on-run))
+         (cond-> (fn? on-poll) (.setOnPollCallback on-poll))))))
 
 #?(:clj
    (extend-type ConcurrencyLimiter
      pt/IExecutor
-     (-submit! [this f]
-       (.invoke ^ConcurrencyLimiter this ^Callable f))))
+     (-submit! [this f] (this f))))

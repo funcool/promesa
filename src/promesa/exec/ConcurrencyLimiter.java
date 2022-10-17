@@ -18,6 +18,9 @@ package promesa.exec;
 
 import clojure.lang.IObj;
 import clojure.lang.IPersistentMap;
+import clojure.lang.AFn;
+import clojure.lang.IFn;
+import clojure.lang.Keyword;
 import clojure.lang.PersistentArrayMap;
 
 import java.util.concurrent.LinkedBlockingQueue;
@@ -28,41 +31,42 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 
-public class ConcurrencyLimiter implements Runnable, IObj {
+import java.time.Instant;
+
+public class ConcurrencyLimiter extends AFn implements IObj {
+  final private Keyword KW_QUEUE = Keyword.intern("queue");
+  final private Keyword KW_STATISTICS = Keyword.intern("statistics");
+  final private Keyword KW_CURRENT_QUEUE_SIZE = Keyword.intern("current-queue-size");
+  final private Keyword KW_CURRENT_CONCURRENCY = Keyword.intern("current-concurrency");
+  final private Keyword KW_REMAINING_QUEUE_SIZE = Keyword.intern("remaining-queue-size");
+  final private Keyword KW_REMAINING_CONCURRENCY = Keyword.intern("remaining-concurrency");
+
   private final BlockingQueue<Task> queue;
   private final ExecutorService executor;
   private final Semaphore limit;
-  private final int maxConcurrencyCapacity;
+  private final int maxConcurrency;
   private final int maxQueueSize;
   private IPersistentMap metadata = PersistentArrayMap.EMPTY;
 
-  public static ConcurrencyLimiter create(final ExecutorService executor,
-                                                           final int maxConcurrencyCapacity,
-                                                           final int maxQueueSize) {
-    return new ConcurrencyLimiter(executor, maxConcurrencyCapacity, maxQueueSize);
-  }
+  protected IFn onRunCallback;
+  protected IFn onPollCallback;
 
-  public static ConcurrencyLimiter create(final ExecutorService executor,
-                                                           final int maxConcurrencyCapacity) {
-    return new ConcurrencyLimiter(executor, maxConcurrencyCapacity, Integer.MAX_VALUE);
-  }
-
-  private ConcurrencyLimiter(final ExecutorService executor,
-                             final int maxConcurrencyCapacity,
-                             final int maxQueueSize) {
-    if (maxConcurrencyCapacity <= 0) {
-      throw new IllegalArgumentException("maxConcurrencyCapacity must be at least 0");
-    }
-
-    if (maxQueueSize <= 0) {
-      throw new IllegalArgumentException("maxQueueSize must be at least 0");
-    }
-
+  public ConcurrencyLimiter(final ExecutorService executor,
+                            final int maxConcurrency,
+                            final int maxQueueSize) {
     this.executor = executor;
-    this.maxConcurrencyCapacity = maxConcurrencyCapacity;
+    this.maxConcurrency = maxConcurrency;
     this.maxQueueSize = maxQueueSize;
-    this.queue = new LinkedBlockingQueue<>(maxQueueSize);
-    this.limit = new Semaphore(maxConcurrencyCapacity);
+    this.queue = new LinkedBlockingQueue<Task>(maxQueueSize);
+    this.limit = new Semaphore(maxConcurrency);
+  }
+
+  public void setOnRunCallback(IFn f) {
+    this.onRunCallback = f;
+  }
+
+  public void setOnPollCallback(IFn f) {
+    this.onPollCallback = f;
   }
 
   public IObj withMeta(IPersistentMap meta) {
@@ -74,18 +78,19 @@ public class ConcurrencyLimiter implements Runnable, IObj {
     return this.metadata;
   }
 
-  public CompletableFuture invoke(final Callable<CompletionStage<Object>> callable) {
-    final var response = new CompletableFuture<Object>();
-    final var task = new Task(this, callable, response);
+  public CompletableFuture invoke(Object arg1) {
+    final var callable = (Callable) arg1;
+    final var result = new CompletableFuture();
+    final var task = new Task(this, callable, result);
 
     if (!this.queue.offer(task)) {
       final var message = "Queue size has reached capacity: " + maxQueueSize;
-      final var result = new CompletableFuture();
-      result.completeExceptionally(new CapacityReachedException(message));
+      result.completeExceptionally(new CapacityLimitReachedException(message));
       return result;
     }
-    this.executor.submit(this);
-    return response;
+
+    this.executor.submit((Runnable)this);
+    return result;
   }
 
   protected void release() {
@@ -94,22 +99,26 @@ public class ConcurrencyLimiter implements Runnable, IObj {
 
   protected void releaseAndSchedule() {
     this.limit.release();
-    this.executor.submit(this);
+    this.executor.submit((Runnable)this);
+  }
+
+  public ExecutorService getExecutor() {
+    return this.executor;
   }
 
   public int getCurrentQueueSize() {
     return this.queue.size();
   }
 
-  public int getCurrentConcurrencyCapacity() {
-    return this.maxConcurrencyCapacity - this.limit.availablePermits();
+  public int getCurrentConcurrency() {
+    return this.maxConcurrency - this.limit.availablePermits();
   }
 
   public int getRemainingQueueSize() {
     return this.queue.remainingCapacity();
   }
 
-  public int getRemainingConcurrencyCapacity() {
+  public int getRemainingConcurrency() {
     return this.limit.availablePermits();
   }
 
@@ -127,6 +136,7 @@ public class ConcurrencyLimiter implements Runnable, IObj {
     return null;
   }
 
+  @Override
   public void run() {
     Task task;
     while ((task = this.poll()) != null) {
@@ -136,54 +146,70 @@ public class ConcurrencyLimiter implements Runnable, IObj {
         this.executor.submit(task);
       }
     }
+
+    if (this.onRunCallback != null) {
+      var stats = PersistentArrayMap.EMPTY
+        .assoc(KW_CURRENT_CONCURRENCY, this.getCurrentConcurrency())
+        .assoc(KW_CURRENT_QUEUE_SIZE, this.getCurrentQueueSize())
+        .assoc(KW_REMAINING_CONCURRENCY, this.getRemainingConcurrency())
+        .assoc(KW_REMAINING_QUEUE_SIZE, this.getRemainingQueueSize());
+      this.onRunCallback.invoke(stats);
+    }
   }
 
   private static class Task implements Runnable {
     private final ConcurrencyLimiter limiter;
-    private final Callable<CompletionStage<Object>> callable;
-    private final CompletableFuture<Object> response;
+    private final Callable callable;
+    private final CompletableFuture result;
+    private final Instant createdAt;
 
     public Task(final ConcurrencyLimiter limiter,
-                final Callable<CompletionStage<Object>> callable,
-                final CompletableFuture<Object> response) {
+                final Callable callable,
+                final CompletableFuture result) {
+      this.createdAt = Instant.now();
       this.limiter = limiter;
       this.callable = callable;
-      this.response = response;
+      this.result = result;
     }
 
     public boolean isCancelled() {
-      return this.response.isCancelled();
+      return this.result.isCancelled();
     }
 
+    @SuppressWarnings("unchecked")
     public void run() {
-      final CompletionStage<Object> future;
+      if (this.limiter.onPollCallback != null) {
+        this.limiter.onPollCallback.invoke(this.createdAt);
+      }
+
+      final CompletionStage future;
       try {
-        future = callable.call();
+        future = (CompletionStage)callable.call();
         if (future == null) {
           this.limiter.release();
-          this.response.completeExceptionally(new NullPointerException());
+          this.result.completeExceptionally(new NullPointerException());
           return;
         }
       } catch (Throwable e) {
         this.limiter.release();
-        this.response.completeExceptionally(e);
+        this.result.completeExceptionally(e);
         return;
       }
 
       future.whenComplete((result, t) -> {
           if (t != null) {
             this.limiter.releaseAndSchedule();
-            this.response.completeExceptionally(t);
+            this.result.completeExceptionally((Throwable)t);
           } else {
             this.limiter.releaseAndSchedule();
-            this.response.complete(result);
+            this.result.complete(result);
           }
         });
     }
   }
 
-  public static class CapacityReachedException extends RuntimeException {
-    public CapacityReachedException(String msg) {
+  public static class CapacityLimitReachedException extends RuntimeException{
+    public CapacityLimitReachedException(String msg) {
       super(msg);
     }
   }
