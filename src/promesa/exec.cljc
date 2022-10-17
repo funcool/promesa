@@ -472,14 +472,20 @@
   `(-> (submit! ~executor (^:once fn* [] (pt/-promise (do ~@body))))
        (pt/-bind identity)))
 
+#?(:clj
+   (defn concurrency-limiter
+     "Create an instance of concurrencly limiter. EXPERIMENTAL"
+     [& {:keys [executor concurrency queue]
+         :or {executor *default-executor*
+              concurrency 1
+              queue Integer/MAX_VALUE}}]
+     (let [executor (resolve-executor executor)]
+       (ConcurrencyLimiter/create ^ExecutorService executor
+                                  (int concurrency)
+                                  (int queue)))))
 
-(defn concurrency-limiter
-  "Create an instance of concurrencly limiter. EXPERIMENTAL"
-  [& {:keys [executor concurrency queue]
-      :or {executor *default-executor*
-           concurrency 1
-           queue Integer/MAX_VALUE}}]
-  (let [executor (resolve-executor executor)]
-    (ConcurrencyLimiter/create ^ExecutorService executor
-                               (int concurrency)
-                               (int queue))))
+#?(:clj
+   (extend-type ConcurrencyLimiter
+     pt/IExecutor
+     (-submit! [this f]
+       (.invoke ^ConcurrencyLimiter this ^Callable f))))
