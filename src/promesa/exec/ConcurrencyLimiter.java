@@ -48,6 +48,7 @@ public class ConcurrencyLimiter extends AFn implements IObj {
   private final int maxQueueSize;
   private IPersistentMap metadata = PersistentArrayMap.EMPTY;
 
+  protected IFn onQueueCallback;
   protected IFn onRunCallback;
   protected IFn onPollCallback;
 
@@ -59,6 +60,10 @@ public class ConcurrencyLimiter extends AFn implements IObj {
     this.maxQueueSize = maxQueueSize;
     this.queue = new LinkedBlockingQueue<Task>(maxQueueSize);
     this.limit = new Semaphore(maxConcurrency);
+  }
+
+  public void setOnQueueCallback(IFn f) {
+    this.onQueueCallback = f;
   }
 
   public void setOnRunCallback(IFn f) {
@@ -87,6 +92,10 @@ public class ConcurrencyLimiter extends AFn implements IObj {
       final var message = "Queue size has reached capacity: " + maxQueueSize;
       result.completeExceptionally(new CapacityLimitReachedException(message));
       return result;
+    }
+
+    if (this.onQueueCallback != null) {
+      this.onQueueCallback.invoke();
     }
 
     this.executor.submit((Runnable)this);
@@ -196,10 +205,10 @@ public class ConcurrencyLimiter extends AFn implements IObj {
         return;
       }
 
-      future.whenComplete((result, t) -> {
-          if (t != null) {
+      future.whenComplete((result, cause) -> {
+          if (cause != null) {
             this.limiter.releaseAndSchedule();
-            this.result.completeExceptionally((Throwable)t);
+            this.result.completeExceptionally((Throwable)cause);
           } else {
             this.limiter.releaseAndSchedule();
             this.result.complete(result);
