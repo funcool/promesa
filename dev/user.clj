@@ -4,9 +4,9 @@
             [clojure.walk :refer [macroexpand-all]]
             [clojure.pprint :refer [pprint]]
             [clojure.test :as test]
-            [promesa.core :as p]
-            [promesa.protocols :as pt]
-            [promesa.util :as pu])
+            #_[promesa.core :as p]
+            #_[promesa.protocols :as pt]
+            #_[promesa.util :as pu])
   (:import java.util.concurrent.CompletableFuture
            java.util.concurrent.CompletionStage
            java.util.function.Function))
@@ -49,45 +49,45 @@
       (System/exit fail)
       (System/exit 0))))
 
-(defn simple-promise-chain-5-raw
-  []
-  @(as-> (CompletableFuture/completedFuture 1) $
-     (p/then' $ inc)
-     (p/then' $ inc)
-     (p/then' $ inc)
-     (p/then' $ inc)
-     (p/then' $ inc)))
+;; (defn simple-promise-chain-5-raw
+;;   []
+;;   @(as-> (CompletableFuture/completedFuture 1) $
+;;      (p/then' $ inc)
+;;      (p/then' $ inc)
+;;      (p/then' $ inc)
+;;      (p/then' $ inc)
+;;      (p/then' $ inc)))
 
-(defn simple-promise-chain-5
-  []
-  @(as-> (CompletableFuture/completedFuture 1) $
-     (p/then $ inc)
-     (p/then $ inc)
-     (p/then $ inc)
-     (p/then $ inc)
-     (p/then $ inc)))
+;; (defn simple-promise-chain-5
+;;   []
+;;   @(as-> (CompletableFuture/completedFuture 1) $
+;;      (p/then $ inc)
+;;      (p/then $ inc)
+;;      (p/then $ inc)
+;;      (p/then $ inc)
+;;      (p/then $ inc)))
 
-(defn simple-completable-chain-5-raw
-  []
-  (let [^Function finc (pu/->FunctionWrapper inc)]
-    @(as-> (CompletableFuture/completedFuture 1) $
-       (.thenApply ^CompletionStage $ finc)
-       (.thenApply ^CompletionStage $ finc)
-       (.thenApply ^CompletionStage $ finc)
-       (.thenApply ^CompletionStage $ finc)
-       (.thenApply ^CompletionStage $ finc))))
+;; (defn simple-completable-chain-5-raw
+;;   []
+;;   (let [^Function finc (pu/->FunctionWrapper inc)]
+;;     @(as-> (CompletableFuture/completedFuture 1) $
+;;        (.thenApply ^CompletionStage $ finc)
+;;        (.thenApply ^CompletionStage $ finc)
+;;        (.thenApply ^CompletionStage $ finc)
+;;        (.thenApply ^CompletionStage $ finc)
+;;        (.thenApply ^CompletionStage $ finc))))
 
 
-(defn resolved
-  [v]
-  (CompletableFuture/completedFuture v))
+;; (defn resolved
+;;   [v]
+;;   (CompletableFuture/completedFuture v))
 
-(defn simple-completable-chain-5
-  []
-  (let [^Function finc (pu/->FunctionWrapper (comp resolved inc))]
-    @(as-> (CompletableFuture/completedFuture 1) $
-       (.thenCompose ^CompletionStage $ finc)
-       (.thenCompose ^CompletionStage $ finc)
-       (.thenCompose ^CompletionStage $ finc)
-       (.thenCompose ^CompletionStage $ finc)
-       (.thenCompose ^CompletionStage $ finc))))
+;; (defn simple-completable-chain-5
+;;   []
+;;   (let [^Function finc (pu/->FunctionWrapper (comp resolved inc))]
+;;     @(as-> (CompletableFuture/completedFuture 1) $
+;;        (.thenCompose ^CompletionStage $ finc)
+;;        (.thenCompose ^CompletionStage $ finc)
+;;        (.thenCompose ^CompletionStage $ finc)
+;;        (.thenCompose ^CompletionStage $ finc)
+;;        (.thenCompose ^CompletionStage $ finc))))
