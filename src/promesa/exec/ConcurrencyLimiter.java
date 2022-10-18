@@ -34,13 +34,6 @@ import java.util.concurrent.Semaphore;
 import java.time.Instant;
 
 public class ConcurrencyLimiter extends AFn implements IObj {
-  final private Keyword KW_QUEUE = Keyword.intern("queue");
-  final private Keyword KW_STATISTICS = Keyword.intern("statistics");
-  final private Keyword KW_CURRENT_QUEUE_SIZE = Keyword.intern("current-queue-size");
-  final private Keyword KW_CURRENT_CONCURRENCY = Keyword.intern("current-concurrency");
-  final private Keyword KW_REMAINING_QUEUE_SIZE = Keyword.intern("remaining-queue-size");
-  final private Keyword KW_REMAINING_CONCURRENCY = Keyword.intern("remaining-concurrency");
-
   private final BlockingQueue<Task> queue;
   private final ExecutorService executor;
   private final Semaphore limit;
@@ -50,7 +43,6 @@ public class ConcurrencyLimiter extends AFn implements IObj {
 
   protected IFn onQueueCallback;
   protected IFn onRunCallback;
-  protected IFn onPollCallback;
 
   public ConcurrencyLimiter(final ExecutorService executor,
                             final int maxConcurrency,
@@ -68,10 +60,6 @@ public class ConcurrencyLimiter extends AFn implements IObj {
 
   public void setOnRunCallback(IFn f) {
     this.onRunCallback = f;
-  }
-
-  public void setOnPollCallback(IFn f) {
-    this.onPollCallback = f;
   }
 
   public IObj withMeta(IPersistentMap meta) {
@@ -95,7 +83,7 @@ public class ConcurrencyLimiter extends AFn implements IObj {
     }
 
     if (this.onQueueCallback != null) {
-      this.onQueueCallback.invoke();
+      this.onQueueCallback.invoke(this);
     }
 
     this.executor.submit((Runnable)this);
@@ -155,15 +143,6 @@ public class ConcurrencyLimiter extends AFn implements IObj {
         this.executor.submit(task);
       }
     }
-
-    if (this.onRunCallback != null) {
-      var stats = PersistentArrayMap.EMPTY
-        .assoc(KW_CURRENT_CONCURRENCY, this.getCurrentConcurrency())
-        .assoc(KW_CURRENT_QUEUE_SIZE, this.getCurrentQueueSize())
-        .assoc(KW_REMAINING_CONCURRENCY, this.getRemainingConcurrency())
-        .assoc(KW_REMAINING_QUEUE_SIZE, this.getRemainingQueueSize());
-      this.onRunCallback.invoke(stats);
-    }
   }
 
   private static class Task implements Runnable {
@@ -187,8 +166,8 @@ public class ConcurrencyLimiter extends AFn implements IObj {
 
     @SuppressWarnings("unchecked")
     public void run() {
-      if (this.limiter.onPollCallback != null) {
-        this.limiter.onPollCallback.invoke(this.createdAt);
+      if (this.limiter.onRunCallback != null) {
+        this.limiter.onRunCallback.invoke(this.limiter, this.createdAt);
       }
 
       final CompletionStage future;
@@ -217,7 +196,7 @@ public class ConcurrencyLimiter extends AFn implements IObj {
     }
   }
 
-  public static class CapacityLimitReachedException extends RuntimeException{
+  public static class CapacityLimitReachedException extends RuntimeException {
     public CapacityLimitReachedException(String msg) {
       super(msg);
     }

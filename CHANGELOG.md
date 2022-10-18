@@ -1,5 +1,11 @@
 # Changelog #
 
+## Version 9.0.489
+
+Date: 2022-10-18
+
+- Minor fixes on concurrency limiter hook fns.
+
 
 ## Version 9.0.488
 
