@@ -101,6 +101,10 @@ BREAKING CHANGES:
 - The `promesa.exec/forkjoin-named-thread-factory` has is renamed to
   `promesa.exec/default-forkjoin-thread-factory` and the call
   signature is changed.
+- The `future` macro has changed to does not automatically unwrap
+  returned promises. This is change is motivated for make it behave in
+  the same way as `clojure.core/future` as `promesa.core/future`
+  expects to be a replacement for it.
 
 Enhancements:
 
