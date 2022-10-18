@@ -9,7 +9,6 @@
 <p>deps.edn:</p>
 <pre><code class="language-clojure">funcool/promesa {:mvn/version "9.0.489"}
 </code></pre>
-<p>On the JVM platform <em>promesa</em> is built on top of <em>completable futures</em> (requires JDK &gt;= 11). On JS engines it is built on top of the execution environment’s built-in Promise implementation.</p>
 <h2><a href="#introduction" id="introduction"></a>Introduction</h2>
 <p>A promise is an abstraction that represents the result of an asynchronous operation that has the notion of error.</p>
 <p>This is a list of all possible states for a promise:</p>
@@ -19,6 +18,8 @@
 <li><code>pending</code>: means that the promise does not have value.</li>
 </ul>
 <p>The promise can be considered <em>done</em> when it is resolved or rejected.</p>
+<p>This library exposes the promise abstraction backed by the underlying implementations that the platform offers: <strong>CompletableFuture</strong> in JVM and built-in Promise on JS.</p>
+<p>Keep in mind that the vast majority of things work identically regardless of the runtime, but there are cases where the limitations of the platform implementation imply differences or even the omission of some functions.</p>
 <h2><a href="#creating-a-promise" id="creating-a-promise"></a>Creating a promise</h2>
 <p>There are several different ways to create a promise instance. If you just want to create a promise with a plain value, you can use the polymorphic <code>promise</code> function:</p>
 <pre><code class="language-clojure">(require '[promesa.core :as p])
@@ -51,7 +52,7 @@
 ;; =&gt; 1
 </code></pre>
 <p><strong>NOTE:</strong> the <code>@</code> reader macro only works on JVM.</p>
-<p>The factory will be executed synchronously (in the current thread) but if you want to execute it asynchronously, you can provide an executor:</p>
+<p>The factory will be executed synchronously (in the current thread) but if you want to execute it asynchronously, you can provide an executor (JVM only):</p>
 <pre><code class="language-clojure">(require '[promesa.exec :as exec])
 
 @(p/create (fn [resolve reject] (resolve 1)) exec/default-executor)
@@ -68,10 +69,10 @@
 <p>If the <code>do</code> contains more than one expression, each expression will be treated as a promise expression and will be executed sequentially, each awaiting the resolution of the prior expression.</p>
 <p>For example, this <code>do</code> macro:</p>
 <pre><code class="language-clojure">(p/do (expr1)
-       (expr2)
-       (expr3))
+      (expr2)
+      (expr3))
 </code></pre>
-<p>Is roughtly equivalent to:</p>
+<p>Is roughtly equivalent to <code>let</code> macro (explained below):</p>
 <pre><code class="language-clojure">(p/let [_ (expr1)
         _ (expr2)]
   (expr3))
@@ -79,10 +80,6 @@
 <p>Finally, <em>promesa</em> exposes a <code>future</code> macro very similar to the <code>clojure.core/future</code>:</p>
 <pre><code class="language-clojure">@(p/future (some-complex-task))
 ;; =&gt; "result-of-complex-task"
-</code></pre>
-<p>One difference from <code>clojure.core/future</code> is that if the return value of the future expression is itself a promise instance, then it will await and unwrap the inner promise:</p>
-<pre><code class="language-clojure">@(p/future (p/future (p/future 1)))
-;; =&gt; 1
 </code></pre>
 <h2><a href="#promise-chaining" id="promise-chaining"></a>Promise Chaining</h2>
 <h3><a href="#then" id="then"></a><code>then</code></h3>
