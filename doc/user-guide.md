@@ -18,11 +18,6 @@ deps.edn:
 funcool/promesa {:mvn/version "9.0.489"}
 ```
 
-On the JVM platform _promesa_ is built on top of *completable futures*
-(requires JDK >= 11). On JS engines it is built on top of the execution
-environment's built-in Promise implementation.
-
-
 ## Introduction
 
 A promise is an abstraction that represents the result of an asynchronous
@@ -35,6 +30,15 @@ This is a list of all possible states for a promise:
 - `pending`: means that the promise does not have value.
 
 The promise can be considered *done* when it is resolved or rejected.
+
+This library exposes the promise abstraction backed by the underlying
+implementations that the platform offers: **CompletableFuture** in JVM
+and built-in Promise on JS.
+
+Keep in mind that the vast majority of things work identically
+regardless of the runtime, but there are cases where the limitations
+of the platform implementation imply differences or even the omission
+of some functions.
 
 
 ## Creating a promise
@@ -94,7 +98,8 @@ JavaScript, this is a similar approach:
 **NOTE:** the `@` reader macro only works on JVM.
 
 The factory will be executed synchronously (in the current thread) but
-if you want to execute it asynchronously, you can provide an executor:
+if you want to execute it asynchronously, you can provide an executor
+(JVM only):
 
 
 ```clojure
@@ -120,19 +125,19 @@ expression can be a plain value or another promise.
 If an exception is raised inside the `do` block, it will return the
 rejected promise instead of re-raising the exception on the stack.
 
-If the `do` contains more than one expression, each expression will
-be treated as a promise expression and will be executed sequentially,
+If the `do` contains more than one expression, each expression will be
+treated as a promise expression and will be executed sequentially,
 each awaiting the resolution of the prior expression.
 
 For example, this `do` macro:
 
 ```clojure
 (p/do (expr1)
-       (expr2)
-       (expr3))
+      (expr2)
+      (expr3))
 ```
 
-Is roughtly equivalent to:
+Is roughtly equivalent to `let` macro (explained below):
 
 ```clojure
 (p/let [_ (expr1)
@@ -146,15 +151,6 @@ Finally, _promesa_ exposes a `future` macro very similar to the
 ```clojure
 @(p/future (some-complex-task))
 ;; => "result-of-complex-task"
-```
-
-One difference from `clojure.core/future` is that if the return value
-of the future expression is itself a promise instance, then it will
-await and unwrap the inner promise:
-
-```clojure
-@(p/future (p/future (p/future 1)))
-;; => 1
 ```
 
 ## Promise Chaining
