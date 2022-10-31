@@ -153,7 +153,11 @@ Finally, _promesa_ exposes a `future` macro very similar to the
 ;; => "result-of-complex-task"
 ```
 
-## Promise Chaining
+## Chaining computatons
+
+This section explains the helpers and macros that **promesa** provides
+for chain different (high-probably asynchonous) operations in a
+sequence of operations.
 
 ### `then`
 
@@ -171,9 +175,9 @@ the general purpose `then` function:
 ;; => 2
 ```
 
-As you can observe in the example, `then` handles functions that return
-plain values as well as functions that return promise instances (which
-will automatically be flattened).
+As you can observe in the example, `then` handles functions that
+return plain values as well as functions that return promise instances
+(which will automatically be flattened).
 
 **NOTE**: If you know that the chained function will always return
 plain values, you can use the more performant `then'` variant of this
@@ -207,7 +211,7 @@ step, there are the `chain` and `chain'` functions:
 ;; => 4
 ```
 
-**NOTE**: these are analogous to `then` and `then'` but accept
+**NOTE**: `chain` is analogous to `then` and `then'` but accept
 multiple transformation functions.
 
 
@@ -280,7 +284,7 @@ similar to try/finally):
 ;; => stdout: "finally"
 ```
 
-## Promise Composition
+## Composition
 
 ### `let`
 
@@ -290,13 +294,13 @@ while using the Clojure's familiar `let` syntax:
 
 ```clojure
 (require '[promesa.core :as p]
-         '[promesa.exec :as exec])
+         '[promesa.exec :as px])
 
 ;; A function that emulates asynchronos behavior.
 (defn sleep
   [wait]
   (p/create (fn [resolve reject]
-              (exec/schedule! wait #(resolve wait)))))
+              (px/schedule! wait #(resolve wait)))))
 
 (def result
   (p/let [x (sleep 42)
@@ -316,10 +320,16 @@ exceptionally resolved promise.
 Under the hood, the `let` macro evalutes to something like this:
 
 ```clojure
-(p/then (sleep 42)
-        (fn [x] (p/then (sleep 41)
-                        (fn [y] (p/then 2 (fn [z]
-                                            (p/promise (do (+ x y z)))))))))
+(p/then
+  (sleep 42)
+  (fn [x]
+    (p/then
+      (sleep 41)
+      (fn [y]
+        (p/then
+          2
+          (fn [z]
+            (p/promise (do (+ x y z)))))))))
 ```
 
 ### `all`
@@ -506,11 +516,11 @@ user-defined executor to control where the chained callbacks are
 executed:
 
 ```clojure
-(require '[promesa.exec :as exec])
+(require '[promesa.exec :as px])
 
 @(-> (p/delay 100 1)
-     (p/then inc exec/default-executor)
-     (p/then inc exec/default-executor))
+     (p/then inc px/*default-executor*)
+     (p/then inc px/*default-executor*))
 ;; => 3
 ```
 
@@ -518,8 +528,12 @@ This will schedule a separate task for each chained callback, making
 the whole system more responsive because you are no longer executing
 big blocking functions; instead you are executing many small tasks.
 
-The `exec/default-executor` is a `ForkJoinPool` instance that is
+The `px/*default-executor*` is a `ForkJoinPool` instance that is
 highly optimized for lots of small tasks.
+
+On JDK19 with Preview enabled you will also have the
+`px/*vthread-executor*` that is an instance of *Virtual Thread per
+task* executor.
 
 
 ## Performance overhead
