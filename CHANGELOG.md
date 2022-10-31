@@ -1,5 +1,13 @@
 # Changelog #
 
+## Version 9.0.493
+
+Date: 2022-10-31
+
+- Minor documentation updates.
+- Make it work again as git dep.
+
+
 ## Version 9.0.489
 
 Date: 2022-10-18
