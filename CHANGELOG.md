@@ -1,5 +1,12 @@
 # Changelog #
 
+## Version 9.0.494
+
+Date: 2022-10-31
+
+- Add missing classes to repository
+
+
 ## Version 9.0.493
 
 Date: 2022-10-31
