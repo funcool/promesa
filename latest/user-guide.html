@@ -4,10 +4,10 @@
 <p>A promise library for Clojure and ClojureScript.</p>
 <h2><a href="#install" id="install"></a>Install</h2>
 <p>Leiningen:</p>
-<pre><code class="language-clojure">[funcool/promesa "9.0.489"]
+<pre><code class="language-clojure">[funcool/promesa "9.0.494"]
 </code></pre>
 <p>deps.edn:</p>
-<pre><code class="language-clojure">funcool/promesa {:mvn/version "9.0.489"}
+<pre><code class="language-clojure">funcool/promesa {:mvn/version "9.0.494"}
 </code></pre>
 <h2><a href="#introduction" id="introduction"></a>Introduction</h2>
 <p>A promise is an abstraction that represents the result of an asynchronous operation that has the notion of error.</p>
@@ -81,7 +81,8 @@
 <pre><code class="language-clojure">@(p/future (some-complex-task))
 ;; =&gt; "result-of-complex-task"
 </code></pre>
-<h2><a href="#promise-chaining" id="promise-chaining"></a>Promise Chaining</h2>
+<h2><a href="#chaining-computatons" id="chaining-computatons"></a>Chaining computatons</h2>
+<p>This section explains the helpers and macros that <strong>promesa</strong> provides for chain different (high-probably asynchonous) operations in a sequence of operations.</p>
 <h3><a href="#then" id="then"></a><code>then</code></h3>
 <p>The most common way to chain a transformation to a promise is using the general purpose <code>then</code> function:</p>
 <pre><code class="language-clojure">@(-&gt; (p/resolved 1)
@@ -113,7 +114,7 @@
 @result
 ;; =&gt; 4
 </code></pre>
-<p><strong>NOTE</strong>: these are analogous to <code>then</code> and <code>then'</code> but accept multiple transformation functions.</p>
+<p><strong>NOTE</strong>: <code>chain</code> is analogous to <code>then</code> and <code>then'</code> but accept multiple transformation functions.</p>
 <h3><a href="#-and-as-" id="-and-as-"></a><code>-&gt;</code>, <code>-&gt;&gt;</code> and <code>as-&gt;</code></h3>
 <p><strong>NOTE</strong>: <code>-&gt;</code> and <code>-&gt;&gt;</code> introduced in 6.1.431, <code>as-&gt;</code> introduced in 6.1.434.</p>
 <p>This threading macros simplifices chaining operation, removing the need of using <code>then</code> all the time.</p>
@@ -150,17 +151,17 @@
 ;; =&gt; 1
 ;; =&gt; stdout: "finally"
 </code></pre>
-<h2><a href="#promise-composition" id="promise-composition"></a>Promise Composition</h2>
+<h2><a href="#composition" id="composition"></a>Composition</h2>
 <h3><a href="#let" id="let"></a><code>let</code></h3>
 <p>The <em>promesa</em> library comes with convenient syntactic-sugar that allows you to create a composition that looks like synchronous code while using the Clojure’s familiar <code>let</code> syntax:</p>
 <pre><code class="language-clojure">(require '[promesa.core :as p]
-         '[promesa.exec :as exec])
+         '[promesa.exec :as px])
 
 ;; A function that emulates asynchronos behavior.
 (defn sleep
   [wait]
   (p/create (fn [resolve reject]
-              (exec/schedule! wait #(resolve wait)))))
+              (px/schedule! wait #(resolve wait)))))
 
 (def result
   (p/let [x (sleep 42)
@@ -173,10 +174,16 @@
 </code></pre>
 <p>The <code>let</code> macro behaves identically to Clojure’s <code>let</code> with the exception that it always returns a promise. If an error occurs at any step, the entire composition will be short-circuited, returning exceptionally resolved promise.</p>
 <p>Under the hood, the <code>let</code> macro evalutes to something like this:</p>
-<pre><code class="language-clojure">(p/then (sleep 42)
-        (fn [x] (p/then (sleep 41)
-                        (fn [y] (p/then 2 (fn [z]
-                                            (p/promise (do (+ x y z)))))))))
+<pre><code class="language-clojure">(p/then
+  (sleep 42)
+  (fn [x]
+    (p/then
+      (sleep 41)
+      (fn [y]
+        (p/then
+          2
+          (fn [z]
+            (p/promise (do (+ x y z)))))))))
 </code></pre>
 <h3><a href="#all" id="all"></a><code>all</code></h3>
 <p>In some circumstances you will want wait for completion of several promises at the same time. To help with that, <em>promesa</em> also provides the <code>all</code> helper.</p>
@@ -266,15 +273,16 @@
 <p>This default execution model is usually preferrable because it don’t abuse the task scheduling and leverages function inlining on the JVM.</p>
 <p>But it does have drawbacks: this approach will block the thread until all of the chained callbacks are executed. For small chains this is not a problem. However, if your chain has a lot of functions and requires a lot of computation time, this might cause unexpected latency. It may block other threads in the thread pool from doing other, maybe more important, tasks.</p>
 <p>For such cases, <em>promesa</em> exposes an additional arity for provide a user-defined executor to control where the chained callbacks are executed:</p>
-<pre><code class="language-clojure">(require '[promesa.exec :as exec])
+<pre><code class="language-clojure">(require '[promesa.exec :as px])
 
 @(-&gt; (p/delay 100 1)
-     (p/then inc exec/default-executor)
-     (p/then inc exec/default-executor))
+     (p/then inc px/*default-executor*)
+     (p/then inc px/*default-executor*))
 ;; =&gt; 3
 </code></pre>
 <p>This will schedule a separate task for each chained callback, making the whole system more responsive because you are no longer executing big blocking functions; instead you are executing many small tasks.</p>
-<p>The <code>exec/default-executor</code> is a <code>ForkJoinPool</code> instance that is highly optimized for lots of small tasks.</p>
+<p>The <code>px/*default-executor*</code> is a <code>ForkJoinPool</code> instance that is highly optimized for lots of small tasks.</p>
+<p>On JDK19 with Preview enabled you will also have the <code>px/*vthread-executor*</code> that is an instance of <em>Virtual Thread per task</em> executor.</p>
 <h2><a href="#performance-overhead" id="performance-overhead"></a>Performance overhead</h2>
 <p><em>promesa</em> is a lightweight abstraction built on top of native facilities (<code>CompletableFuture</code> in the JVM and <code>js/Promise</code> in JavaScript).</p>
 <p>Internally we make heavy use of protocols in order to expose a polymorphic and user friendly API, and this has little overhead on top of raw usage of <code>CompletableFuture</code> or <code>Promise</code>. This is the latest micro benchmark (2019-09-17) that shows the real overhead of this library in contrast to the use of native abstractions:</p>
