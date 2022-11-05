@@ -2,7 +2,6 @@
 
 A promise library for Clojure and ClojureScript.
 
-
 ## Install
 
 

@@ -33,7 +33,7 @@ jobs:
           java-version: ${{ matrix.java }}
       - uses: actions/setup-node@v2
         with:
-          node-version: '16.18.0'
+          node-version: '18.12.1'
       - name: Install clojure tools
         uses: DeLaGuardo/setup-clojure@3.5
         with:
@@ -41,7 +41,6 @@ jobs:
       # Run trojansourcedetector
       - name: Trojan Source Detector
         uses: haveyoudebuggedit/trojansourcedetector@v1
-      - run: clojure -T:dev:build compile
       - run: clojure -Mdev -m promesa.tests.main
       - run: clojure -Mdev tools.clj build
       - run: node out/tests.js
