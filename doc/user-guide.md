@@ -4,17 +4,16 @@ A promise library for Clojure and ClojureScript.
 
 ## Install
 
-
 Leiningen:
-
-```clojure
-[funcool/promesa "9.0.494"]
-```
 
 deps.edn:
 
 ```clojure
 funcool/promesa {:mvn/version "9.0.494"}
+```
+
+```clojure
+[funcool/promesa "9.0.494"]
 ```
 
 ## Introduction
@@ -39,8 +38,9 @@ regardless of the runtime, but there are cases where the limitations
 of the platform implementation imply differences or even the omission
 of some functions.
 
+## Working with `promesa`
 
-## Creating a promise
+### Creating a promise
 
 There are several different ways to create a promise instance. If you
 just want to create a promise with a plain value, you can use the
@@ -152,7 +152,7 @@ Finally, _promesa_ exposes a `future` macro very similar to the
 ;; => "result-of-complex-task"
 ```
 
-## Chaining computatons
+### Chaining computatons
 
 This section explains the helpers and macros that **promesa** provides
 for chain different (high-probably asynchonous) operations in a
@@ -283,7 +283,7 @@ similar to try/finally):
 ;; => stdout: "finally"
 ```
 
-## Composition
+### Composition
 
 ### `let`
 
@@ -396,7 +396,7 @@ with the value or reason from that promise:
 ```
 
 
-## Error handling
+### Error handling
 
 One of the advantages of using the promise abstraction is that it
 natively has a notion of errors, so you don't need to reinvent it. If
@@ -428,7 +428,7 @@ like `map`:
                 (.log js/console error))))
 ```
 
-## Delays and Timeouts.
+### Delays and Timeouts.
 
 JavaScript, due to its single-threaded nature, does not allow you to
 block or sleep. But, with promises you can emulate that functionality
@@ -458,35 +458,13 @@ promise will be rejected with a timeout error and then successfully
 captured with the `catch` handler.
 
 
-## Scheduling Tasks
+### Promise chaining execution model
 
-In addition to the promise abstraction, this library also comes with a
-lightweight abstraction for scheduling tasks to be executed at some time in
-future:
+Let's try to understand how promise chained functions are executed and
+how they interact with platform threads. **This section is mainly
+affects the **JVM**.
 
-```clojure
-(require '[promesa.exec :as exec])
-(exec/schedule! 1000 (fn []
-                       (println "hello world")))
-```
-
-This example shows you how you can schedule a function call to be
-executed 1 second in the future. It works the same way for both
-Clojure and ClojureScript.
-
-The tasks can be cancelled using its return value:
-
-```clojure
-(def task (exec/schedule! 1000 #(do-stuff)))
-
-(p/cancel! task)
-```
-
-## Execution model
-
-**NOTE**: This section is mainly affects the **JVM**.
-
-Lets consider this example::
+Lets consider this example:
 
 ```clojure
 @(-> (p/delay 100 1)
@@ -533,6 +511,68 @@ highly optimized for lots of small tasks.
 On JDK19 with Preview enabled you will also have the
 `px/*vthread-executor*` that is an instance of *Virtual Thread per
 task* executor.
+
+
+
+
+## Scheduling asynchronous tasks
+
+Additionally to the _promise_ abstraction, **promesa** library comes
+with some helpers and factories for execution and scheduling of tasks
+for asynchronous execution.
+
+### Scheduling Tasks
+
+This consists in a simple helper that allows scheduling execution of a
+function after some amount of time. 
+
+
+```clojure
+(require '[promesa.exec :as exec])
+(exec/schedule! 1000 (fn []
+                       (println "hello world")))
+```
+
+This example shows you how you can schedule a function call to be
+executed 1 second in the future. It works the same way for both
+Clojure and ClojureScript.
+
+The tasks can be cancelled using its return value:
+
+```clojure
+(def task (exec/schedule! 1000 #(do-stuff)))
+
+(p/cancel! task)
+```
+
+The execution model depends on the platform: on the **JVM** a default
+scheduler executor is used and the the scheduled function will be
+executed in different thread; on **JS** runtime the function will be
+executed in a _microtask_.
+
+### Async Task
+
+This is a general purpose API for submiting a task exection on
+background thread. **Although this API works in JS runtime, the main
+target is JVM.*
+
+
+## Execution patterns
+
+### CSP
+
+TODO: in development
+
+### Bulkhead
+
+In general, the goal of the bulkhead pattern is to avoid faults in one
+part of a system to take the entire system down. The bulkhead
+implementation in **promesa** limits the number of concurrent calls.
+
+This [SO answer][so-bulkhead]
+
+[so-bulkhead]: (https://stackoverflow.com/questions/30391809/what-is-bulkhead-pattern-used-by-hystrix) explains the concept very well.
+
 
 
 ## Performance overhead
