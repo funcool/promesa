@@ -5,6 +5,7 @@
 ;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
 (ns ^:no-doc promesa.util
+  (:require [promesa.protocols :as pt])
   #?(:clj
      (:import
       java.lang.reflect.Method
@@ -49,3 +50,12 @@
   (if (delay? o)
     (deref o)
     o))
+
+(defn wrap
+  "A convenience alias for `promise` coercion function that only
+  accepts a single argument."
+  [v]
+  (if (satisfies? pt/IPromise v)
+    v
+    (pt/-promise v)))
+

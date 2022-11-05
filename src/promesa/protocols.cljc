@@ -55,3 +55,14 @@
 (defprotocol IScheduler
   "A generic abstraction for scheduler facilities."
   (-schedule! [_ ms func] "Schedule a function to be executed in future."))
+
+(defprotocol ISemaphore
+  "An experimental semaphore protocol, used internally; no public api"
+  (-try-acquire! [_] [_ n] "Try acquire 1 or n permits; not blocking operation")
+  (-acquire! [_] [_ n] "Acquire 1 or N permits")
+  (-release! [_] [_ n] "Release 1 or N permits"))
+
+(defprotocol ILock
+  "An experimental lock protocol, used internally; no public api"
+  (-lock! [_])
+  (-unlock! [_]))

@@ -27,8 +27,7 @@
       java.util.concurrent.TimeUnit
       java.util.concurrent.TimeoutException
       java.util.concurrent.atomic.AtomicLong
-      java.util.function.Supplier
-      promesa.exec.ConcurrencyLimiter)))
+      java.util.function.Supplier)))
 
 #?(:clj (set! *warn-on-reflection* true))
 
@@ -471,18 +470,3 @@
   [executor & body]
   `(-> (submit! ~executor (^:once fn* [] (pt/-promise (do ~@body))))
        (pt/-bind identity)))
-
-#?(:clj
-   (defn concurrency-limiter
-     "Create an instance of concurrencly limiter. EXPERIMENTAL"
-     [& {:keys [executor concurrency queue-size on-run on-queue]
-         :or {concurrency 1 queue-size Integer/MAX_VALUE}}]
-     (let [^ExecutorService executor (resolve-executor (or executor *default-executor*))]
-       (doto (ConcurrencyLimiter. executor (int concurrency) (int queue-size))
-         (cond-> (fn? on-queue) (.setOnQueueCallback on-queue))
-         (cond-> (fn? on-run) (.setOnRunCallback on-run))))))
-
-#?(:clj
-   (extend-type ConcurrencyLimiter
-     pt/IExecutor
-     (-submit! [this f] (this f))))

@@ -1,15 +1,19 @@
 (ns user
-  (:require [clojure.tools.namespace.repl :as r]
-            [criterium.core :refer [quick-bench bench with-progress-reporting]]
-            [clojure.walk :refer [macroexpand-all]]
-            [clojure.pprint :refer [pprint]]
-            [clojure.test :as test]
-            #_[promesa.core :as p]
-            #_[promesa.protocols :as pt]
-            #_[promesa.util :as pu])
-  (:import java.util.concurrent.CompletableFuture
-           java.util.concurrent.CompletionStage
-           java.util.function.Function))
+  (:require
+   [clojure.tools.namespace.repl :as r]
+   [criterium.core :refer [quick-bench bench with-progress-reporting]]
+   [clojure.walk :refer [macroexpand-all]]
+   [clojure.pprint :refer [pprint]]
+   [clojure.test :as test]
+   [promesa.core :as p]
+   [promesa.protocols :as pt]
+   [promesa.util :as pu]
+   [promesa.exec :as px]
+   [promesa.exec.bulkhead :as pbh])
+  (:import
+   java.util.concurrent.CompletableFuture
+   java.util.concurrent.CompletionStage
+   java.util.function.Function))
 
 (defmacro run-quick-bench
   [& exprs]

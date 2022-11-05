@@ -14,7 +14,8 @@
    [promesa.protocols :as pt]
    [clojure.core :as c]
    [promesa.exec :as exec]
-   [promesa.impl :as impl])
+   [promesa.impl :as impl]
+   [promesa.util :as util])
   #?(:cljs (:require-macros [promesa.core]))
   #?(:clj
      (:import
@@ -54,7 +55,7 @@
   "A convenience alias for `promise` coercion function that only accepts
   a single argument."
   [v]
-  (pt/-promise v))
+  (util/wrap v))
 
 (defn create
   "Create a promise instance from a factory function. If an executor is
