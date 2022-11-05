@@ -1,5 +1,13 @@
 # Changelog #
 
+## Version 9.0.xxx
+
+- Fix `promesa.core/wrap`; it now only wraps if the value is not a promise instance
+- Replace previously introduced `ConcurrencyLimiter` (java impl) with
+  `Bulkhead` (100% clojure impl; cljs not suported but contributions
+  welcome to port it to cljs if someone consider it can be useful).
+
+
 ## Version 9.0.494
 
 Date: 2022-10-31
