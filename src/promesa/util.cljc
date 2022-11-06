@@ -58,4 +58,3 @@
   (if (satisfies? pt/IPromise v)
     v
     (pt/-promise v)))
-

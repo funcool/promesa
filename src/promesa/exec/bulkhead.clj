@@ -17,7 +17,6 @@
    clojure.lang.IFn
    clojure.lang.ILookup
    java.util.concurrent.LinkedBlockingQueue
-
    java.util.concurrent.BlockingQueue
    java.util.concurrent.CompletableFuture
    java.util.concurrent.ExecutorService

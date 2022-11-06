@@ -6,7 +6,7 @@
 
 (ns promesa.exec
   "Executors & Schedulers facilities."
-  (:refer-clojure :exclude [run!])
+  (:refer-clojure :exclude [run! pmap])
   (:require [promesa.protocols :as pt]
             [promesa.util :as pu]
             #?(:cljs [goog.object :as gobj]))
@@ -470,3 +470,54 @@
   [executor & body]
   `(-> (submit! ~executor (^:once fn* [] (pt/-promise (do ~@body))))
        (pt/-bind identity)))
+
+(defmacro with-executor
+  "Binds the *default-executor* var with the provided executor,
+  executes the macro body. It also can optionally shutdown or shutdown
+  and interrupt on termination if you provide `^:shutdown` and
+  `^:interrupt` metadata.
+
+  EXPERIMENTAL API: This function should be considered EXPERIMENTAL
+  and may be changed or removed in future versions until this
+  notification is removed."
+  [executor & body]
+  (let [interrupt?   (-> executor meta :interrupt)
+        shutdown?    (-> executor meta :shutdown)
+        executor-sym (gensym "executor")]
+    `(let [~executor-sym ~executor
+           ~executor-sym (if (fn? ~executor-sym) (~executor-sym) ~executor-sym)]
+       (binding [*default-executor* ~executor-sym]
+         (try
+           ~@body
+           (finally
+             ~(when (or shutdown? interrupt?)
+                (list (if interrupt? 'promesa.exec/shutdown-now! 'promesa.exec/shutdown!) executor-sym))))))))
+
+#?(:clj
+(defn pmap
+  "Analogous to the `clojure.core/pmap` with the excetion that it allows
+  use a custom executor (binded to *default-executor* var) The default
+  clojure chunk size (32) is used for evaluation and the real
+  parallelism is determined by the provided executor.
+
+
+  EXPERIMENTAL API: This function should be considered EXPERIMENTAL
+  and may be changed or removed in future versions until this
+  notification is removed."
+  {:experimental true}
+  ([f coll]
+   (let [executor (resolve-executor *default-executor*)]
+     (->> coll
+          (map (fn [o] (pt/-submit! executor #(f o))))
+          (clojure.lang.RT/iter)
+          (clojure.lang.RT/chunkIteratorSeq)
+          (map (fn [o] (.get ^CompletableFuture o))))))
+  ([f coll & colls]
+   (let [step-fn (fn step-fn [cs]
+                   (lazy-seq
+                    (let [ss (map seq cs)]
+                      (when (every? identity ss)
+                        (cons (map first ss) (step-fn (map rest ss)))))))]
+     (pmap #(apply f %) (step-fn (cons coll colls)))))))
+
+

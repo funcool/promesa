@@ -620,6 +620,59 @@ Since v9.0.x there are new factories that uses the JDK>=19 preview API:
   virtual Thread for each task.
 
 
+### Helpers
+
+#### `pmap`
+
+This is a simplified `clojure.core/pmap` analogous function that allows
+execute a potentially computationally expensive or io bound functions
+in parallell.
+
+It returns a lazy chunked seq (uses the clojure's default chunk size:
+32) and the maximum parallelism is determined by the provided
+executor.
+
+Example:
+
+```clojure
+(defn slow-inc
+  [x]
+  (Thread/sleep 1000)
+  (inc x))
+
+(time
+ (doall
+  (px/pmap slow-inc (range 10))))
+
+;; "Elapsed time: 2002.724345 msecs"
+;; => (1 2 3 4 5 6 7 8 9 10)
+
+(time
+ (doall
+  (map slow-inc (range 10))))
+
+;; Elapsed time: 10001.912614 msecs"
+;; => (1 2 3 4 5 6 7 8 9 10)
+```
+
+#### `with-executor` macro
+
+
+This allows run a scoped code with the `px/*default-executor*` binded
+to the provided executor. The provided executor can be a function for
+lazy executor instantiation.
+
+There an example on how you can customize the executor for **pmap**:
+
+```clojure
+(time
+ (px/with-executor ^:shutdown (px/fixed-executor :parallelism 2)
+   (doall (px/pmap slow-inc (range 10)))))
+
+;; "Elapsed time: 5004.506274 msecs"
+;; => (1 2 3 4 5 6 7 8 9 10)
+```
+
 ## Execution patterns
 
 ### CSP

@@ -6,6 +6,12 @@
 - Replace previously introduced `ConcurrencyLimiter` (java impl) with
   `Bulkhead` (100% clojure impl; cljs not suported but contributions
   welcome to port it to cljs if someone consider it can be useful).
+- Add `promesa.exec/pmap`; a simplified `clojure.core/pmap` analogous
+  function that allows use a user specified executor (thanks to the
+  dynamic vars) (EXPERIMENTAL)
+- Add `promesa.exec/with-executor` helper macro for easily bind a new
+  value to the `*default-executor*` and optionally close it on lexical
+  scope ending (EXPERIMENTAL)
 
 
 ## Version 9.0.494
