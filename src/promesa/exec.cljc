@@ -33,7 +33,7 @@
 
 ;; --- Globals & Defaults (with CLJS Impl)
 
-#?(:clj (declare scheduled-pool)
+#?(:clj (declare scheduled-executor)
    :cljs (declare ->ScheduledExecutor))
 
 #?(:clj (declare cached-executor)
@@ -42,7 +42,7 @@
 (declare ->SameThreadExecutor)
 
 (defonce ^:dynamic *default-scheduler*
-  (delay #?(:clj (scheduled-pool)
+  (delay #?(:clj (scheduled-executor)
             :cljs (->ScheduledExecutor))))
 
 (defonce ^:dynamic *default-executor*
