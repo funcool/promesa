@@ -1,11 +1,11 @@
 # Changelog #
 
-## Version 9.0.xxx
+## Version 9.0.507
 
-- Fix `promesa.core/wrap`; it now only wraps if the value is not a promise instance
 - Replace previously introduced `ConcurrencyLimiter` (java impl) with
   `Bulkhead` (100% clojure impl; cljs not suported but contributions
   welcome to port it to cljs if someone consider it can be useful).
+- Fix `promesa.core/wrap`; it now only wraps if the value is not a promise instance
 - Add `promesa.exec/pmap`; a simplified `clojure.core/pmap` analogous
   function that allows use a user specified executor (thanks to the
   dynamic vars) (EXPERIMENTAL)

@@ -10,11 +10,11 @@ Leiningen:
 deps.edn:
 
 ```clojure
-funcool/promesa {:mvn/version "9.0.494"}
+funcool/promesa {:mvn/version "9.0.507"}
 ```
 
 ```clojure
-[funcool/promesa "9.0.494"]
+[funcool/promesa "9.0.507"]
 ```
 
 ## Introduction
