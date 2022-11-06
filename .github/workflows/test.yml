@@ -44,4 +44,4 @@ jobs:
 
       - run: clojure -M:dev -m promesa.tests.main
       - run: clojure -T:dev:build build-cljs-tests
-      - run: node out/tests.js
+      - run: node target/tests.js
