@@ -213,7 +213,7 @@ step, there are the `chain` and `chain'` functions:
 multiple transformation functions.
 
 
-### `->`, `->>` and `as->`
+### `->`, `->>` and `as->` (macros)
 
 **NOTE**: `->` and `->>` introduced in 6.1.431, `as->` introduced in 6.1.434.
 
@@ -342,8 +342,7 @@ the `all` helper.
   (p/then p (fn [[result1 result2]]
               (do-something-with-results result1 result2))))
 ```
-
-### `plet`
+### `plet` macro
 
 The `plet` macro combines syntax of `let` with `all`; and enables a
 simple declaration of parallel operations followed by a body
@@ -367,6 +366,12 @@ previous example can be written using `all` in this manner:
         (p/delay 120 3)]
   (fn [[a b c]] (+ a b c)))
 ```
+
+The real parallelism strictly depends on the underlying implementation
+of the executed functions. If they does syncrhonous work, all the code
+will be executed serially, almost identical to the standard let. Is
+the user responsability of the final execution model.
+
 
 ### `any`
 
@@ -562,7 +567,8 @@ used (binded on the `promesa.exec/*default-executor*` dynamic var).
 
 Also, in both cases, the returned promise is cancellable, so if for
 some reason the function is still not execued, the cancellation will
-prevent the execution.
+prevent the execution. You can cancel a cancellable promise with
+`p/cancel!` function.
 
 
 ### Delayed Tasks
@@ -622,7 +628,7 @@ Since v9.0.x there are new factories that uses the JDK>=19 preview API:
 
 ### Helpers
 
-#### `pmap`
+#### `pmap` (experimental)
 
 This is a simplified `clojure.core/pmap` analogous function that allows
 execute a potentially computationally expensive or io bound functions
@@ -655,12 +661,16 @@ Example:
 ;; => (1 2 3 4 5 6 7 8 9 10)
 ```
 
-#### `with-executor` macro
-
+#### `with-executor` macro (experimental)
 
 This allows run a scoped code with the `px/*default-executor*` binded
 to the provided executor. The provided executor can be a function for
 lazy executor instantiation.
+
+It optionally accepts metadata on the executor part for indicate:
+
+- `^:shutdown`: shutdown the pool before return
+- `^:interrupt`: shutdown and interrupt before return
 
 There an example on how you can customize the executor for **pmap**:
 
@@ -672,6 +682,7 @@ There an example on how you can customize the executor for **pmap**:
 ;; "Elapsed time: 5004.506274 msecs"
 ;; => (1 2 3 4 5 6 7 8 9 10)
 ```
+
 
 ## Execution patterns
 
