@@ -1,6 +1,7 @@
 # User Guide
 
-A promise library for Clojure and ClojureScript.
+A promise library & async toolkit for Clojure and ClojureScript.
+
 
 ## Install
 
@@ -18,8 +19,9 @@ funcool/promesa {:mvn/version "9.0.494"}
 
 ## Introduction
 
-A promise is an abstraction that represents the result of an asynchronous
-operation that has the notion of error.
+A **promise** is an abstraction that represents the result of an
+asynchronous operation that has the notion of error. Backedn with
+[CompletebleFuture][0] on the JVM and [Promise][1] on JS.
 
 This is a list of all possible states for a promise:
 
@@ -29,16 +31,13 @@ This is a list of all possible states for a promise:
 
 The promise can be considered *done* when it is resolved or rejected.
 
-This library exposes the promise abstraction backed by the underlying
-implementations that the platform offers: **CompletableFuture** in JVM
-and built-in Promise on JS.
+**NOTE:** keep in mind that the vast majority of things work
+identically regardless of the runtime, but there are cases where the
+limitations of the platform implementation imply differences or even
+the omission of some functions.
 
-Keep in mind that the vast majority of things work identically
-regardless of the runtime, but there are cases where the limitations
-of the platform implementation imply differences or even the omission
-of some functions.
 
-## Working with `promesa`
+## Working with `promises`
 
 ### Creating a promise
 
@@ -458,7 +457,7 @@ promise will be rejected with a timeout error and then successfully
 captured with the `catch` handler.
 
 
-### Promise chaining execution model
+### Promise chaining & execution model
 
 Let's try to understand how promise chained functions are executed and
 how they interact with platform threads. **This section is mainly
@@ -514,17 +513,62 @@ task* executor.
 
 
 
-
-## Scheduling asynchronous tasks
+## Scheduling & Executors
 
 Additionally to the _promise_ abstraction, **promesa** library comes
-with some helpers and factories for execution and scheduling of tasks
+with many helpers and factories for execution and scheduling of tasks
 for asynchronous execution.
 
-### Scheduling Tasks
+Although this API works in the JS runtime and some of the function has
+general utility, the main target is the JVM platform.
+
+
+### Async Tasks
+
+Firstly, lets define **async task**: a function that is executed out
+of current flow using a different thread. Here, **promesa** library
+exposes mainly two functions:
+
+- `promesa.exec/run!`: useful when you want run a function in a
+  different thread and you don't care abour the return value; it
+  returns a promise that will be fullfilled when the callback
+  terminates.
+- `promesa.exec/submit!` useful when you want run a function in a
+  different thread and you need the return value; it returns a promise
+  that will be fullfilled with the return value of the function.
+
+
+Let see some examples:
+
+```clojure
+(require '[promesa.exec :as px])
+
+
+@(px/run! (fn []
+            (prn "I'm running in different thread")
+            1))
+;; => nil
+
+@(px/submit! (fn []
+               (prn "I'm running in different thread")
+               1))
+;; => 1
+```
+
+The both functions optionally accepts as first argument an executor
+instance that allows specify the executor where you want execute the
+specified function. If no executor is provided, the default one is
+used (binded on the `promesa.exec/*default-executor*` dynamic var).
+
+Also, in both cases, the returned promise is cancellable, so if for
+some reason the function is still not execued, the cancellation will
+prevent the execution.
+
+
+### Delayed Tasks
 
 This consists in a simple helper that allows scheduling execution of a
-function after some amount of time. 
+function after some amount of time.
 
 
 ```clojure
@@ -550,11 +594,30 @@ scheduler executor is used and the the scheduled function will be
 executed in different thread; on **JS** runtime the function will be
 executed in a _microtask_.
 
-### Async Task
 
-This is a general purpose API for submiting a task exection on
-background thread. **Although this API works in JS runtime, the main
-target is JVM.*
+### Executors Factories
+
+A collection of factories function for create executors instances (JVM only):
+
+- `px/cached-executor`: creates a thread pool that creates new threads
+  as needed, but will reuse previously constructed threads when they
+  are available.
+- `px/fixed-executor`: creates a thread pool that reuses a fixed
+  number of threads operating off a shared unbounded queue.
+- `px/single-executor`: creates an Executor that uses a single worker
+  thread operating off an unbounded queue
+- `px/scheduled-executor`: creates a thread pool that can schedule
+  commands to run after a given delay, or to execute periodically.
+- `px/forkjoin-executor`: creates a thread pool that maintains enough
+  threads to support the given parallelism level, and may use multiple
+  queues to reduce contention.
+
+Since v9.0.x there are new factories that uses the JDK>=19 preview API:
+
+- `px/thread-per-task-executor`: creates an Executor that starts a new
+  Thread for each task.
+- `px/vthread-per-task-executor`: creates an Executor that starts a new
+  virtual Thread for each task.
 
 
 ## Execution patterns
@@ -563,80 +626,67 @@ target is JVM.*
 
 TODO: in development
 
+
 ### Bulkhead
 
 In general, the goal of the bulkhead pattern is to avoid faults in one
 part of a system to take the entire system down. The bulkhead
 implementation in **promesa** limits the number of concurrent calls.
 
-This [SO answer][so-bulkhead]
-
-[so-bulkhead]: (https://stackoverflow.com/questions/30391809/what-is-bulkhead-pattern-used-by-hystrix) explains the concept very well.
+This [SO answer][2] explains the concept very well.
 
 
+So lets stat with an example:
+
+```clojure
+(require '[promesa.exec.bulkhead :as pxb]
+         '[promesa.exec :as px])
+
+;; All parameters are optional and have default value
+(def instance (pxb/create :concurrency 1
+                          :queue-size 16
+                          :executor px/*default-executor*))
+
+@(px/submit! instance (fn []
+                        (Thread/sleep 1000)
+                        1))
+;; => 1
+```
+
+At first glance, this seems like an executor instance because it
+resembles the same API (aka `px/submit! call). And it proxies all
+submits to the provided executor (or the default one if not provided).
+
+When you submits a task to it, it does the following:
+
+- Checkes if concurrency limit is not reached, if not, proceed to
+  execute the function in the underlying executor.
+- If concurrency limit is reached, it queues the execution until
+  other tasks are finished.
+- If queue limit is reached, the returned promise will be
+  automatically rejected with an exception indicating that queue limit
+  reached.
+
+This allows control the concurrency and the queue size on access to
+some resource.
+
+
+NOTES:
+
+- _As future improvements we consider adding an option for delimit the
+  **max wait** and cancel/reject tasks after some timeout._
+- _For now it is implemented only on JVM but I think is pretty easy to
+  implement on CLJS, so if there are some interest on it, feel free to
+  open and issue for just show interest or discuss how it can be
+  contributed._
 
 ## Performance overhead
 
 _promesa_ is a lightweight abstraction built on top of native
-facilities (`CompletableFuture` in the JVM and `js/Promise` in JavaScript).
-
-Internally we make heavy use of protocols in order to expose a
-polymorphic and user friendly API, and this has little overhead on top
-of raw usage of `CompletableFuture` or `Promise`. This is the latest
-micro benchmark (2019-09-17) that shows the real overhead of this
-library in contrast to the use of native abstractions:
-
-```clojure
-(run-bench (simple-promise-chain-5-raw))
-;; => amd64 Linux 5.2.9-arch1-1-ARCH 4 cpu(s)
-;; => OpenJDK 64-Bit Server VM 12.0.2+10
-;; => Runtime arguments: -Dclojure.compiler.direct-linking=true
-;; => Evaluation count : 687647820 in 60 samples of 11460797 calls.
-;; =>       Execution time sample mean : 82.617649 ns
-;; =>              Execution time mean : 82.606811 ns
-;; => Execution time sample std-deviation : 2.348589 ns
-;; =>     Execution time std-deviation : 2.365164 ns
-;; =>    Execution time lower quantile : 78.787962 ns ( 2.5%)
-;; =>    Execution time upper quantile : 86.941501 ns (97.5%)
-;; =>                    Overhead used : 9.967315 ns
-;; =>
-
-(run-bench (simple-completable-chain-5-raw))
-;; => amd64 Linux 5.2.9-arch1-1-ARCH 4 cpu(s)
-;; => OpenJDK 64-Bit Server VM 12.0.2+10
-;; => Runtime arguments: -Dclojure.compiler.direct-linking=true
-;; => Evaluation count : 823532160 in 60 samples of 13725536 calls.
-;; =>       Execution time sample mean : 62.267034 ns
-;; =>              Execution time mean : 62.279349 ns
-;; => Execution time sample std-deviation : 1.967931 ns
-;; =>     Execution time std-deviation : 2.014908 ns
-;; =>    Execution time lower quantile : 59.663843 ns ( 2.5%)
-;; =>    Execution time upper quantile : 67.599822 ns (97.5%)
-;; =>                    Overhead used : 9.967315 ns
-```
-
-The benchmarked functions are:
-
-
-```clojure
-(defn simple-promise-chain-5-raw
-  []
-  @(as-> (CompletableFuture/completedFuture 1) $
-     (p/then' $ inc)
-     (p/then' $ inc)
-     (p/then' $ inc)
-     (p/then' $ inc)
-     (p/then' $ inc)))
-
-(defn simple-completable-chain-5-raw
-  []
-  @(as-> (CompletableFuture/completedFuture 1) $
-     (.thenApply ^CompletionStage $ ^Function (pu/->FunctionWrapper inc))
-     (.thenApply ^CompletionStage $ ^Function (pu/->FunctionWrapper inc))
-     (.thenApply ^CompletionStage $ ^Function (pu/->FunctionWrapper inc))
-     (.thenApply ^CompletionStage $ ^Function (pu/->FunctionWrapper inc))
-     (.thenApply ^CompletionStage $ ^Function (pu/->FunctionWrapper inc))))
-```
+facilities (`CompletableFuture` in the JVM and `js/Promise` in
+JavaScript). Internally we make heavy use of protocols in order to
+expose a polymorphic and user friendly API, and this has little
+overhead on top of raw usage of `CompletableFuture` or `Promise`.
 
 
 ## Contributing
@@ -688,3 +738,8 @@ file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 Copyright (c) Andrey Antukh <niwi@niwi.nz>
 ```
+
+
+[0]: https://docs.oracle.com/en/java/javase/19/docs/api/java.base/java/util/concurrent/CompletableFuture.html
+[1]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
+[2]: (https://stackoverflow.com/questions/30391809/what-is-bulkhead-pattern-used-by-hystrix)
