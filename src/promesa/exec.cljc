@@ -31,26 +31,15 @@
 
 #?(:clj (set! *warn-on-reflection* true))
 
+
 ;; --- Globals & Defaults (with CLJS Impl)
 
-#?(:clj (declare scheduled-executor)
-   :cljs (declare ->ScheduledExecutor))
-
-#?(:clj (declare cached-executor)
-   :cljs (declare ->MicrotaskExecutor))
-
+(declare #?(:clj scheduled-executor :cljs ->ScheduledExecutor))
+(declare #?(:clj cached-executor :cljs ->MicrotaskExecutor))
 (declare ->SameThreadExecutor)
 
-(defonce ^:dynamic *default-scheduler*
-  (delay #?(:clj (scheduled-executor)
-            :cljs (->ScheduledExecutor))))
-
-(defonce ^:dynamic *default-executor*
-  (delay #?(:clj (ForkJoinPool/commonPool)
-            :cljs (->MicrotaskExecutor))))
-
-(defonce same-thread-executor
-  (delay (->SameThreadExecutor)))
+(def ^:dynamic *default-scheduler* nil)
+(def ^:dynamic *default-executor* nil)
 
 (def vthreads-supported?
   #?(:clj (and (pu/has-method? Thread "startVirtualThread")
@@ -61,12 +50,39 @@
                    false)))
      :cljs false))
 
-(defonce ^:dynamic *vthread-executor*
-  #?(:clj (when vthreads-supported?
-            (delay (eval '(java.util.concurrent.Executors/newVirtualThreadPerTaskExecutor))))
+(def noop (constantly nil))
+
+(defn- get-available-processors
+  []
+  #?(:clj (.availableProcessors (Runtime/getRuntime))
+     :cljs 1))
+
+(defonce
+  ^{:doc "A global, default scheduler executor service."}
+  default-scheduler
+  (delay #?(:clj (scheduled-executor :parallelism (get-available-processors))
+            :cljs (->ScheduledExecutor))))
+
+(defonce
+  ^{:doc "A global, default executor service."}
+  default-executor
+  (delay #?(:clj (ForkJoinPool/commonPool)
+            :cljs (->MicrotaskExecutor))))
+
+(defonce
+  ^{:doc "A global thread executor that uses the same thread to run the code."}
+  same-thread-executor
+  (delay (->SameThreadExecutor)))
+
+(defonce
+  ^{:doc "A global, virtual thread per task executor service."}
+  vthread-executor
+  #?(:clj  (delay (eval '(java.util.concurrent.Executors/newVirtualThreadPerTaskExecutor)))
      :cljs (delay (->MicrotaskExecutor))))
 
-(defonce ^:dynamic *thread-executor*
+(defonce
+  ^{:doc "A global, thread per task executor service."}
+  thread-executor
   #?(:clj  (delay (cached-executor))
      :cljs (delay (->MicrotaskExecutor))))
 
@@ -75,30 +91,32 @@
   #?(:clj (instance? Executor o)
      :cljs (satisfies? pt/IExecutor o)))
 
+(defn shutdown!
+  "Shutdowns the executor service."
+  [^ExecutorService executor]
+  (.shutdown executor))
+
+(defn shutdown-now!
+  "Shutdowns and interrupts the executor service."
+  [^ExecutorService executor]
+  (.shutdownNow executor))
+
 (defn resolve-executor
-  ([] (resolve-executor :default))
+  ([] (resolve-executor nil))
   ([executor]
-   (case executor
-     :default (pu/maybe-deref *default-executor*)
-     :thread  (pu/maybe-deref *thread-executor*)
-     :vthread (do
-                #?(:clj
-                   (when (nil? *vthread-executor*)
-                     (throw (UnsupportedOperationException. "vthreads not available"))))
-                (pu/maybe-deref *vthread-executor*))
-     (pu/maybe-deref executor))))
+   (if (or (nil? executor) (= :default executor))
+     @default-executor
+     (case executor
+       :thread  (pu/maybe-deref thread-executor)
+       :vthread (pu/maybe-deref vthread-executor)
+       (pu/maybe-deref executor)))))
 
 (defn resolve-scheduler
-  ([] (resolve-scheduler :default))
+  ([] (resolve-scheduler nil))
   ([scheduler]
-   (if (= :default scheduler)
-     (pu/maybe-deref *default-scheduler*)
+   (if (or (nil? scheduler) (= :default scheduler))
+     (pu/maybe-deref default-scheduler)
      (pu/maybe-deref scheduler))))
-
-#?(:clj
-   (defn- get-available-processors
-     []
-     (.availableProcessors (Runtime/getRuntime))))
 
 (defn wrap-bindings
   [f]
@@ -124,14 +142,12 @@
 
 ;; --- Public API
 
-(def noop (constantly nil))
-
 (defn run!
   "Run the task in the provided executor."
   ([f]
-   (pt/-submit! (resolve-executor) (comp noop f)))
+   (pt/-run! (resolve-executor) f))
   ([executor f]
-   (pt/-submit! (resolve-executor executor) (comp noop f))))
+   (pt/-run! (resolve-executor executor) f)))
 
 (defn submit!
   "Submit a task to be executed in a provided executor
@@ -365,8 +381,11 @@
                        (apply forkjoin-executor params)))))
 
 #?(:clj
-   (extend-protocol pt/IExecutor
-     Executor
+   (extend-type Executor
+     pt/IExecutor
+     (-run! [this f]
+       (CompletableFuture/runAsync ^Runnable f ^Executor this))
+
      (-submit! [this f]
        (CompletableFuture/supplyAsync ^Supplier (pu/->SupplierWrapper f) ^Executor this))))
 
@@ -375,6 +394,10 @@
 #?(:cljs
    (deftype MicrotaskExecutor []
      pt/IExecutor
+     (-run! [this f]
+       (-> (pt/-submit! this f)
+           (pt/-map noop)))
+
      (-submit! [this f]
        (-> (pt/-promise nil)
            (pt/-map (fn [_] (f)))
@@ -390,6 +413,8 @@
    :cljs
    (deftype SameThreadExecutor []
      pt/IExecutor
+     (-run! [this f]
+       (pt/-promise (comp noop f)))
      (-submit! [this f]
        (pt/-promise (f)))))
 

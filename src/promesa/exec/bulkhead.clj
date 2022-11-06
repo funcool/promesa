@@ -94,6 +94,10 @@
     (or (.valAt ^ILookup this key) nil))
 
   pt/IExecutor
+  (-run! [this task-fn]
+    (-> (-offer! this task-fn)
+        (pt/-map px/noop)))
+
   (-submit! [this task-fn]
     (-offer! this task-fn))
 
