@@ -13,5 +13,8 @@
     "compile-test": "clojure -M:dev:shadow-cljs compile test --config-merge '{:autorun false}'",
     "run-test": "node target/tests.js",
     "test": "npm run compile-test && npm run run-test"
+  },
+  "devDependencies": {
+    "source-map-support": "^0.5.21"
   }
 }
