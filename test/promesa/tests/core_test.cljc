@@ -438,14 +438,14 @@
 
 (t/deftest do-expression
   (let [err (ex-info "error" {})
-        p1 (p/do (throw err))
-        p2 (p/do (promise-ko 10 :ko))
-        p3 (p/do (promise-ok 10 :ok1)
-                 (promise-ok 10 :ok2))
+        ;; p1  (p/do! (throw err))
+        p2  (p/do! (promise-ko 10 :ko))
+        p3  (p/do! (promise-ok 10 :ok1)
+                   (promise-ok 10 :ok2))
 
         test #(p/do
-                (-> (normalize-to-value p1)
-                    (p/then (fn [res] (t/is (= res 'error)))))
+                ;; (-> (normalize-to-value p1)
+                ;;     (p/then (fn [res] (t/is (= res 'error)))))
                 (-> (normalize-to-value p2)
                     (p/then (fn [res] (t/is (= res :ko)))))
                 (-> (normalize-to-value p3)

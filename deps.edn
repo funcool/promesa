@@ -5,21 +5,26 @@
    {com.bhauman/rebel-readline-cljs {:mvn/version "RELEASE"},
     com.bhauman/rebel-readline {:mvn/version "RELEASE"},
     org.clojure/tools.namespace {:mvn/version "RELEASE"},
-    org.clojure/clojurescript {:mvn/version "RELEASE"},
-    org.clojure/clojure {:mvn/version "1.11.1"},
-    criterium/criterium {:mvn/version "RELEASE"}}
+    criterium/criterium {:mvn/version "RELEASE"}
+    thheller/shadow-cljs {:mvn/version "RELEASE"}}
    :extra-paths ["test" "dev" "src"]},
 
   :repl
   {:main-opts  ["-m" "rebel-readline.main"]}
 
+  :shadow-cljs
+  {:main-opts ["-m" "shadow.cljs.devtools.cli"]}
+
   :test
   {:extra-paths ["test"]
    :extra-deps
    {io.github.cognitect-labs/test-runner
-    {:git/tag "v0.5.0" :git/sha "b3fd0d2"}}
+    {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
+   ;; :main-opts ["-m" "cognitect.test-runner"]
    :exec-fn cognitect.test-runner.api/test
    :exec-args {:patterns [".*-test.*"]}}
+
+
 
   :codox
   {:extra-deps

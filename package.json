@@ -1,0 +1,17 @@
+{
+  "name": "promesa",
+  "version": "9.0",
+  "description": "-",
+  "author": "-",
+  "license": "SEE LICENSE IN <LICENSE>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/funcool/promesa"
+  },
+  "scripts": {
+    "watch-test": "clojure -M:dev:shadow-cljs watch test",
+    "compile-test": "clojure -M:dev:shadow-cljs compile test --config-merge '{:autorun false}'",
+    "run-test": "node target/tests.js",
+    "test": "npm run compile-test && npm run run-test"
+  }
+}
