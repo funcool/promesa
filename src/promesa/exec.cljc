@@ -12,6 +12,7 @@
             #?(:cljs [goog.object :as gobj]))
   #?(:clj
      (:import
+      clojure.lang.Var
       java.lang.AutoCloseable
       java.util.concurrent.Callable
       java.util.concurrent.CompletableFuture
@@ -122,22 +123,22 @@
   [f]
   #?(:cljs f
      :clj
-     (let [frame (clojure.lang.Var/cloneThreadBindingFrame)]
+     (let [frame (Var/cloneThreadBindingFrame)]
        (fn
          ([]
-          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (Var/resetThreadBindingFrame frame)
           (f))
          ([x]
-          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (Var/resetThreadBindingFrame frame)
           (f x))
          ([x y]
-          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (Var/resetThreadBindingFrame frame)
           (f x y))
          ([x y z]
-          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (Var/resetThreadBindingFrame frame)
           (f x y z))
          ([x y z & args]
-          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (Var/resetThreadBindingFrame frame)
           (apply f x y z args))))))
 
 ;; --- Public API
@@ -531,9 +532,12 @@
   notification is removed."
   {:experimental true}
   ([f coll]
-   (let [executor (resolve-executor *default-executor*)]
+   (let [executor (resolve-executor *default-executor*)
+         frame    (Var/cloneThreadBindingFrame)]
      (->> coll
-          (map (fn [o] (pt/-submit! executor #(f o))))
+          (map (fn [o] (pt/-submit! executor #(do
+                                                (Var/resetThreadBindingFrame frame)
+                                                (f o)))))
           (clojure.lang.RT/iter)
           (clojure.lang.RT/chunkIteratorSeq)
           (map (fn [o] (.get ^CompletableFuture o))))))
