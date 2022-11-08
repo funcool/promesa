@@ -1,5 +1,12 @@
 # Changelog #
 
+## Version 9.0.518
+
+- Forward dynamic bindings for `pmap`.
+- Forward dynamic bindings for `with-dispatch`
+- Add minor internal adjustments to bulkhead.
+
+
 ## Version 9.0.507
 
 - Replace previously introduced `ConcurrencyLimiter` (java impl) with
