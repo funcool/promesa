@@ -83,11 +83,11 @@
     (case key
       ::executor           executor
       ::semaphore          semaphore
-      :queue-size          (-> this meta ::queue-size)
-      :concurrency         (-> this meta ::concurrency)
-      :current-queue-size  (.size ^BlockingQueue queue)
-      :current-concurrency (- (-> this meta ::concurrency)
-                              (.availablePermits ^Semaphore semaphore))
+      ::queue-size          (-> this meta ::queue-size)
+      ::concurrency         (-> this meta ::concurrency)
+      ::current-queue-size  (.size ^BlockingQueue queue)
+      ::current-concurrency (- (-> this meta ::concurrency)
+                               (.availablePermits ^Semaphore semaphore))
       nil))
 
   (valAt [this key default]
