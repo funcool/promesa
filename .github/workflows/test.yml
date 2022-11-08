@@ -14,7 +14,7 @@ env:
   ACTION_CACHE_VERSION: 'v1'
 
 jobs:
-  test:
+  test-clj:
     strategy:
       matrix:
         java: ['11', '17', '18', '19']
@@ -23,16 +23,29 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-java@v3
         with:
-          distribution: 'zulu' # See 'Supported distributions' for available options
+          distribution: 'zulu'
           java-version: ${{ matrix.java }}
-
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18.12.1'
 
       - uses: DeLaGuardo/setup-clojure@3.5
         with:
           cli: 1.11.1.1189
 
       - run: clojure -X:dev:test
+
+  test-cljs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '19'
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18.12.1'
+      - uses: DeLaGuardo/setup-clojure@3.5
+        with:
+          cli: 1.11.1.1189
+      - run: npm install
       - run: npm test
+
