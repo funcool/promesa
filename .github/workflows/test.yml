@@ -17,18 +17,14 @@ jobs:
   test:
     strategy:
       matrix:
-        java: ['11', '18', '19']
+        java: ['11', '17', '18', '19']
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-java@v3
         with:
           distribution: 'zulu' # See 'Supported distributions' for available options
-          java-version: |
-            11
-            17
-            18
-            19
+          java-version: ${{ matrix.java }}
 
       - uses: actions/setup-node@v3
         with:
