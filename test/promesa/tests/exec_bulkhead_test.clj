@@ -53,7 +53,7 @@
     (t/is (thrown? java.util.concurrent.ExecutionException (deref res3)))
     ))
 
-(t/deftest basic-operations-hooks
+#_(t/deftest basic-operations-hooks
   (let [state    (atom {})
         on-queue (fn [lim]
                    (swap! state update :on-queue (fnil inc 0)))
@@ -68,11 +68,11 @@
         res4      (px/submit! instance (waiting-fn))
         res5      (px/submit! instance (waiting-fn))]
 
-    ;; (t/is (< @res1 10000000))
-    ;; (t/is (< @res2 10000000))
-    ;; (t/is (< @res3 10000000))
-    ;; (t/is (< @res4 10000000))
-    ;; (t/is (< @res5 10000000))
+    (t/is (< @res1 10000000))
+    (t/is (< @res2 10000000))
+    (t/is (< @res3 10000000))
+    (t/is (< @res4 10000000))
+    (t/is (< @res5 10000000))
     (prn @res1 @res2 @res3 @res4 @res5)
     (prn @state)))
 

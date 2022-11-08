@@ -20,25 +20,23 @@ jobs:
         java: ['11', '18', '19']
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v2
+      - uses: actions/setup-java@v3
         with:
-          path: ~/.m2/repository
-          key: ${{ env.ACTION_CACHE_VERSION }}-${{ runner.os }}-maven-${{ hashFiles('**/deps.edn') }}
-      - name: Prepare java
-        uses: actions/setup-java@v2
-        with:
-          distribution: 'temurin'
-          java-version: ${{ matrix.java }}
-      - uses: actions/setup-node@v2
+          distribution: 'zulu' # See 'Supported distributions' for available options
+          java-version: |
+            11
+            17
+            18
+            19
+
+      - uses: actions/setup-node@v3
         with:
           node-version: '18.12.1'
-      - name: Install clojure tools
-        uses: DeLaGuardo/setup-clojure@3.5
+
+      - uses: DeLaGuardo/setup-clojure@3.5
         with:
           cli: 1.11.1.1189
-      - name: Trojan Source Detector
-        uses: haveyoudebuggedit/trojansourcedetector@v1
+
       - run: clojure -X:dev:test
       - run: npm test
