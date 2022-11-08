@@ -55,7 +55,7 @@
   "A convenience alias for `promise` coercion function that only accepts
   a single argument."
   [v]
-  (util/wrap v))
+  (pt/-promise v))
 
 (defn create
   "Create a promise instance from a factory function. If an executor is

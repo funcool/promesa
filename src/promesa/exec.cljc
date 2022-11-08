@@ -494,8 +494,8 @@
   service. The returned promise is not cancellable (the body will be
   executed independently of the cancellation)."
   [executor & body]
-  `(-> (submit! ~executor (^:once fn* [] (pt/-promise (do ~@body))))
-       (pt/-bind identity)))
+  `(-> (submit! ~executor (wrap-bindings (^:once fn* [] ~@body)))
+       (pt/-bind pt/-promise)))
 
 (defmacro with-executor
   "Binds the *default-executor* var with the provided executor,

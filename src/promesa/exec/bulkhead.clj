@@ -58,7 +58,7 @@
         (if-let [rval (task-fn)]
           (do
             ;; (prn "Task.invoke0" "rval=" rval)
-            (-> (pu/wrap rval)
+            (-> (pt/-promise rval)
                 (pt/-handle (fn [v e]
                               (pt/-release! semaphore)
                               (pt/-submit! executor bulkhead)
