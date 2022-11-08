@@ -784,8 +784,8 @@ clojure -X:dev:test
 And for JS platform:
 
 ```
-clojure -A:dev -T:build build-cljs-tests
-node target/tests.js
+npm install
+npm test
 ```
 
 You will need to have Node.js installed on your system.

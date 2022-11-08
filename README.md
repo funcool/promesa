@@ -22,14 +22,14 @@ more thank welcome.
 Run the Clojure (.clj) tests:
 
 ``` shell
-clojure -M:dev -m promesa.tests.main
+clojure -X:dev:test
 ```
 
 Run the ClojureScript (.cljs) tests:
 
 ``` shell
-clojure -T:dev:build build-cljs-tests
-node target/tests.js
+npm install
+npm test
 ```
 
 [0]: https://funcool.github.io/promesa/latest/user-guide.html
