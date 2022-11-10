@@ -1,15 +1,16 @@
 (ns user
   (:require
-   [clojure.tools.namespace.repl :as r]
-   [criterium.core :refer [quick-bench bench with-progress-reporting]]
-   [clojure.walk :refer [macroexpand-all]]
    [clojure.pprint :refer [pprint]]
    [clojure.test :as test]
+   [clojure.tools.namespace.repl :as r]
+   [clojure.walk :refer [macroexpand-all]]
+   [criterium.core :refer [quick-bench bench with-progress-reporting]]
    [promesa.core :as p]
-   [promesa.protocols :as pt]
-   [promesa.util :as pu]
    [promesa.exec :as px]
-   [promesa.exec.bulkhead :as pbh])
+   [promesa.exec.bulkhead :as pbh]
+   [promesa.exec.csp :as sp]
+   [promesa.protocols :as pt]
+   [promesa.util :as pu])
   (:import
    java.util.concurrent.CompletableFuture
    java.util.concurrent.CompletionStage
@@ -52,3 +53,12 @@
     (if (pos? fail)
       (System/exit fail)
       (System/exit 0))))
+
+(defn current-thread
+  []
+  (.getName (Thread/currentThread)))
+
+(defn dbg
+  [label v]
+  (locking dbg
+    (println "DBG[" label "/" (current-thread) "]:" (pr-str v))))
