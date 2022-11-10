@@ -334,8 +334,9 @@
    (defn scheduled-executor
      "A scheduled thread pool constructor."
      [& {:keys [parallelism factory] :or {parallelism 1}}]
-     (let [factory (or (some-> factory resolve-thread-factory)
-                       (default-thread-factory :name "promesa/scheduled/%s"))]
+     (let [parallelism (or parallelism (get-available-processors))
+           factory     (or (some-> factory resolve-thread-factory)
+                           (default-thread-factory :name "promesa/scheduled/%s"))]
        (Executors/newScheduledThreadPool (int parallelism) factory))))
 
 #?(:clj
