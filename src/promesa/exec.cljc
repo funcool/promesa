@@ -123,23 +123,50 @@
   [f]
   #?(:cljs f
      :clj
-     (let [frame (Var/cloneThreadBindingFrame)]
+     (let [bindings (get-thread-bindings)]
        (fn
          ([]
-          (Var/resetThreadBindingFrame frame)
-          (f))
-         ([x]
-          (Var/resetThreadBindingFrame frame)
-          (f x))
-         ([x y]
-          (Var/resetThreadBindingFrame frame)
-          (f x y))
-         ([x y z]
-          (Var/resetThreadBindingFrame frame)
-          (f x y z))
-         ([x y z & args]
-          (Var/resetThreadBindingFrame frame)
-          (apply f x y z args))))))
+          (push-thread-bindings bindings)
+          (try
+            (f)
+            (finally
+              (pop-thread-bindings))))
+         ([a]
+          (push-thread-bindings bindings)
+          (try
+            (f a)
+            (finally
+              (pop-thread-bindings))))
+         ([a b]
+          (push-thread-bindings bindings)
+          (try
+            (f a b)
+            (finally
+              (pop-thread-bindings))))
+         ([a b c]
+          (push-thread-bindings bindings)
+          (try
+            (f a b c)
+            (finally
+              (pop-thread-bindings))))
+         ([a b c d]
+          (push-thread-bindings bindings)
+          (try
+            (f a b c d)
+            (finally
+              (pop-thread-bindings))))
+         ([a b c d e]
+          (push-thread-bindings bindings)
+          (try
+            (f a b c d e)
+            (finally
+              (pop-thread-bindings))))
+         ([a b c d e & args]
+          (push-thread-bindings bindings)
+          (try
+            (apply f a b c d e args)
+            (finally
+              (pop-thread-bindings))))))))
 
 ;; --- Public API
 
