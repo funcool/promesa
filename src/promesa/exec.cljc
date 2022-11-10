@@ -364,7 +364,10 @@
      (let [parallelism (or parallelism (get-available-processors))
            factory     (or (some-> factory resolve-thread-factory)
                            (default-thread-factory :name "promesa/scheduled/%s"))]
-       (Executors/newScheduledThreadPool (int parallelism) factory))))
+
+
+       (doto (java.util.concurrent.ScheduledThreadPoolExecutor. (int parallelism) ^ThreadFactory factory)
+         (.setRemoveOnCancelPolicy true)))))
 
 #?(:clj
    (when vthreads-supported?
