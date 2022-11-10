@@ -67,3 +67,24 @@
   "An experimental lock protocol, used internally; no public api"
   (-lock! [_])
   (-unlock! [_]))
+
+(defprotocol IChannel
+  (-take! [_ _])
+  (-put! [_ _ _])
+  (-cleanup! [_])
+  (-abort! [_]))
+
+(defprotocol ICloseable
+  (-closed? [_])
+  (-close! [_]))
+
+(defprotocol IBuffer
+  (-full? [_])
+  (-poll! [_])
+  (-offer! [_ _])
+  (-size [_]))
+
+(defprotocol IHandler
+  (-active? [_])
+  (-commit! [_])
+  (-blockable? [_]))
