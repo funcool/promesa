@@ -112,6 +112,34 @@
      (pt/-take! port h)
      (deref (p/finally d (fn [_ _] (p/cancel! t)))))))
 
+(defn alts
+  ([ports] (alts ports {}))
+  ([ports {:keys [priority]}]
+   (let [ret     (p/deferred)
+         lock    (channel/promise->handler ret)
+         ports   (if priority ports (shuffle ports))
+         handler (fn [port]
+                   (reify
+                     pt/ILock
+                     (-lock! [_] (pt/-lock! lock))
+                     (-unlock! [_] (pt/-unlock! lock))
+
+                     pt/IHandler
+                     (-active? [_] (pt/-active? lock))
+                     (-blockable? [_] (pt/-blockable? lock))
+                     (-commit! [_]
+                       (when-let [f (pt/-commit! lock)]
+                         (fn [val]
+                           (f [val port]))))))]
+     (loop [ports (seq ports)]
+       (when-let [port (first ports)]
+         (if (vector? port)
+           (let [[port val] port]
+             (pt/-put! port val (handler port)))
+           (pt/-take! port (handler port)))
+         (recur (rest ports))))
+     ret)))
+
 (defn alts!
   "Completes at most one of several operations on channel. Receives a
   vector of operations and optional keyword options.
@@ -125,30 +153,8 @@
   operation is ready to a vector [val channel] where val is return
   value of the operation and channel identifies the channel where the
   the operation is succeeded."
-  [ports & {:keys [priority]}]
-  (let [ret     (p/deferred)
-        lock    (channel/promise->handler ret)
-        ports   (if priority ports (shuffle ports))
-        handler (fn [port]
-                  (reify
-                    pt/ILock
-                    (-lock! [_] (pt/-lock! lock))
-                    (-unlock! [_] (pt/-unlock! lock))
-
-                    pt/IHandler
-                    (-active? [_] (pt/-active? lock))
-                    (-blockable? [_] (pt/-blockable? lock))
-                    (-commit! [_]
-                      (when-let [f (pt/-commit! lock)]
-                        (fn [val]
-                          (f [val port]))))))]
-    (loop [ports (seq ports)]
-      (when-let [[op port val] (first ports)]
-        (case op
-          (:> :put)  (pt/-put! port val (handler port))
-          (:< :take) (pt/-take! port (handler port)))
-        (recur (rest ports))))
-    ret))
+  [ports & {:as opts}]
+  (deref (alts ports opts)))
 
 (defn close!
   "Close the channel."
@@ -161,7 +167,12 @@
   [port]
   (pt/-closed? port))
 
-(defn timeout
+(defn sleep
+  "Turn the current thread to sleep."
+  [ms]
+  (Thread/sleep (int ms)))
+
+(defn timeout-chan
   "Returns a channel that will be closed in the specified timeout. The
   default scheduler will be used. You can provide your own as optional
   first argument."
@@ -173,6 +184,13 @@
    (let [ch (chan)]
      (px/schedule! scheduler ms #(pt/-close! ch))
      ch)))
+
+(defn timeout
+  "Returns a promise that will be resolved in the specified timeout. The
+  default scheduler will be used. You can provide your own as optional
+  first argument."
+  [ms]
+  (go (Thread/sleep (int ms))))
 
 (defn slidding-buffer
   "Create a slidding buffer instance."
