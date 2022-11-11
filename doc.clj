@@ -3,10 +3,14 @@
 (codox/generate-docs
  {:output-path "doc/dist/latest"
   :metadata {:doc/format :markdown}
-  ;; :package 'funcool/promesa
-  ;; :version "5.1.1"
   :name "Promesa"
   :themes [:rdash]
   :source-paths ["src"]
   :namespaces [#"^promesa\."]
+  :doc-files
+  ["doc/intro.md"
+   "doc/promises.md"
+   "doc/executors.md"
+   "doc/patterns.md"
+   "doc/contributing.md"]
   :source-uri "https://github.com/funcool/promesa/blob/master/{filepath}#L{line}"})
