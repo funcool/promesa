@@ -40,9 +40,9 @@ channel implementation in CLJS remains to be seen._**
 
 ## Bulkhead
 
-In general, the goal of the bulkhead pattern is to avoid faults in one
-part of a system to take the entire system down. The bulkhead
-implementation in **promesa** limits the number of concurrent calls.
+In general, the goal of the bulkhead pattern is to avoid faults in one part of a system to take the
+entire system down. The bulkhead implementation in **promesa** limits the number of concurrent
+calls.
 
 This [SO answer][2] explains the concept very well.
 
@@ -64,32 +64,27 @@ So lets stat with an example:
 ;; => 1
 ```
 
-At first glance, this seems like an executor instance because it
-resembles the same API (aka `px/submit! call). And it proxies all
-submits to the provided executor (or the default one if not provided).
+At first glance, this seems like an executor instance because it resembles the same API (aka
+`px/submit! call).
 
 When you submits a task to it, it does the following:
 
-- Checkes if concurrency limit is not reached, if not, proceed to
-  execute the function in the underlying executor.
-- If concurrency limit is reached, it queues the execution until
-  other tasks are finished.
-- If queue limit is reached, the returned promise will be
-  automatically rejected with an exception indicating that queue limit
-  reached.
+- Checkes if concurrency limit is not reached, if not, proceed to execute the function in the
+  underlying executor.
+- If concurrency limit is reached, it queues the execution until other tasks are finished.
+- If queue limit is reached, the returned promise will be automatically rejected with an exception
+  indicating that queue limit reached.
 
-This allows control the concurrency and the queue size on access to
-some resource.
+This allows control the concurrency and the queue size on access to some resource.
 
 
 NOTES:
 
-- _As future improvements we consider adding an option for delimit the
-  **max wait** and cancel/reject tasks after some timeout._
-- _For now it is implemented only on JVM but I think is pretty easy to
-  implement on CLJS, so if there are some interest on it, feel free to
-  open and issue for just show interest or discuss how it can be
-  contributed._
+- _As future improvements we consider adding an option for delimit the **max wait** and
+  cancel/reject tasks after some timeout._
+- _For now it is implemented only on JVM but I think is pretty easy to implement on CLJS, so if
+  there are some interest on it, feel free to open and issue for just show interest or discuss how
+  it can be contributed._
 
 [0]: https://github.com/funcool/promesa/blob/master/doc/csp-walkthrought.clj
 [1]: https://clojure.org/news/2013/06/28/clojure-clore-async-channels

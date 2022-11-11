@@ -43,6 +43,7 @@
 (def ^:dynamic *default-executor* nil)
 
 (def vthreads-supported?
+  "A var that indicates if virtual threads are supported or not in the current runtime."
   #?(:clj (and (pu/has-method? Thread "startVirtualThread")
                (try
                  (eval '(Thread/startVirtualThread (constantly nil)))
@@ -59,13 +60,13 @@
      :cljs 1))
 
 (defonce
-  ^{:doc "A global, default scheduler executor service."}
+  ^{:no-doc true}
   default-scheduler
   (delay #?(:clj (scheduled-executor :parallelism (get-available-processors))
             :cljs (->ScheduledExecutor))))
 
 (defonce
-  ^{:doc "A global, default executor service."}
+  ^{:no-doc true}
   default-executor
   (delay #?(:clj (ForkJoinPool/commonPool)
             :cljs (->MicrotaskExecutor))))
@@ -76,18 +77,21 @@
   (delay (->SameThreadExecutor)))
 
 (defonce
-  ^{:doc "A global, virtual thread per task executor service."}
+  ^{:doc "A global, virtual thread per task executor service."
+    :no-doc true}
   vthread-executor
   #?(:clj  (delay (eval '(java.util.concurrent.Executors/newVirtualThreadPerTaskExecutor)))
      :cljs (delay (->MicrotaskExecutor))))
 
 (defonce
-  ^{:doc "A global, thread per task executor service."}
+  ^{:doc "A global, thread per task executor service."
+    :no-doc true}
   thread-executor
   #?(:clj  (delay (cached-executor))
      :cljs (delay (->MicrotaskExecutor))))
 
 (defn executor?
+  "Returns true if `o` is an instane of Executor."
   [o]
   #?(:clj (instance? Executor o)
      :cljs (satisfies? pt/IExecutor o)))
@@ -103,6 +107,7 @@
   (.shutdownNow executor))
 
 (defn resolve-executor
+  {:no-doc true}
   ([] (resolve-executor nil))
   ([executor]
    (if (or (nil? executor) (= :default executor))
@@ -113,6 +118,7 @@
        (pu/maybe-deref executor)))))
 
 (defn resolve-scheduler
+  {:no-doc true}
   ([] (resolve-scheduler nil))
   ([scheduler]
    (if (or (nil? scheduler) (= :default scheduler))
@@ -120,6 +126,7 @@
      (pu/maybe-deref scheduler))))
 
 (defn wrap-bindings
+  {:no-doc true}
   [f]
   #?(:cljs f
      :clj
@@ -203,6 +210,7 @@
 
 #?(:clj
    (defn thread-factory?
+     "Checks if `o` is an instance of ThreadFactory"
      [o]
      (instance? ThreadFactory o)))
 
@@ -214,10 +222,11 @@
        (^Thread newThread [_ ^Runnable runnable]
         (func runnable)))))
 
-#?(:clj (def counter (AtomicLong. 0)))
+#?(:clj (def ^{:no-doc true} counter (AtomicLong. 0)))
 
 #?(:clj
    (defn default-thread-factory
+     "Returns an instance of promesa default thread factory."
      [& {:keys [name daemon priority]
          :or {daemon true
               priority Thread/NORM_PRIORITY
@@ -255,6 +264,7 @@
 
 #?(:clj
    (defn- resolve-thread-factory
+     {:no-doc true}
      ^ThreadFactory
      [opts]
      (cond
@@ -272,7 +282,7 @@
 #?(:clj
    (defn cached-pool
      "A cached thread pool constructor."
-     {:deprecated "9.0"}
+     {:deprecated "9.0" :no-doc true}
      ([]
       (Executors/newCachedThreadPool))
      ([opts]
@@ -282,7 +292,7 @@
 #?(:clj
    (defn fixed-pool
      "A fixed thread pool constructor."
-     {:deprecated "9.0"}
+     {:deprecated "9.0" :no-doc true}
      ([n]
       (Executors/newFixedThreadPool (int n)))
      ([n opts]
@@ -292,7 +302,7 @@
 #?(:clj
    (defn single-pool
      "A single thread pool constructor."
-     {:deprecated "9.0"}
+     {:deprecated "9.0" :no-doc true}
      ([]
       (Executors/newSingleThreadExecutor))
      ([opts]
@@ -302,7 +312,7 @@
 #?(:clj
    (defn scheduled-pool
      "A scheduled thread pool constructor."
-     {:deprecated "9.0"}
+     {:deprecated "9.0" :no-doc true}
      ([] (Executors/newScheduledThreadPool (int 0)))
      ([n] (Executors/newScheduledThreadPool (int n)))
      ([n opts]
@@ -312,13 +322,13 @@
 #?(:clj
    (defn work-stealing-pool
      "Creates a work-stealing thread pool."
-     {:deprecated "9.0"}
+     {:deprecated "9.0" :no-doc true}
      ([] (Executors/newWorkStealingPool))
      ([n] (Executors/newWorkStealingPool (int n)))))
 
 #?(:clj
    (defn forkjoin-pool
-     {:deprecated "9.0"}
+     {:deprecated "9.0" :no-doc true}
      [{:keys [factory async? parallelism]
        :or {async? true}
        :as opts}]
@@ -534,9 +544,9 @@
   and interrupt on termination if you provide `^:shutdown` and
   `^:interrupt` metadata.
 
-  EXPERIMENTAL API: This function should be considered EXPERIMENTAL
-  and may be changed or removed in future versions until this
-  notification is removed."
+  **EXPERIMENTAL API:** This function should be considered
+  EXPERIMENTAL and may be changed or removed in future versions until
+  this notification is removed."
   [executor & body]
   (let [interrupt?   (-> executor meta :interrupt)
         shutdown?    (-> executor meta :shutdown)
@@ -558,9 +568,9 @@
   parallelism is determined by the provided executor.
 
 
-  EXPERIMENTAL API: This function should be considered EXPERIMENTAL
-  and may be changed or removed in future versions until this
-  notification is removed."
+  **EXPERIMENTAL API:** This function should be considered
+  EXPERIMENTAL and may be changed or removed in future versions until
+  this notification is removed."
   {:experimental true}
   ([f coll]
    (let [executor (resolve-executor *default-executor*)

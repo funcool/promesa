@@ -175,6 +175,7 @@
   (pt/-closed? port))
 
 (defn chan?
+  "Returns true if `o` is instance of Channel or satisfies IChannel protocol."
   [o]
   (channel/chan? o))
 
