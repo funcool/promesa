@@ -19,8 +19,11 @@
       (-poll! [this]
         (mlist/remove-last! buf))
       (-offer! [this o]
-        (mlist/add-first! buf o)
-        this)
+        (if (>= (mlist/size buf) n)
+          false
+          (do
+            (mlist/add-first! buf o)
+            true)))
       (-size [_]
         (mlist/size buf)))))
 
@@ -35,11 +38,11 @@
       (-offer! [this o]
         (when-not (>= (mlist/size buf) n)
           (mlist/add-first! buf o))
-        this)
+        true)
       (-size [_]
         (mlist/size buf)))))
 
-(defn slidding
+(defn sliding
   [n]
   (let [buf (mlist/create)]
     (reify
@@ -51,6 +54,6 @@
         (when (= (mlist/size buf) n)
           (mlist/remove-last! buf))
         (mlist/add-first! buf o)
-        this)
+        true)
       (-size [_]
         (mlist/size buf)))))

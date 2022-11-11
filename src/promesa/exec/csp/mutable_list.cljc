@@ -21,25 +21,24 @@
 (defn add-first!
   [o v]
   #?(:clj  (do (.addFirst ^LinkedList o v) o)
-     :cljs (do (.unshift o v) o)))
+     :cljs (do (.unshift ^js o v) o)))
 
 (defn add-last!
   [o v]
   #?(:clj  (do (.add ^LinkedList o v) o)
-     :cljs (do (.push o v) o)))
+     :cljs (do (.push ^js o v) o)))
 
 (defn remove-last!
   "Remove the last element from list and return it. If no elements,
   `nil` is returned."
   [o]
-  #?(:clj (try
-            (.removeLast ^LinkedList o)
-            (catch java.util.NoSuchElementException cause
-              nil))
-     :cljs (let [res (.splice o -1 1)]
-             (or (aget res 0) nil))))
+  #?(:clj  (try
+             (.removeLast ^LinkedList o)
+             (catch java.util.NoSuchElementException _
+               nil))
+     :cljs (.pop ^js o)))
 
 (defn size
   [o]
   #?(:clj  (.size ^LinkedList o)
-     :cljs (.-lenght o)))
+     :cljs (.-length ^js o)))

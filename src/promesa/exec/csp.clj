@@ -24,7 +24,6 @@
   virtual threads and seamless blocking operations on channels.
 
   **EXPERIMENTAL API**"
-
   (:require
    [promesa.core :as p]
    [promesa.exec :as px]
@@ -63,29 +62,12 @@
   instance that will resolve to: false if channel is closed, true if
   put is succeed. If channel has buffer, it will return immediatelly
   with resolved promise."
-  [port val]
-  (let [d (p/deferred)]
-    (pt/-put! port val (channel/promise->handler d))
-    d))
-
-(defn take!
-  "Schedules a take operation on the channel. Returns a promise
-  instance that will resolve to: nil if channel is closed, obj if
-  value is found. If channel has non-empty buffer the take operation
-  will succeed immediatelly with resolved promise."
-  [port]
-  (let [d (p/deferred)]
-    (pt/-take! port (channel/promise->handler d))
-    d))
-
-(defn >!
-  "Perform a blocking put operation with optional timeout
-  handling. Analogous to @(put! port val)."
   ([port val]
-   (-> (put! port val)
-       (deref)))
+   (let [d (p/deferred)]
+     (pt/-put! port val (channel/promise->handler d))
+     d))
   ([port val timeout-ms]
-   (>! port val timeout-ms nil))
+   (put! port val timeout-ms nil))
   ([port val timeout-ms timeout-val]
    (let [d (p/deferred)
          h (channel/promise->handler d)
@@ -93,15 +75,19 @@
                          #(when-let [f (channel/commit! h)]
                             (f timeout-val)))]
      (pt/-put! port val h)
-     (deref (p/finally d (fn [_ _] (p/cancel! t)))))))
+     (p/finally d (fn [_ _] (p/cancel! t))))))
 
-(defn <!
-  "Perform a blocking put operation with optional timeout
-  handling. Analogous to @(take! port)."
+(defn take!
+  "Schedules a take operation on the channel. Returns a promise
+  instance that will resolve to: nil if channel is closed, obj if
+  value is found. If channel has non-empty buffer the take operation
+  will succeed immediatelly with resolved promise."
   ([port]
-   (-> port take! deref))
+   (let [d (p/deferred)]
+     (pt/-take! port (channel/promise->handler d))
+     d))
   ([port timeout-ms]
-   (<! port timeout-ms nil))
+   (take! port timeout-ms nil))
   ([port timeout-ms timeout-val]
    (let [d (p/deferred)
          h (channel/promise->handler d)
@@ -109,37 +95,54 @@
                          #(when-let [f (channel/commit! h)]
                             (f timeout-val)))]
      (pt/-take! port h)
-     (deref (p/finally d (fn [_ _] (p/cancel! t)))))))
+     (p/finally d (fn [_ _] (p/cancel! t))))))
+
+(defn >!
+  "A blocking version of `put!`"
+  ([port val]
+   (deref (put! port val)))
+  ([port val timeout-ms]
+   (deref (put! port val timeout-ms nil)))
+  ([port val timeout-ms timeout-val]
+   (deref (put! port val timeout-ms timeout-val))))
+
+(defn <!
+  "A blocking version of `take!`"
+  ([port val]
+   (deref (take! port)))
+  ([port val timeout-ms]
+   (deref (take! port timeout-ms nil)))
+  ([port val timeout-ms timeout-val]
+   (deref (take! port timeout-ms timeout-val))))
+
+(defn- alts*
+  [ports {:keys [priority]}]
+  (let [ret     (p/deferred)
+        lock    (channel/promise->handler ret)
+        ports   (if priority ports (shuffle ports))
+        handler (fn [port]
+                  (reify
+                    pt/ILock
+                    (-lock! [_] (pt/-lock! lock))
+                    (-unlock! [_] (pt/-unlock! lock))
+
+                    pt/IHandler
+                    (-active? [_] (pt/-active? lock))
+                    (-blockable? [_] (pt/-blockable? lock))
+                    (-commit! [_]
+                      (when-let [f (pt/-commit! lock)]
+                        (fn [val]
+                          (f [val port]))))))]
+    (loop [ports (seq ports)]
+      (when-let [port (first ports)]
+        (if (vector? port)
+          (let [[port val] port]
+            (pt/-put! port val (handler port)))
+          (pt/-take! port (handler port)))
+        (recur (rest ports))))
+    ret))
 
 (defn alts
-  ([ports] (alts ports {}))
-  ([ports {:keys [priority]}]
-   (let [ret     (p/deferred)
-         lock    (channel/promise->handler ret)
-         ports   (if priority ports (shuffle ports))
-         handler (fn [port]
-                   (reify
-                     pt/ILock
-                     (-lock! [_] (pt/-lock! lock))
-                     (-unlock! [_] (pt/-unlock! lock))
-
-                     pt/IHandler
-                     (-active? [_] (pt/-active? lock))
-                     (-blockable? [_] (pt/-blockable? lock))
-                     (-commit! [_]
-                       (when-let [f (pt/-commit! lock)]
-                         (fn [val]
-                           (f [val port]))))))]
-     (loop [ports (seq ports)]
-       (when-let [port (first ports)]
-         (if (vector? port)
-           (let [[port val] port]
-             (pt/-put! port val (handler port)))
-           (pt/-take! port (handler port)))
-         (recur (rest ports))))
-     ret)))
-
-(defn alts!
   "Completes at most one of several operations on channel. Receives a
   vector of operations and optional keyword options.
 
@@ -153,7 +156,12 @@
   value of the operation and channel identifies the channel where the
   the operation is succeeded."
   [ports & {:as opts}]
-  (deref (alts ports opts)))
+  (alts* ports opts))
+
+(defn alts!
+  "A blocking variant of `alts`."
+  [ports & {:as opts}]
+  (deref (alts* ports opts)))
 
 (defn close!
   "Close the channel."
@@ -165,6 +173,10 @@
   "Returns true if channel is closed."
   [port]
   (pt/-closed? port))
+
+(defn chan?
+  [o]
+  (channel/chan? o))
 
 (defn sleep
   "Turn the current thread to sleep."
@@ -186,15 +198,14 @@
 
 (defn timeout
   "Returns a promise that will be resolved in the specified timeout. The
-  default scheduler will be used. You can provide your own as optional
-  first argument."
+  default scheduler will be used."
   [ms]
   (go (Thread/sleep (int ms))))
 
-(defn slidding-buffer
-  "Create a slidding buffer instance."
+(defn sliding-buffer
+  "Create a sliding buffer instance."
   [n]
-  (buffers/slidding n))
+  (buffers/sliding n))
 
 (defn dropping-buffer
   "Create a dropping buffer instance."

@@ -335,6 +335,11 @@
    (assert (not (nil? itm)))
    (pt/-offer! b itm)))
 
+(defn chan?
+  [o]
+  (or (instance? Channel o)
+      (satisfies? pt/IChannel o)))
+
 (defn chan
   ([buf] (chan buf nil))
   ([buf xf] (chan buf xf nil))
