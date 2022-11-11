@@ -686,9 +686,44 @@ There an example on how you can customize the executor for **pmap**:
 
 ## Execution patterns
 
-### CSP
+### Channels (CSP)
 
-TODO: in development
+#### Introduction
+
+Is's a [core.async][3] alternative that laverages JDK19 Virtual Threads; therefore, it is mainly
+available in the JVM. It combines a new and simplified channel implementation, JDK virtual thrads
+and composability of promises (CompletableFuture's).
+
+The main highlights and differences with [core.async][3] are:
+
+- **There are no macro transformations**, the `go` macro is a convenient alias for `p/vthread` (or
+  `p/thread` when vthreads are not available); there are not limitation on using blocking calls
+  inside `go` macro neither many other inconveniences of core.async go macro, mainly thanks to the
+  JDK19 with preview enabled Virtual Threads.
+- **No callbacks**, functions returns promises or blocks.
+- **No take/put limits**; you can attach more than 1024 pending tasks to a channel.
+- **Simplier mental model**, there are no differences between parking and blocking operations.
+- **Analgous performance**; in my own stress tests it has the same performance as core.async.
+
+There are also some internal differences that you should know:
+
+- the promesa implementation cancells immediatelly all pending puts when channel is closed in
+  contrast to core.async that leaves them operative until all puts are succeded.
+- the promesa implementation takes a bit less grandular locking than core.async, but on the end it
+  should not have any effect on the final performance or usability.
+
+**The promesa channel and csp patterns implementation do not intend to be a replacement for
+core.async; and there are cases where [core.async][3] is preferable; the main usage target for
+promesa channels and csp patterns implementation is for JVM based backends with JDK>=19.**
+
+**NOTE:** Although the main focus is the use in JVM, where is all the potential; the channel
+implementation and all internal buffers are implemented in CLJC. This means that, if there is
+interest, we can think about exposing channels api using promises. In any case, _the usefulness of
+channel implementation in CLJS remains to be seen._
+
+#### Getting Started
+
+TODO
 
 
 ### Bulkhead
@@ -807,3 +842,4 @@ Copyright (c) Andrey Antukh <niwi@niwi.nz>
 [0]: https://docs.oracle.com/en/java/javase/19/docs/api/java.base/java/util/concurrent/CompletableFuture.html
 [1]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
 [2]: (https://stackoverflow.com/questions/30391809/what-is-bulkhead-pattern-used-by-hystrix)
+[3]: https://github.com/clojure/core.async
