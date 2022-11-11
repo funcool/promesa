@@ -93,7 +93,7 @@
     (finally
       (pt/-unlock! handler))))
 
-(defn commit-and-run!
+(defn- commit-and-run!
   [handler rval]
   "A convenience helper that commits handler and if success, executes
   the handler immediatelly with the provided value as first argument."
@@ -269,7 +269,7 @@
       (pt/-cleanup! this)
       (if @closed
         (when-let [take-fn (commit! handler)]
-          (take-fn (pt/-poll! buf)))
+          (take-fn (some-> buf pt/-poll!)))
 
         (if buf
           (if (pos? (pt/-size buf))

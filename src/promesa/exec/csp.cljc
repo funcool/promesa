@@ -99,8 +99,7 @@
   "Perform a blocking put operation with optional timeout
   handling. Analogous to @(take! port)."
   ([port]
-   (-> (take! port)
-       (deref)))
+   (-> port take! deref))
   ([port timeout-ms]
    (<! port timeout-ms nil))
   ([port timeout-ms timeout-val]
