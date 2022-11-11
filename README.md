@@ -2,7 +2,7 @@
 
 [![Clojars Project](http://clojars.org/funcool/promesa/latest-version.svg)](http://clojars.org/funcool/promesa)
 
-A promise library & async toolkit for Clojure and ClojureScript.
+A promise library & concurrency toolkit for Clojure and ClojureScript.
 
 This library exposes a bunch of usefull syntactic abstractions that
 will considerably simplify to work with promises (in a very similar
