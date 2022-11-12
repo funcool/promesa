@@ -3,9 +3,9 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>funcool</groupId>
   <artifactId>promesa</artifactId>
-  <version>9.0</version>
+  <version>9.1</version>
   <name>promesa</name>
-  <description>Promise library for Clojure(Script)</description>
+  <description>A promise library and concurency toolkit for Clojure and ClojureScript.</description>
   <url>https://github.com/funcool/promesa</url>
   <licenses>
     <license>

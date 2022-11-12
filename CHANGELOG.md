@@ -1,5 +1,11 @@
 # Changelog #
 
+## Version 9.1.536
+
+- Assign default parallelism to scheduled executor (based on CPUs).
+- Add channels & csp pattern (experimental).
+- Restructurate documentation and improve many docstrings.
+
 ## Version 9.0.518
 
 - Forward dynamic bindings for `pmap`.

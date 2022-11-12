@@ -7,13 +7,13 @@ A promise library & concurency toolkit for Clojure and ClojureScript.
 deps.edn:
 
 ```clojure
-funcool/promesa {:mvn/version "9.0.518"}
+funcool/promesa {:mvn/version "9.1.536"}
 ```
 
 Leiningen:
 
 ```clojure
-[funcool/promesa "9.0.518"]
+[funcool/promesa "9.1.536"]
 ```
 
 ## Checking on the REPL
