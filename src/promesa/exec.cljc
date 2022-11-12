@@ -80,7 +80,8 @@
   ^{:doc "A global, virtual thread per task executor service."
     :no-doc true}
   vthread-executor
-  #?(:clj  (delay (eval '(java.util.concurrent.Executors/newVirtualThreadPerTaskExecutor)))
+  #?(:clj  (delay (when vthreads-supported?
+                    (eval '(java.util.concurrent.Executors/newVirtualThreadPerTaskExecutor))))
      :cljs (delay (->MicrotaskExecutor))))
 
 (defonce

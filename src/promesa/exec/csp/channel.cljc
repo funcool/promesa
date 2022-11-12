@@ -13,7 +13,8 @@
   #?(:clj
      (:import java.util.concurrent.locks.ReentrantLock)))
 
-(def ^:dynamic *executor* :vthread)
+(def ^:dynamic *executor*
+  (if px/vthreads-supported? :vthread :thread))
 
 (defn mutex
   []
