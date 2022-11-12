@@ -4,7 +4,7 @@
 ;;
 ;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
-(ns promesa.exec.csp.buffers
+(ns ^:no-doc promesa.exec.csp.buffers
   (:require
    [promesa.exec.csp.mutable-list :as mlist]
    [promesa.protocols :as pt]))

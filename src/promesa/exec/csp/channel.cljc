@@ -4,7 +4,7 @@
 ;;
 ;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
-(ns promesa.exec.csp.channel
+(ns ^:no-doc promesa.exec.csp.channel
   (:require
    [promesa.core :as p]
    [promesa.protocols :as pt]
@@ -13,10 +13,11 @@
   #?(:clj
      (:import java.util.concurrent.locks.ReentrantLock)))
 
-(def ^:dynamic *executor*
+(def ^{:dynamic true :no-doc true} *executor*
   (if px/vthreads-supported? :vthread :thread))
 
 (defn mutex
+  {:no-doc true}
   []
   #?(:clj
      (let [m (ReentrantLock.)]
@@ -31,6 +32,7 @@
        (-unlock! [_]))))
 
 (defn fn->handler
+  {:no-doc true}
   [f]
   (let [lock    (mutex)
         active? (atom true)]
@@ -46,6 +48,7 @@
         (and (compare-and-set! active? true false) f)))))
 
 (defn volatile->handler
+  {:no-doc true}
   [vo]
   (let [lock    (mutex)
         active? (atom true)]
@@ -63,6 +66,7 @@
                (vreset! vo v)))))))
 
 (defn promise->handler
+  {:no-doc true}
   [p]
   (let [lock    (mutex)
         active? (atom true)]
@@ -85,6 +89,7 @@
 (defn commit!
   "A convenience helper that locks, checks and return commited handler
   callbale given an instance of handler."
+  {:no-doc true}
   [handler]
   (try
     (pt/-lock! handler)
@@ -336,11 +341,14 @@
    (pt/-offer! b itm)))
 
 (defn chan?
+  "Check if `o` is an instance of `Channel` or satisfies `IChannel`
+  protocol."
   [o]
   (or (instance? Channel o)
       (satisfies? pt/IChannel o)))
 
 (defn chan
+  "Create a channel instance."
   ([buf] (chan buf nil))
   ([buf xf] (chan buf xf nil))
   ([buf xf exh]

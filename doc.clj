@@ -11,6 +11,7 @@
   ["doc/intro.md"
    "doc/promises.md"
    "doc/executors.md"
-   "doc/patterns.md"
+   "doc/channels.md"
+   "doc/bulkhead.md"
    "doc/contributing.md"]
   :source-uri "https://github.com/funcool/promesa/blob/master/{filepath}#L{line}"})

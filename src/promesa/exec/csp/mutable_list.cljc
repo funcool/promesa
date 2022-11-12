@@ -4,7 +4,7 @@
 ;;
 ;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
-(ns promesa.exec.csp.mutable-list
+(ns ^:no-doc promesa.exec.csp.mutable-list
   "A internal abstraction for a mutable list that is used internally
   by channels."
   (:refer-clojure :exclude [count])
