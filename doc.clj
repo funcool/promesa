@@ -8,8 +8,7 @@
   :source-paths ["src"]
   :namespaces [#"^promesa\."]
   :doc-files
-  ["doc/intro.md"
-   "doc/promises.md"
+  ["doc/promises.md"
    "doc/executors.md"
    "doc/channels.md"
    "doc/bulkhead.md"
