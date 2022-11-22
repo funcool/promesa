@@ -5,6 +5,7 @@
    {com.bhauman/rebel-readline-cljs {:mvn/version "RELEASE"},
     com.bhauman/rebel-readline {:mvn/version "RELEASE"},
     org.clojure/tools.namespace {:mvn/version "RELEASE"},
+    org.clojure/core.async {:mvn/version "1.6.673"}
     criterium/criterium {:mvn/version "RELEASE"}
     thheller/shadow-cljs {:mvn/version "RELEASE"}}
    :extra-paths ["test" "dev" "src"]},

@@ -4,6 +4,7 @@
    [clojure.test :as test]
    [clojure.tools.namespace.repl :as r]
    [clojure.walk :refer [macroexpand-all]]
+   [clojure.core.async :as a]
    [criterium.core :refer [quick-bench bench with-progress-reporting]]
    [promesa.core :as p]
    [promesa.exec :as px]
@@ -14,7 +15,8 @@
   (:import
    java.util.concurrent.CompletableFuture
    java.util.concurrent.CompletionStage
-   java.util.function.Function))
+   java.util.function.Function
+   java.util.concurrent.atomic.AtomicLong))
 
 (defmacro run-quick-bench
   [& exprs]

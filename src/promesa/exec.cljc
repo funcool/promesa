@@ -14,6 +14,7 @@
      (:import
       clojure.lang.Var
       java.lang.AutoCloseable
+      java.time.Duration
       java.util.concurrent.Callable
       java.util.concurrent.CompletableFuture
       java.util.concurrent.Executor
@@ -31,7 +32,6 @@
       java.util.function.Supplier)))
 
 #?(:clj (set! *warn-on-reflection* true))
-
 
 ;; --- Globals & Defaults (with CLJS Impl)
 
@@ -223,7 +223,16 @@
        (^Thread newThread [_ ^Runnable runnable]
         (func runnable)))))
 
-#?(:clj (def ^{:no-doc true} counter (AtomicLong. 0)))
+#?(:clj (def ^{:no-doc true :dynamic true}
+          *default-counter*
+          (AtomicLong. 0)))
+
+#?(:clj
+   (defn get-next
+     "Get next value from atomic long counter"
+     {:no-doc true}
+     ([] (.getAndIncrement ^AtomicLong *default-counter*))
+     ([counter] (.getAndIncrement ^AtomicLong counter))))
 
 #?(:clj
    (defn default-thread-factory
@@ -232,36 +241,26 @@
          :or {daemon true
               priority Thread/NORM_PRIORITY
               name "promesa/thread/%s"}}]
-     (reify ThreadFactory
-       (newThread [this runnable]
-         (doto (Thread. ^Runnable runnable)
-           (.setPriority priority)
-           (.setDaemon ^Boolean daemon)
-           (.setName (format name (.getAndIncrement ^AtomicLong counter))))))))
+     (let [counter (AtomicLong. 0)]
+       (reify ThreadFactory
+         (newThread [this runnable]
+           (doto (Thread. ^Runnable runnable)
+             (.setPriority priority)
+             (.setDaemon ^Boolean daemon)
+             (.setName (format name (get-next counter)))))))))
 
 #?(:clj
    (defn default-forkjoin-thread-factory
      ^ForkJoinPool$ForkJoinWorkerThreadFactory
      [& {:keys [name daemon] :or {name "promesa/forkjoin/%s" daemon true}}]
-     (let [^AtomicLong counter (AtomicLong. 0)]
+     (let [counter (AtomicLong. 0)]
        (reify ForkJoinPool$ForkJoinWorkerThreadFactory
          (newThread [_ pool]
            (let [thread (.newThread ForkJoinPool/defaultForkJoinWorkerThreadFactory pool)
-                 tname  (format name (.getAndIncrement counter))]
+                 tname  (format name (get-next counter))]
              (.setName ^ForkJoinWorkerThread thread ^String tname)
              (.setDaemon ^ForkJoinWorkerThread thread ^Boolean daemon)
              thread))))))
-
-#?(:clj
-   (defn- opts->thread-factory
-     [{:keys [daemon priority]
-       :or {daemon true priority Thread/NORM_PRIORITY}}]
-     (fn->thread-factory
-      (fn [runnable]
-        (let [thread (Thread. ^Runnable runnable)]
-          (.setDaemon thread daemon)
-          (.setPriority thread priority)
-          thread)))))
 
 #?(:clj
    (defn- resolve-thread-factory
@@ -591,4 +590,65 @@
                         (cons (map first ss) (step-fn (map rest ss)))))))]
      (pmap #(apply f %) (step-fn (cons coll colls)))))))
 
+#?(:clj
+   (defmacro thread
+     "A low-level, not-pooled thread constructor."
+     [opts & body]
+     (let [[opts body] (if (map? opts)
+                         [opts body]
+                         [nil (cons opts body)])]
+       `(let [opts# ~opts
+              thr#  (Thread. (^:once fn* [] ~@body))]
+          (.setName thr# (or (:name ~opts) (format "promesa/unnamed-thread/%s" (get-next))))
+          (.setDaemon thr# (:daemon? ~opts false))
+          (.setPriority thr# (:priority ~opts Thread/NORM_PRIORITY))
+          (.start thr#)
+          thr#))))
 
+#?(:clj
+(defn current-thread
+  "Return the current thread."
+  []
+  (Thread/currentThread)))
+
+#?(:clj
+(defn thread-interrupted?
+  "Check if the thread has the interrupted flag set.
+
+  There are two special cases:
+
+  Using the `:current` keyword as argument will check the interrupted
+  flag on the current thread.
+
+  Using the arity 0 (passing no arguments), then the current thread
+  will be checked and **WARNING** the interrupted flag reset to
+  `false`."
+  ([]
+   (Thread/interrupted))
+  ([thread]
+   (if (= :current thread)
+     (.isInterrupted (Thread/currentThread))
+     (.isInterrupted ^Thread thread)))))
+
+#?(:clj
+(defn thread-id
+  "Retrieves the thread ID."
+  ([]
+   (.getId ^Thread (Thread/currentThread)))
+  ([^Thread thread]
+   (.getId thread))))
+
+#?(:clj
+(defn interrupt-thread!
+  [^Thread thread]
+  (.interrupt thread)))
+
+#?(:clj
+(defn join!
+  "Waits for the specified thread to terminate."
+  ([^Thread thread]
+   (.join thread))
+  ([^Thread thread duration]
+   (if (instance? Duration duration)
+     (.join thread ^Duration duration)
+     (.join thread (long duration))))))

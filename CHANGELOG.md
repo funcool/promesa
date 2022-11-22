@@ -1,5 +1,15 @@
 # Changelog #
 
+
+## Version 9.1.538
+
+- Add `px/current-thread` helper function
+- Add `px/thread-interrupted?` helper function
+- Add `px/interrupt-thread!` helper function
+- Add `px/join!` helper function
+- Add `px/thread-id` helper function
+
+
 ## Version 9.1.536
 
 - Assign default parallelism to scheduled executor (based on CPUs).
