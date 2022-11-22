@@ -235,7 +235,7 @@
      ([counter] (.getAndIncrement ^AtomicLong counter))))
 
 #?(:clj
-   (defn default-thread-factory
+   (defn thread-factory
      "Returns an instance of promesa default thread factory."
      [& {:keys [name daemon priority]
          :or {daemon true
@@ -245,12 +245,12 @@
        (reify ThreadFactory
          (newThread [this runnable]
            (doto (Thread. ^Runnable runnable)
-             (.setPriority priority)
+             (.setPriority (int priority))
              (.setDaemon ^Boolean daemon)
              (.setName (format name (get-next counter)))))))))
 
 #?(:clj
-   (defn default-forkjoin-thread-factory
+   (defn forkjoin-thread-factory
      ^ForkJoinPool$ForkJoinWorkerThreadFactory
      [& {:keys [name daemon] :or {name "promesa/forkjoin/%s" daemon true}}]
      (let [counter (AtomicLong. 0)]
@@ -269,9 +269,9 @@
      [opts]
      (cond
        (thread-factory? opts) opts
-       (= :default opts)      (default-thread-factory)
-       (nil? opts)            (default-thread-factory)
-       (map? opts)            (default-thread-factory opts)
+       (= :default opts)      (thread-factory)
+       (nil? opts)            (thread-factory)
+       (map? opts)            (thread-factory opts)
        (fn? opts)             (fn->thread-factory opts)
        :else                  (throw (ex-info "Invalid thread factory" {})))))
 
@@ -348,7 +348,7 @@
      "A cached thread executor pool constructor."
      [& {:keys [factory]}]
      (let [factory (or (some-> factory resolve-thread-factory)
-                       (default-thread-factory :name "promesa/cached/%s"))]
+                       (thread-factory :name "promesa/cached/%s"))]
        (Executors/newCachedThreadPool factory))))
 
 #?(:clj
@@ -356,7 +356,7 @@
      "A fixed thread executor pool constructor."
      [& {:keys [parallelism factory]}]
      (let [factory (or (some-> factory resolve-thread-factory)
-                       (default-thread-factory :name "promesa/fixed/%s"))]
+                       (thread-factory :name "promesa/fixed/%s"))]
        (Executors/newFixedThreadPool (int parallelism) factory))))
 
 #?(:clj
@@ -364,7 +364,7 @@
      "A single thread executor pool constructor."
      [& {:keys [factory]}]
      (let [factory (or (some-> factory resolve-thread-factory)
-                       (default-thread-factory :name "promesa/single/%s"))]
+                       (thread-factory :name "promesa/single/%s"))]
        (Executors/newSingleThreadExecutor factory))))
 
 #?(:clj
@@ -373,7 +373,7 @@
      [& {:keys [parallelism factory] :or {parallelism 1}}]
      (let [parallelism (or parallelism (get-available-processors))
            factory     (or (some-> factory resolve-thread-factory)
-                           (default-thread-factory :name "promesa/scheduled/%s"))]
+                           (thread-factory :name "promesa/scheduled/%s"))]
 
 
        (doto (java.util.concurrent.ScheduledThreadPoolExecutor. (int parallelism) ^ThreadFactory factory)
@@ -385,7 +385,7 @@
       '(defn thread-per-task-executor
          [& {:keys [factory]}]
          (let [factory (or (some-> factory resolve-thread-factory)
-                           (default-thread-factory :name "promesa/thread-per-task/%s"))]
+                           (thread-factory :name "promesa/thread-per-task/%s"))]
            (Executors/newThreadPerTaskExecutor ^ThreadFactory factory))))))
 
 #?(:clj
@@ -401,7 +401,7 @@
      (let [parallelism (or parallelism (get-available-processors))
            factory     (cond
                          (instance? ForkJoinPool$ForkJoinWorkerThreadFactory factory) factory
-                         (nil? factory) (default-forkjoin-thread-factory)
+                         (nil? factory) (forkjoin-thread-factory)
                          :else (throw (ex-info "Unexpected thread factory" {:factory factory})))]
        (ForkJoinPool. (int parallelism) factory nil async?))))
 
@@ -599,9 +599,9 @@
                          [nil (cons opts body)])]
        `(let [opts# ~opts
               thr#  (Thread. (^:once fn* [] ~@body))]
-          (.setName thr# (or (:name ~opts) (format "promesa/unnamed-thread/%s" (get-next))))
-          (.setDaemon thr# (:daemon? ~opts true))
-          (.setPriority thr# (:priority ~opts Thread/NORM_PRIORITY))
+          (.setName thr# (str (or (:name opts#) (format "promesa/unpooled-thread/%s" (get-next)))))
+          (.setDaemon thr# (boolean (:daemon opts# true)))
+          (.setPriority thr# (int (:priority opts# Thread/NORM_PRIORITY)))
           (.start thr#)
           thr#))))
 

@@ -1,5 +1,12 @@
 # Changelog #
 
+## Version 9.1.540
+
+- Minor consistency fix on `px/thread` macro parameters
+- Fix consistency issues on naming for internal thread factory helpers
+  (this may **BREAKING CHANGE** if you are using the internal factory
+  helpers).
+
 ## Version 9.1.539
 
 - Set the `px/thread` by default the daemon flag to true
