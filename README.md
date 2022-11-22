@@ -16,13 +16,13 @@ Here you can look a detailed [documentation][1].
 deps.edn:
 
 ```clojure
-funcool/promesa {:mvn/version "9.1.538"}
+funcool/promesa {:mvn/version "9.1.539"}
 ```
 
 Leiningen:
 
 ```clojure
-[funcool/promesa "9.1.538"]
+[funcool/promesa "9.1.539"]
 ```
 
 ## On the REPL

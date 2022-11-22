@@ -1,5 +1,9 @@
 # Changelog #
 
+## Version 9.1.539
+
+- Set the `px/thread` by default the daemon flag to true
+
 
 ## Version 9.1.538
 
@@ -8,6 +12,7 @@
 - Add `px/interrupt-thread!` helper function
 - Add `px/join!` helper function
 - Add `px/thread-id` helper function
+- Add `px/thread` low-level macro for create non-pooled threads
 
 
 ## Version 9.1.536

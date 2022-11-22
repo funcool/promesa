@@ -600,7 +600,7 @@
        `(let [opts# ~opts
               thr#  (Thread. (^:once fn* [] ~@body))]
           (.setName thr# (or (:name ~opts) (format "promesa/unnamed-thread/%s" (get-next))))
-          (.setDaemon thr# (:daemon? ~opts false))
+          (.setDaemon thr# (:daemon? ~opts true))
           (.setPriority thr# (:priority ~opts Thread/NORM_PRIORITY))
           (.start thr#)
           thr#))))
