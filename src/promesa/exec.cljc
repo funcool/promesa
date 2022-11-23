@@ -97,15 +97,23 @@
   #?(:clj (instance? Executor o)
      :cljs (satisfies? pt/IExecutor o)))
 
+#?(:clj
 (defn shutdown!
   "Shutdowns the executor service."
   [^ExecutorService executor]
-  (.shutdown executor))
+  (.shutdown executor)))
 
+#?(:clj
 (defn shutdown-now!
   "Shutdowns and interrupts the executor service."
   [^ExecutorService executor]
-  (.shutdownNow executor))
+  (.shutdownNow executor)))
+
+#?(:clj
+(defn shutdown?
+  "Check if execitor is in shutdown state."
+  [^ExecutorService executor]
+  (.isShutdown executor)))
 
 (defn resolve-executor
   {:no-doc true}
@@ -223,57 +231,58 @@
        (^Thread newThread [_ ^Runnable runnable]
         (func runnable)))))
 
-#?(:clj (def ^{:no-doc true :dynamic true}
-          *default-counter*
-          (AtomicLong. 0)))
+#?(:clj
+(def ^{:no-doc true :dynamic true}
+  *default-counter*
+  (AtomicLong. 0)))
 
 #?(:clj
-   (defn get-next
-     "Get next value from atomic long counter"
-     {:no-doc true}
-     ([] (.getAndIncrement ^AtomicLong *default-counter*))
-     ([counter] (.getAndIncrement ^AtomicLong counter))))
+(defn get-next
+  "Get next value from atomic long counter"
+  {:no-doc true}
+  ([] (.getAndIncrement ^AtomicLong *default-counter*))
+  ([counter] (.getAndIncrement ^AtomicLong counter))))
 
 #?(:clj
-   (defn thread-factory
-     "Returns an instance of promesa default thread factory."
-     [& {:keys [name daemon priority]
-         :or {daemon true
-              priority Thread/NORM_PRIORITY
-              name "promesa/thread/%s"}}]
-     (let [counter (AtomicLong. 0)]
-       (reify ThreadFactory
-         (newThread [this runnable]
-           (doto (Thread. ^Runnable runnable)
-             (.setPriority (int priority))
-             (.setDaemon ^Boolean daemon)
-             (.setName (format name (get-next counter)))))))))
+(defn thread-factory
+  "Returns an instance of promesa default thread factory."
+  [& {:keys [name daemon priority]
+      :or {daemon true
+           priority Thread/NORM_PRIORITY
+           name "promesa/thread/%s"}}]
+  (let [counter (AtomicLong. 0)]
+    (reify ThreadFactory
+      (newThread [this runnable]
+        (doto (Thread. ^Runnable runnable)
+          (.setPriority (int priority))
+          (.setDaemon ^Boolean daemon)
+          (.setName (format name (get-next counter)))))))))
 
 #?(:clj
-   (defn forkjoin-thread-factory
-     ^ForkJoinPool$ForkJoinWorkerThreadFactory
-     [& {:keys [name daemon] :or {name "promesa/forkjoin/%s" daemon true}}]
-     (let [counter (AtomicLong. 0)]
-       (reify ForkJoinPool$ForkJoinWorkerThreadFactory
-         (newThread [_ pool]
-           (let [thread (.newThread ForkJoinPool/defaultForkJoinWorkerThreadFactory pool)
-                 tname  (format name (get-next counter))]
-             (.setName ^ForkJoinWorkerThread thread ^String tname)
-             (.setDaemon ^ForkJoinWorkerThread thread ^Boolean daemon)
-             thread))))))
+(defn forkjoin-thread-factory
+  ^ForkJoinPool$ForkJoinWorkerThreadFactory
+  [& {:keys [name daemon] :or {name "promesa/forkjoin/%s" daemon true}}]
+  (let [counter (AtomicLong. 0)]
+    (reify ForkJoinPool$ForkJoinWorkerThreadFactory
+      (newThread [_ pool]
+        (let [thread (.newThread ForkJoinPool/defaultForkJoinWorkerThreadFactory pool)
+              tname  (format name (get-next counter))]
+          (.setName ^ForkJoinWorkerThread thread ^String tname)
+          (.setDaemon ^ForkJoinWorkerThread thread ^Boolean daemon)
+          thread))))))
 
 #?(:clj
-   (defn- resolve-thread-factory
-     {:no-doc true}
-     ^ThreadFactory
-     [opts]
-     (cond
-       (thread-factory? opts) opts
-       (= :default opts)      (thread-factory)
-       (nil? opts)            (thread-factory)
-       (map? opts)            (thread-factory opts)
-       (fn? opts)             (fn->thread-factory opts)
-       :else                  (throw (ex-info "Invalid thread factory" {})))))
+(defn- resolve-thread-factory
+  {:no-doc true}
+  ^ThreadFactory
+  [opts]
+  (cond
+    (thread-factory? opts) opts
+    (= :default opts)      (thread-factory)
+    (nil? opts)            (thread-factory)
+    (map? opts)            (thread-factory opts)
+    (fn? opts)             (fn->thread-factory opts)
+    :else                  (throw (ex-info "Invalid thread factory" {})))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; --- DEPRECATED
@@ -612,7 +621,7 @@
   (Thread/currentThread)))
 
 #?(:clj
-(defn thread-interrupted?
+(defn interrupted?
   "Check if the thread has the interrupted flag set.
 
   There are two special cases:
@@ -639,7 +648,8 @@
    (.getId thread))))
 
 #?(:clj
-(defn interrupt-thread!
+(defn interrupt!
+  "Interrupt a thread."
   [^Thread thread]
   (.interrupt thread)))
 
@@ -652,3 +662,12 @@
    (if (instance? Duration duration)
      (.join thread ^Duration duration)
      (.join thread (long duration))))))
+
+#?(:clj
+(defn sleep
+  "Turn the current thread to sleep accept a number of milliseconds or
+  Duration instance."
+  [ms]
+  (if (instance? Duration ms)
+    (Thread/sleep (int (.toMillis ^Duration ms)))
+    (Thread/sleep (int ms)))))

@@ -1,5 +1,23 @@
 # Changelog #
 
+## Version 9.2.541
+
+BREAKING CHANGES:
+
+They are very recent additions and may be considered experimental, but
+still worth mentioning as breaking change:
+
+- Rename `px/thread-interrupted?` to `px/interrupted?`
+- Rename `px/interrupt-thread!` to `px/interrupt!`
+- Move   `promesa.exec.csp/sleep` to `px/sleep`
+
+Other changes:
+
+- Add `px/shutdown?` predicate
+- Make `px/sleep` accept number (in milliseconds) and duration instance
+- Make the `px/shutdown!` and `px/shutdown-now!` CLJ only
+
+
 ## Version 9.1.540
 
 - Minor consistency fix on `px/thread` macro parameters

@@ -58,7 +58,7 @@
 
 (defn current-thread
   []
-  (.getName (Thread/currentThread)))
+  (str (Thread/currentThread)))
 
 (defn dbg
   [label v]

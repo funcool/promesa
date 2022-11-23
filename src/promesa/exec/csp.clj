@@ -179,11 +179,6 @@
   [o]
   (channel/chan? o))
 
-(defn sleep
-  "Turn the current thread to sleep."
-  [ms]
-  (Thread/sleep (int ms)))
-
 (defn timeout-chan
   "Returns a channel that will be closed in the specified timeout. The
   default scheduler will be used. You can provide your own as optional
