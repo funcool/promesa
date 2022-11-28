@@ -188,6 +188,13 @@
   ([executor f p]
    (pt/-bind (pt/-promise p) f executor)))
 
+(defn mcat
+  "Shorted alias for `mapcat`."
+  ([f p]
+   (pt/-bind (pt/-promise p) f))
+  ([executor f p]
+   (pt/-bind (pt/-promise p) f executor)))
+
 (defn chain
   "Chain variable number of computations to be executed
   serially. Analogous to `then` that accepts variable number of
@@ -210,6 +217,13 @@
   ([p f executor]
    (pt/-handle (pt/-promise p) f executor)))
 
+(defn hmap
+  "Inverted arguments version of handle."
+  ([f p]
+   (pt/-handle (pt/-promise p) f))
+  ([executor f p]
+   (pt/-handle (pt/-promise p) f executor)))
+
 (defn finally
   "Attach a potentially side-effectful handler to promise that will be
   executed independently if promise is resolved or rejected.
@@ -219,6 +233,13 @@
   ([p f]
    (pt/-finally (pt/-promise p) f))
   ([p f executor]
+   (pt/-finally (pt/-promise p) f executor)))
+
+(defn fnly
+  "Inverted arguments version of `finally`"
+  ([f p]
+   (pt/-finally (pt/-promise p) f))
+  ([executor f p]
    (pt/-finally (pt/-promise p) f executor)))
 
 (defn catch
@@ -258,9 +279,10 @@
   ([f p] (catch p f))
   ([f type p] (catch p type f)))
 
-(def err
+(defn err
   "A short alias for `error` function."
-  error)
+  ([f p] (catch p f))
+  ([f type p] (catch p type f)))
 
 (defn all
   "Given an array of promises, return a promise

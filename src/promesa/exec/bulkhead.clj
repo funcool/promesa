@@ -139,6 +139,11 @@
           task)
         (.release ^Semaphore semaphore)))))
 
+(defn bulkhead?
+  "Check if the provided object is instance of Bulkhead type."
+  [o]
+  (instance? Bulkhead o))
+
 (extend-type BlockingQueue
   IQueue
   (-poll! [this] (.poll ^BlockingQueue this))

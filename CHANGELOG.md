@@ -1,5 +1,17 @@
 # Changelog #
 
+## Version 9.2.542
+
+- Add `promesa.core/mcat`, a shorter alias for `mapcat`
+- Add `promesa.core/hmap`, a shorter alias for `handle` with inverted
+  arguments (for `->>`)
+- Add `promesa.core/fnly`, a shorter alias for `finally` with inverted
+  arguments (for `->>`)
+- Add `promesa.exec.bulkhead/bulkhead?` predicate.
+- Add arity 0 for `promesa.exec/interrupt!` function (interrupts the
+  current thread).
+
+
 ## Version 9.2.541
 
 BREAKING CHANGES:
