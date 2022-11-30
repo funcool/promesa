@@ -108,11 +108,11 @@
 
 (defn <!
   "A blocking version of `take!`"
-  ([port val]
+  ([port]
    (deref (take! port)))
-  ([port val timeout-ms]
+  ([port timeout-ms]
    (deref (take! port timeout-ms nil)))
-  ([port val timeout-ms timeout-val]
+  ([port timeout-ms timeout-val]
    (deref (take! port timeout-ms timeout-val))))
 
 (defn- alts*
