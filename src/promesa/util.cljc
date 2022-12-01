@@ -13,7 +13,8 @@
       java.util.function.BiFunction
       java.util.function.BiConsumer
       java.util.function.Supplier
-      java.util.function.Consumer)))
+      java.util.function.Consumer
+      java.util.concurrent.locks.ReentrantLock)))
 
 #?(:clj
    (deftype SupplierWrapper [f]
@@ -50,3 +51,17 @@
   (if (delay? o)
     (deref o)
     o))
+
+(defn mutex
+  []
+  #?(:clj
+     (let [m (ReentrantLock.)]
+       (reify
+         pt/ILock
+         (-lock! [_] (.lock m))
+         (-unlock! [_] (.unlock m))))
+     :cljs
+     (reify
+       pt/ILock
+       (-lock! [_])
+       (-unlock! [_]))))

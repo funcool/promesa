@@ -25,8 +25,6 @@
    :exec-fn cognitect.test-runner.api/test
    :exec-args {:patterns [".*-test.*"]}}
 
-
-
   :codox
   {:extra-deps
    {codox/codox {:mvn/version "RELEASE"}

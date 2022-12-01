@@ -136,6 +136,24 @@
                        (t/is (= e x))
                        (done)))))))
 
+
+
+(t/deftest promise-from-exception-2
+  #?(:clj
+     (let [e (ex-info "foo" {})
+           p1 (p/promise e)]
+       (t/is (p/rejected? p1))
+       (t/is (= e @@(p/merr (fn [x] (p/resolved (reduced x))) p1))))
+     :cljs
+     (t/async done
+       (let [e (ex-info "foo" {})
+             p1 (p/promise e)]
+         (p/merr (fn [x]
+                   (t/is (= e x))
+                   (done))
+                 p1)))))
+
+
 (t/deftest promise-from-promise
   (let [p1 (p/promise 1)
         p2 (p/promise p1)]
@@ -262,6 +280,15 @@
     #?(:cljs (t/async done (p/do (test) (done)))
        :clj @(test))))
 
+(t/deftest chaining-using-fmap
+  (let [p1 (promise-ok 10 2)
+        p2 (p/fmap inc p1)
+        p3 (p/fmap inc p2)
+
+        test #(p/then p3 (fn [res] (t/is (= res 4))))]
+    #?(:cljs (t/async done (p/do (test) (done)))
+       :clj @(test))))
+
 (t/deftest chaining-using-then'
   (let [p1 (promise-ok 10 2)
         p2 (p/then' p1 inc)
@@ -291,6 +318,17 @@
     #?(:cljs (t/async done (p/do (test) (done)))
        :clj @(test))))
 
+(t/deftest chaining-using-fnly
+  (let [p1 (promise-ok 100 2)
+        st (atom 0)
+        p2 (p/fnly (fn [v e] (swap! st inc) :foobar) p1)
+        test #(p/then p2 (fn [v]
+                           (t/is (= v 2))
+                           (t/is (= @st 1))))]
+
+    #?(:cljs (t/async done (p/do (test) (done)))
+       :clj @(test))))
+
 (t/deftest chaining-using-handle
   (let [p1 (promise-ok 100 2)
         st (atom 0)
@@ -301,6 +339,37 @@
 
     #?(:cljs (t/async done (p/do (test) (done)))
        :clj @(test))))
+
+#?(:clj
+   (t/deftest chaining-using-handle-with-exception
+     (let [p1 (promise-ko 100 :fail)
+           st (atom 0)
+           p2 (p/handle p1 (fn [v e]
+                             (t/is (instance? clojure.lang.ExceptionInfo e))
+                             (swap! st inc)
+                             :foobar))]
+       (t/is (= :foobar @p2))
+       (t/is (= @st 1)))))
+
+(t/deftest chaining-using-hmap
+  (let [p1 (promise-ok 100 2)
+        st (atom 0)
+        p2 (p/hmap (fn [v e] (swap! st inc) :foobar) p1)
+        test #(p/then p2 (fn [v]
+                           (t/is (= v :foobar))
+                           (t/is (= @st 1))))]
+
+    #?(:cljs (t/async done (p/do (test) (done)))
+       :clj @(test))))
+
+#?(:clj
+   (t/deftest chaining-using-hmap-2
+     (let [p1 (promise-ok 100 2)
+           st (atom 0)
+           p2 (p/hmap (fn [v e] (swap! st inc) (p/wrap :foobar)) p1)
+           p3 (p/mcat identity p2)]
+       (t/is (p/promise? @p2))
+       (t/is (= :foobar @p3)))))
 
 (t/deftest cancel-scheduled-task
   #?(:cljs

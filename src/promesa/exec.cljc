@@ -452,7 +452,7 @@
      (-submit! [this f]
        (-> (pt/-promise nil)
            (pt/-map (fn [_] (f)))
-           (pt/-mapErr (fn [e] (js/setTimeout #(throw e)) nil))))))
+           (pt/-catch (fn [e] (js/setTimeout #(throw e)) nil))))))
 
 ;; Executor that executes the task in the calling thread
 #?(:clj
@@ -664,6 +664,12 @@
    (if (instance? Duration duration)
      (.join thread ^Duration duration)
      (.join thread (long duration))))))
+
+#?(:clj
+(defn thread?
+  "Check if provided object is a thread instance."
+  [t]
+  (instance? Thread t)))
 
 #?(:clj
 (defn sleep

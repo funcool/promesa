@@ -131,190 +131,238 @@
 ;; Chaining
 
 (defn then
-  "Chains a computation `f` (function) to be executed when the promise
-  `p` is successfully resolved.
+  "Chains a function `f` to be executed when the promise `p` is
+  successfully resolved. Returns a promise that will be resolved with
+  the return value of calling `f` with value as single argument; `f`
+  can return a plain value or promise instance, an automatic
+  unwrapping will be performed.
 
-  The computation will be executed in the calling thread by default;
-  you also can provide a custom executor.
-
-  If the function `f` returns a promise instance, it will be
-  automatically unwrapped."
+  The computation will be executed in the completion thread by
+  default; you also can provide a custom executor."
   ([p f]
-   (pt/-then (pt/-promise p) f))
+   (pt/-bind (pt/-promise p) (comp pt/-promise f)))
   ([p f executor]
-   (pt/-then (pt/-promise p) f executor)))
-
-(defn bind
-  ([p f]
-   (pt/-bind (pt/-promise p) f))
-  ([p f executor]
-   (pt/-bind (pt/-promise p) f executor)))
+   (pt/-bind (pt/-promise p) (comp pt/-promise f) executor)))
 
 (defn then'
-  "Chains a computation `f` (function) to be executed when the promise
-  `p` is successfully resolved.
-
-  The computation will be executed in the calling thread by default;
-  you also can provide a custom executor.
-
-  Don't perform flatten on the result."
+  {:deprecated "9.3"
+   :no-doc true}
   ([p f]
    (pt/-map (pt/-promise p) f))
   ([p f executor]
    (pt/-map (pt/-promise p) f executor)))
 
-(defn map
-  "Chains a computation `f` (function) to be executed when the promise
-  `p` is successfully resolved.
+(defn bind
+  "Chains a function `f` to be executed with when the promise `p` is
+  successfully resolved. Returns a promise that will mirror the
+  promise instance returned by calling `f` with the value as single
+  argument; `f` **must** return a promise instance.
 
-  Unlike `then`, this does not perform automatic promise flattening.
-  This is designed to be used with `->>`."
+  The computation will be executed in the completion thread by
+  default; you also can provide a custom executor."
+  ([p f]
+   (pt/-bind (pt/-promise p) f))
+  ([p f executor]
+   (pt/-bind (pt/-promise p) f executor)))
+
+(defn map
+  "Chains a function `f` to be executed when the promise `p` is
+  successfully resolved. Returns a promise that will be resolved with
+  the return value of calling `f` with value as single argument.
+
+  The computation will be executed in the completion thread by
+  default; you also can provide a custom executor.
+
+  This function is intended to be used with `->>`."
+  ([f p]
+   (pt/-map (pt/-promise p) f))
+  ([executor f p]
+   (pt/-map (pt/-promise p) f executor)))
+
+(defn fmap
+  "A convenience alias for `map`."
   ([f p]
    (pt/-map (pt/-promise p) f))
   ([executor f p]
    (pt/-map (pt/-promise p) f executor)))
 
 (defn mapcat
-  "Chains a computation `f` (function) to be executed when the promise
-  `p` is successfully resolved. `f` must return a
-  promise that will be automatically unwrapped.
+  "Chains a function `f` to be executed when the promise `p` is
+  successfully resolved. Returns a promise that will mirror the
+  promise instance returned by calling `f` with the value as single
+  argument; `f` **must** return a promise instance.
 
-  This is just a stricter version of `then` with reversed arguments in
-  the same way as `map`.
+  The computation will be executed in the completion thread by
+  default; you also can provide a custom executor.
 
-  This is designed to be used with `->>`."
+  This funciton is intended to be used with `->>`."
   ([f p]
    (pt/-bind (pt/-promise p) f))
   ([executor f p]
    (pt/-bind (pt/-promise p) f executor)))
 
 (defn mcat
-  "Shorted alias for `mapcat`."
+  "A convenience alias for `mapcat`."
   ([f p]
    (pt/-bind (pt/-promise p) f))
   ([executor f p]
    (pt/-bind (pt/-promise p) f executor)))
 
 (defn chain
-  "Chain variable number of computations to be executed
-  serially. Analogous to `then` that accepts variable number of
-  functions."
+  "Chain variable number of functions to be executed serially using
+  `then`."
   ([p f] (then p f))
   ([p f & fs] (reduce #(then %1 %2) p (cons f fs))))
 
 (defn chain'
-  "Chain variable number of computations to be executed serially. Unlike
-  `chain` does not flatten the return value of each step (probably
-  this is more performant than `chain`)."
+  {:deprecated "9.3" :no-doc true}
   ([p f] (then' p f))
   ([p f & fs] (reduce pt/-map (pt/-promise p) (cons f fs))))
 
 (defn handle
-  "Executes `f` when the promise `p` is resolved or is rejected. Returns
-  a promise resolved with the return value of `f` function."
-  ([p f]
-   (pt/-handle (pt/-promise p) f))
-  ([p f executor]
-   (pt/-handle (pt/-promise p) f executor)))
+  "Chains a function `f` to be executed when the promise `p` is completed
+  (resolved or rejected) and returns a promise completed (resolving or
+  rejecting) with the return value of calling `f` with both: value and
+  the exception; `f` can return a new plain value or promise instance,
+  and automatic unwrapping will be performed.
 
-(defn hmap
-  "Inverted arguments version of handle."
-  ([f p]
-   (pt/-handle (pt/-promise p) f))
-  ([executor f p]
-   (pt/-handle (pt/-promise p) f executor)))
+  The computation will be executed in the completion thread by
+  default; you also can provide a custom executor.
+
+  For performance sensitive code, look at `hmap` and `hcat`."
+  ([p f]
+   #?(:cljs (pt/-handle (pt/-promise p) f)
+      :clj  (c/-> (pt/-handle (pt/-promise p) (comp pt/-promise f))
+                  (impl/unwrap-completion-stage))))
+  ([p f executor]
+   #?(:cljs (pt/-handle (pt/-promise p) f executor)
+      :clj  (c/-> (pt/-handle (pt/-promise p) (comp pt/-promise f) executor)
+                  (impl/unwrap-completion-stage)))))
 
 (defn finally
-  "Attach a potentially side-effectful handler to promise that will be
-  executed independently if promise is resolved or rejected.
-
-  Returns the original promise and the return value of `f` function is
-  ignored."
+  "Like `handle` but ignores the return value. Returns a promise that
+  will mirror the original one."
   ([p f]
    (pt/-finally (pt/-promise p) f))
   ([p f executor]
    (pt/-finally (pt/-promise p) f executor)))
 
+(defn hmap
+  "Chains a function `f` to be executed when the promise `p` is completed
+  (resolved or rejected) and returns a promise completed (resolving or
+  rejecting) with the return value of calling `f` with both: value and
+  the exception.
+
+  The computation will be executed in the completion thread by
+  default; you also can provide a custom executor.
+
+  Intended to be used with `->>`."
+  ([f p]
+   (pt/-handle (pt/-promise p) f))
+  ([executor f p]
+   (pt/-handle (pt/-promise p) f executor)))
+
+(defn hcat
+  "Chains a function `f` to be executed when the promise `p` is completed
+  (resolved or rejected) and returns a promise that will mirror the
+  promise instance returned by calling `f` with both: value and the
+  exception.
+
+  The computation will be executed in the completion thread by
+  default; you also can provide a custom executor.
+
+  Intended to be used with `->>`."
+  ([f p]
+   #?(:cljs (pt/-handle (pt/-promise p) f)
+      :clj  (c/-> (pt/-handle (pt/-promise p) f)
+                  (impl/unwrap-completion-stage))))
+  ([executor f p]
+   #?(:cljs (pt/-handle (pt/-promise p) f executor)
+      :clj  (c/-> (pt/-handle (pt/-promise p) f executor)
+                  (impl/unwrap-completion-stage)))))
+
 (defn fnly
-  "Inverted arguments version of `finally`"
+  "Inverted arguments version of `finally`; intended to be used with
+  `->>`."
   ([f p]
    (pt/-finally (pt/-promise p) f))
   ([executor f p]
    (pt/-finally (pt/-promise p) f executor)))
 
 (defn catch
-  "Executes `f` when the promise `p` is rejected. Returns a promise
-  resolved with the return value of `f` function handler."
+  "Chains a function `f` to be executed when the promise `p` is
+  rejected. Returns a promise that will be resolved with the return
+  value of calling `f` with exception as single argument; `f` can
+  return a plain value or promise instance, an automatic unwrapping
+  will be performed.
+
+  The computation will be executed in the completion thread, look at
+  `merr` if you want the ability to schedule the computation to other
+  thread."
   ([p f]
-   (pt/-thenErr (pt/-promise p) f))
+   (pt/-catch (pt/-promise p) (comp pt/-promise f)))
   ([p pred-or-type f]
    (c/let [accept? (if (ifn? pred-or-type)
                      pred-or-type
                      #(instance? pred-or-type %))]
-     (pt/-thenErr
+     (pt/-catch
       (pt/-promise p)
       (fn [e]
         (if (accept? e)
-          (f e)
+          (pt/-promise (f e))
           (impl/rejected e)))))))
 
 (defn catch'
-  "Executes `f` when the promise `p` is rejected. Returns a promise
-  resolved with the return value of `f` function handler."
-  ([p f]
-   (pt/-mapErr (pt/-promise p) f))
-  ([p pred-or-type f]
-   (c/let [accept? (if (ifn? pred-or-type)
-                     pred-or-type
-                     #(instance? pred-or-type %))]
-     (pt/-mapErr
-      (pt/-promise p)
-      (fn [e]
-        (if (accept? e)
-          (f e)
-          (impl/rejected e)))))))
+  {:deprecated "9.3" :no-doc true}
+  ([p f] (catch p f))
+  ([p pred-or-type f] (catch p pred-or-type f)))
 
 (defn error
-  "Same as `catch` but with parameters inverted."
+  {:deprecated "9.3" :no-doc true}
   ([f p] (catch p f))
-  ([f type p] (catch p type f)))
+  ([f pred-or-type p] (catch p type f)))
 
-(defn err
-  "A short alias for `error` function."
-  ([f p] (catch p f))
-  ([f type p] (catch p type f)))
+(defn merr
+  "Chains a function `f` to be executed when the promise `p` is
+  rejected. Returns a promise that will mirror the promise returned by
+  calling `f` with exception as single argument; `f` **must** return a
+  promise instance.
+
+  The computation will be executed in the completion thread by
+  default; you also can provide a custom executor.
+
+  This is intended to be used with `->>`."
+  ([f p] (pt/-catch p f))
+  ([executor f p] (pt/-catch p f executor)))
 
 (defn all
-  "Given an array of promises, return a promise
-  that is fulfilled  when all the items in the
-  array are fulfilled.
+  "Given an array of promises, return a promise that is fulfilled when
+  all the items in the array are fulfilled.
 
   Example:
 
-  (-> (all [(promise :first-promise)
-            (promise :second-promise)]
+  ```
+  (-> (p/all [(promise :first-promise)
+              (promise :second-promise)]
       (then (fn [[first-result second-result]]))
        (println (str first-result \", \" second-result)
+  ```
 
-  Will print out
-  :first-promise, :second-promise.
+  Will print to out `:first-promise, :second-promise`.
 
-  If at least one of the promises is rejected, the resulting promise will be
-  rejected."
+  If at least one of the promises is rejected, the resulting promise
+  will be rejected."
   [promises]
   #?(:cljs (c/-> (.all impl/*default-promise* (into-array promises))
-                 (then' vec))
+                 (then vec))
      :clj (c/let [promises (clojure.core/map pt/-promise promises)]
-            (then' (c/->> (into-array CompletableFuture promises)
-                          (CompletableFuture/allOf))
-                   (fn [_]
-                     (mapv pt/-extract promises))))))
-
+            (c/->> (CompletableFuture/allOf (into-array CompletableFuture promises))
+                   (map (fn [_]
+                          (c/mapv pt/-extract promises)))))))
 (defn race
   [promises]
-  #?(:cljs (.race impl/*default-promise* (into-array (cljs.core/map pt/-promise promises)))
-     :clj (CompletableFuture/anyOf (c/->> (clojure.core/map pt/-promise promises)
-                                          (into-array CompletableFuture)))))
+  #?(:cljs (.race impl/*default-promise* (into-array (c/map pt/-promise promises)))
+     :clj (CompletableFuture/anyOf (into-array CompletableFuture (c/map pt/-promise promises)))))
 
 (defn any
   "Given an array of promises, return a promise that is fulfilled when
@@ -322,34 +370,44 @@
   ([promises]
    (any promises ::default))
   ([promises default]
-   (c/let [state (atom {:resolved false
-                        :counter (count promises)
-                        :rejections []})]
+   (c/let [items (into #{} promises)
+           state (volatile! {:pending items
+                             :rejections []
+                             :resolved? false})
+           lock  (util/mutex)]
      (create
       (fn [resolve reject]
         (c/doseq [p promises]
-          (c/-> (pt/-promise p)
-                (then (fn [v]
-                        (when-not (:resolved @state)
-                          (swap! state (fn [state]
-                                         (c/-> state
-                                               (assoc :resolved true)
-                                               (update :counter dec))))
-                          (resolve v))))
-                (catch (fn [e]
-                         (swap! state (fn [state]
-                                        (c/-> state
-                                              (update  :counter dec)
-                                              (update :rejections conj e))))
-                         (c/let [{:keys [resolved counter rejections]} @state]
-                           (when (and (not resolved) (= counter 0))
-                             (if (= default ::default)
-                               (reject (ex-info "No promises resolved"
-                                                {:rejections rejections}))
-                               (resolve default)))))))))))))
+          (pt/-handle
+           (pt/-promise p)
+           (fn [v exception]
+             (pt/-lock! lock)
+             (try
+               (if exception
+                 (when-not (:resolved? @state)
+                   (c/let [state (vswap! state (fn [state]
+                                                 (c/-> state
+                                                       (update :pending disj p)
+                                                       (update :rejections conj exception))))]
+                     (when-not (seq (:pending state))
+                       (if (= default ::default)
+                         (reject (ex-info "No promises resolved"
+                                          {:rejections (:rejections state)}))
+                         (resolve default)))))
+
+                 (when-not (:resolved? @state)
+                   (c/let [{:keys [pending]} (vswap! state (fn [state]
+                                                             (c/-> state
+                                                                   (assoc :resolved? true)
+                                                                   (update :pending disj p))))]
+                     #?(:clj (c/run! pt/-cancel! pending))
+                     (resolve v))))
+               (finally
+                 (pt/-unlock! lock)))))))))))
+
 
 (defn run!
-  "A promise aware run! function."
+  "A promise aware run! function. Executed in terms of `then` rules."
   ([f coll] (run! f coll exec/same-thread-executor))
   ([f coll executor] (reduce #(then %1 (fn [_] (f %2))) (promise nil executor) coll)))
 
@@ -400,7 +458,8 @@
        (.call js/Error it message {} nil)
        it)))
 
-#?(:cljs (goog/inherits TimeoutException js/Error))
+#?(:cljs
+   (goog/inherits TimeoutException js/Error))
 
 (defn timeout
   "Returns a cancellable promise that will be fulfilled with this
@@ -414,7 +473,7 @@
            tid     (exec/schedule! scheduler t #(if (= v ::default)
                                                   (reject! timeout (TimeoutException. "Operation timed out."))
                                                   (resolve! timeout v)))]
-     (race [(finally p (fn [_ _] (pt/-cancel! tid))) timeout]))))
+     (race [(fnly (fn [_ _] (pt/-cancel! tid)) p) timeout]))))
 
 (defn delay
   "Given a timeout in miliseconds and optional value, returns a promise
@@ -622,5 +681,5 @@
   runs over it using `promesa.core/run!`"
   [[binding xs] & body]
   `(run! (fn [~binding]
-             (promesa.core/do ~@body))
-           ~xs))
+           (promesa.core/do ~@body))
+         ~xs))

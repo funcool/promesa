@@ -1,5 +1,29 @@
 # Changelog #
 
+## Version 10.0.544
+
+**This release includes internal protocols changes that breaks
+compatibility. If you are using only public API, you should not be
+affected.**
+
+- Deprecate undocumented `promesa.core/chain'` function
+- Deprecate undocumented `promesa.core/catch'` function
+- Deprecate `promesa.core/error` alias to `catch`
+- Improve efficiency in the `promesa.core/any` implementation
+- Remove undocumented `promesa.core/err` alias.
+- Add `promesa.core/hmap` and `promesa.core/hcat` functions (in the
+  same family as `promesa.core/handle` but with arguments in inverse order and no
+  automatic unwrapping)
+- Add `promesa.core/fmap` convenience alias for `promesa.core/map`
+- Add `promesa.core/merr` (inverse ordered arguments and no automatic unwrapping
+  version of `promesa.core/catch`)
+- Fix `promesa.exec.csp/!<` arguments (thanks to @alexandergunnarson)
+- Add `promesa.exec.csp/go-chan` convenience macro (thanks to
+  @alexandergunnarson for the suggestion)
+- Add `promesa.exec/thread?` function
+- Update documentation related to all new related functions
+
+
 ## Version 9.2.542
 
 - Add `promesa.core/mcat`, a shorter alias for `mapcat`
@@ -130,7 +154,7 @@ Date: 2022-10-17
 Date: 2022-10-17
 
 - Rewrite ConcurrencyLimiter for make it more clojure frendly.
-- Expose the **experimental** API forthe ConcurrencyLimiter class.
+- Expose the **experimental** API for the ConcurrencyLimiter class.
 - Officially drop support for JDK <= 8
 
 

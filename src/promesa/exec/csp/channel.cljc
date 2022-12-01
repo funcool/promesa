@@ -7,34 +7,18 @@
 (ns ^:no-doc promesa.exec.csp.channel
   (:require
    [promesa.core :as p]
-   [promesa.protocols :as pt]
+   [promesa.exec :as px]
    [promesa.exec.csp.mutable-list :as mlist]
-   [promesa.exec :as px])
-  #?(:clj
-     (:import java.util.concurrent.locks.ReentrantLock)))
+   [promesa.protocols :as pt]
+   [promesa.util :as util]))
 
 (def ^{:dynamic true :no-doc true} *executor*
   (if px/vthreads-supported? :vthread :thread))
 
-(defn mutex
-  {:no-doc true}
-  []
-  #?(:clj
-     (let [m (ReentrantLock.)]
-       (reify
-         pt/ILock
-         (-lock! [_] (.lock m))
-         (-unlock! [_] (.unlock m))))
-     :cljs
-     (reify
-       pt/ILock
-       (-lock! [_])
-       (-unlock! [_]))))
-
 (defn fn->handler
   {:no-doc true}
   [f]
-  (let [lock    (mutex)
+  (let [lock    (util/mutex)
         active? (atom true)]
     (reify
       pt/ILock
@@ -50,7 +34,7 @@
 (defn volatile->handler
   {:no-doc true}
   [vo]
-  (let [lock    (mutex)
+  (let [lock    (util/mutex)
         active? (atom true)]
     (reify
       pt/ILock
@@ -68,7 +52,7 @@
 (defn promise->handler
   {:no-doc true}
   [p]
-  (let [lock    (mutex)
+  (let [lock    (util/mutex)
         active? (atom true)]
     (reify
       pt/ILock
@@ -368,5 +352,5 @@
                (volatile! (mlist/create))
                buf
                (atom false)
-               (mutex)
+               (util/mutex)
                add-fn))))

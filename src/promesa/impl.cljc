@@ -35,6 +35,22 @@
             (.completeExceptionally ^CompletableFuture p v)
             p)))
 
+#?(:clj
+   (defn unwrap-completion-exception
+     {:no-doc true}
+     [cause]
+     (if (instance? CompletionException cause)
+       (.getCause cause)
+       cause)))
+
+#?(:clj (def fw-identity (pu/->FunctionWrapper identity)))
+
+#?(:clj
+   (defn unwrap-completion-stage
+     {:no-doc true}
+     [it]
+     (.thenCompose ^CompletionStage it ^Function fw-identity)))
+
 ;; --- Promise Impl
 
 (defn deferred
@@ -67,13 +83,7 @@
        (-bind
          ([it f] (.then it #(f %)))
          ([it f e] (.then it #(f %))))
-       (-then
-         ([it f] (.then it #(f %)))
-         ([it f e] (.then it #(f %))))
-       (-mapErr
-         ([it f] (.catch it #(f %)))
-         ([it f e] (.catch it #(f %))))
-       (-thenErr
+       (-catch
          ([it f] (.catch it #(f %)))
          ([it f e] (.catch it #(f %))))
        (-handle
@@ -85,8 +95,6 @@
 
 #?(:cljs
    (extend-promise! js/Promise))
-
-#?(:clj (def fw-identity (pu/->FunctionWrapper identity)))
 
 #?(:clj
    (extend-protocol pt/IPromise
@@ -111,73 +119,35 @@
                            ^Function (pu/->FunctionWrapper f)
                            ^Executor (exec/resolve-executor executor))))
 
-     (-then
+     (-catch
        ([it f]
-        (.thenCompose ^CompletionStage it
-                      ^Function (pu/->FunctionWrapper (comp pt/-promise f))))
+        (-> ^CompletionStage it
+            (.handle ^BiFunction (pu/->BiFunctionWrapper
+                                  (fn [v e]
+                                    (if e
+                                      (f (unwrap-completion-exception e))
+                                      it))))
+            (.thenCompose ^Function fw-identity)))
 
        ([it f executor]
-        (.thenComposeAsync ^CompletionStage it
-                           ^Function (pu/->FunctionWrapper (comp pt/-promise f))
-                           ^Executor (exec/resolve-executor executor))))
-
-     (-mapErr
-       ([it f]
-        (letfn [(handler [e]
-                  (if (instance? CompletionException e)
-                    (f (.getCause ^Exception e))
-                    (f e)))]
-          (.exceptionally ^CompletionStage it
-                          ^Function (pu/->FunctionWrapper handler))))
-
-       ([it f executor]
-        (letfn [(handler [e]
-                  (if (instance? CompletionException e)
-                    (f (.getCause ^Exception e))
-                    (f e)))]
-          ;; ONLY on JDK >= 12 it is there but in jdk<12 will throw an
-          ;; error
-          (.exceptionallyAsync ^CompletionStage it
-                               ^Function (pu/->FunctionWrapper handler)
-                               ^Executor (exec/resolve-executor executor)))))
-
-     (-thenErr
-       ([it f]
-        (letfn [(handler [v e]
-                  (if e
-                    (if (instance? CompletionException e)
-                      (pt/-promise (f (.getCause ^Exception e)))
-                      (pt/-promise (f e)))
-                    it))]
-          (as-> ^CompletionStage it $$
-            (.handle $$ ^BiFunction (pu/->BiFunctionWrapper handler))
-            (.thenCompose $$ ^Function fw-identity))))
-
-       ([it f executor]
-        (letfn [(handler [v e]
-                  (if e
-                    (if (instance? CompletionException e)
-                      (pt/-promise (f (.getCause ^Exception e)))
-                      (pt/-promise (f e)))
-                    (pt/-promise v)))]
-          (as-> ^CompletionStage it $$
-            (.handleAsync $$
-                          ^BiFunction (pu/->BiFunctionWrapper handler)
+        (-> ^CompletionStage it
+            (.handleAsync ^BiFunction (pu/->BiFunctionWrapper
+                                       (fn [v e]
+                                         (if e
+                                           (f (unwrap-completion-exception e))
+                                           it)))
                           ^Executor (exec/resolve-executor executor))
-            (.thenCompose $$ ^Function fw-identity)))))
+            (.thenCompose ^Function fw-identity))))
 
      (-handle
        ([it f]
-        (as-> ^CompletionStage it $$
-          (.handle $$ ^BiFunction (pu/->BiFunctionWrapper (comp pt/-promise f)))
-          (.thenCompose $$ ^Function fw-identity)))
+        (.handle ^CompletionStage it
+                 ^BiFunction (pu/->BiFunctionWrapper #(f %1 (unwrap-completion-exception %2)))))
 
        ([it f executor]
-        (as-> ^CompletionStage it $$
-          (.handleAsync $$
-                        ^BiFunction (pu/->BiFunctionWrapper (comp pt/-promise f))
-                        ^Executor (exec/resolve-executor executor))
-          (.thenCompose $$ ^Function fw-identity))))
+        (.handleAsync ^CompletionStage it
+                      ^BiFunction (pu/->BiFunctionWrapper f #(f %1 (unwrap-completion-exception %2)))
+                      ^Executor (exec/resolve-executor executor))))
 
      (-finally
        ([it f]

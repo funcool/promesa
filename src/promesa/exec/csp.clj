@@ -45,6 +45,21 @@
   [bindings & body]
   `(go (loop ~bindings ~@body)))
 
+(declare offer!)
+(declare close!)
+(declare chan)
+
+(defmacro go-chan
+  "A convencience go macro version that returns a channel instead
+  of a promise instance."
+  [& body]
+  `(let [c# (chan 1)]
+     (->> (go ~@body)
+          (p/fnly (fn [v# e#]
+                    (offer! c# (or v# e#))
+                    (close! c#))))
+     c#))
+
 (defn chan
   "Creates a new channel instance, it optionally accepts buffer,
   transducer and error handler."
