@@ -29,7 +29,9 @@
    [promesa.exec :as px]
    [promesa.exec.csp.buffers :as buffers]
    [promesa.exec.csp.channel :as channel]
-   [promesa.protocols :as pt]))
+   [promesa.protocols :as pt])
+  (:import
+   java.util.concurrent.CountDownLatch))
 
 (defmacro go
   "Schedules the body to be executed asychronously, potentially using
@@ -274,3 +276,57 @@
        (recur (next items))
        (when close?
          (pt/-close! ch))))))
+
+(defprotocol IMultiplexer
+  (-tap! [_ ch close?])
+  (-untap! [_ ch]))
+
+(defn wait-all!
+  {:no-doc true}
+  [promises]
+  (let [^CountDownLatch cdown (CountDownLatch. (count promises))]
+    (doseq [p promises]
+      (->> p (p/fnly (fn [_ _] (.countDown cdown)))))
+    (.await ^CountDownLatch cdown)))
+
+(defn mult
+  "Returns a multiplexer instance for a provided channel."
+  {:no-doc true}
+  [ch]
+  (let [state (atom {})
+        mx    (reify
+                IMultiplexer
+                (-tap! [_ ch close?]
+                  (swap! state assoc ch close?))
+                (-untap! [_ ch]
+                  (swap! state dissoc ch)))]
+    (go-loop []
+      (if-let [v (<! ch)]
+        (do
+          (wait-all!
+           (for [ch (keys @state)]
+             (->> (put! ch v)
+                  (p/fnly (fn [v _]
+                            (when (nil? v)
+                              (-untap! mx ch)))))))
+          (recur))
+        (->> @state
+             (filter (comp true? peek))
+             (run! close!))))
+
+    mx))
+
+(defn tap
+  "Copies the multiplexer source onto the provided channel."
+  ([mult ch]
+   (-tap! mult ch true)
+   ch)
+  ([mult ch close?]
+   (-tap! mult ch close?)
+   ch))
+
+(defn untap!
+  "Disconnects a channel from the multiplexer."
+  [mult ch]
+  (-untap! mult ch)
+  ch)
