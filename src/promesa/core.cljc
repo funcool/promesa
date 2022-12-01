@@ -343,9 +343,9 @@
 
   ```
   (-> (p/all [(promise :first-promise)
-              (promise :second-promise)]
-      (then (fn [[first-result second-result]]))
-       (println (str first-result \", \" second-result)
+              (promise :second-promise)])
+      (then (fn [[first-result second-result]])
+              (println (str first-result \", \" second-result))))
   ```
 
   Will print to out `:first-promise, :second-promise`.
