@@ -21,12 +21,17 @@
   (t/is (false? (p/promise? #{})))
 
   (t/is (true? (p/promise? (p/promise nil))))
-  (t/is (true? (p/promise? (p/promise 1))))
+  (t/is (true? (p/promise? (p/promise 1)))))
 
-  (let [p (p/promise (ex-info "F" {}))]
-    (t/is (p/promise? p))
-    (t/is (p/promise (p/catch p identity)))))
-
+(t/deftest common-tests-2
+  #?(:cljs
+     (t/async done
+       (-> (p/promise (ex-info "foo" {}))
+           (p/catch (fn [e]
+                      (ex-message e)))
+           (p/then (fn [v]
+                     (t/is (= "foo" v))
+                     (done)))))))
 
 (t/deftest with-dispatch-test-1
   #?(:cljs
