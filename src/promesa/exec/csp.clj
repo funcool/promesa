@@ -279,10 +279,11 @@
          (pt/-close! ch))))))
 
 (defn mult
-  "Returns a multiplexer channel instance. It implements the IChannel
-  protocol but can only used for put messages in. Channels containing
-  copies of this multiplexer can be attached using `tap!` and
-  dettached with `untap!`.
+  "Returns a multiplexer channel instance. It implements the
+  IWriteChannel protocol so it acts like a half duplex channel.
+
+  Channels containing copies of this multiplexer can be attached using
+  `tap!` and dettached with `untap!`.
 
   Each item is forwarded to all attached channels in parallel and
   synchronously; use buffers to prevent slow taps from holding up the
@@ -315,24 +316,23 @@
                  (-put! [_ val handler]
                    (pt/-put! ch val handler)))]
 
-    (go-loop []
-      (cdown)
-      (if-let [v (<! ch)]
-        (do
-          (when-let [chs (-> @state keys seq)]
-            (pu/wait-all!
-             (for [ch chs]
-               (->> (put! ch v)
-                    (p/fnly (fn [v _]
-                              (when (nil? v)
-                                (pt/-untap! mx ch))))))))
-          (recur))
-        (->> @state
-             (filter (comp true? peek))
-             (run! (comp pt/-close! key)))))
+     (go
+       (cdown)
+       (loop []
+         (when-let [v (<! ch)]
+           (pu/wait-all! (for [ch (-> @state keys vec)]
+                           (->> (put! ch v)
+                                (p/fnly (fn [v _]
+                                          (when (nil? v)
+                                            (pt/-untap! mx ch)))))))
+           (recur)))
 
-    (pt/-await cdown)
-    mx)))
+       (->> @state
+            (filter (comp true? peek))
+            (run! (comp pt/-close! key))))
+
+     (pt/-await cdown)
+     mx)))
 
 (defn tap!
   "Copies the multiplexer source onto the provided channel."

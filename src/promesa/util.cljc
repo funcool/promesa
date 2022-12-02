@@ -94,7 +94,9 @@
 
 (defn wait-all!
   [promises]
-  (let [cdown-fn (count-down-latch (count promises))]
-    (doseq [p promises]
-      (pt/-finally p cdown-fn))
-    (pt/-await cdown-fn)))
+  (let [total (count promises)]
+    (when (pos? total)
+      (let [cdown-fn (count-down-latch total)]
+        (doseq [p promises]
+          (pt/-finally p cdown-fn))
+        (pt/-await cdown-fn)))))
