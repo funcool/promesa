@@ -22,6 +22,8 @@
    java.util.concurrent.ExecutorService
    java.util.concurrent.Semaphore))
 
+(set! *warn-on-reflection* true)
+
 (declare ^:private instant)
 (declare ^:privare run-hook!)
 

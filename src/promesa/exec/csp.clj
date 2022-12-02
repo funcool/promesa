@@ -32,6 +32,8 @@
    [promesa.protocols :as pt]
    [promesa.util :as pu]))
 
+(set! *warn-on-reflection* true)
+
 (defmacro go
   "Schedules the body to be executed asychronously, potentially using
   virtual thread if available (a normal thread will be used in other
