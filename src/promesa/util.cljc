@@ -14,7 +14,8 @@
       java.util.function.BiConsumer
       java.util.function.Supplier
       java.util.function.Consumer
-      java.util.concurrent.locks.ReentrantLock)))
+      java.util.concurrent.locks.ReentrantLock
+      java.util.concurrent.CountDownLatch)))
 
 #?(:clj
    (deftype SupplierWrapper [f]
@@ -65,3 +66,10 @@
        pt/ILock
        (-lock! [_])
        (-unlock! [_]))))
+
+(defn wait-all!
+  [promises]
+  (let [^CountDownLatch cdown (CountDownLatch. (count promises))]
+    (doseq [p promises]
+      (pt/-finally p (fn [_ _] (.countDown cdown))))
+    (.await ^CountDownLatch cdown)))

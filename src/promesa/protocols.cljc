@@ -86,3 +86,7 @@
   (-active? [_])
   (-commit! [_])
   (-blockable? [_]))
+
+#?(:clj
+   (defprotocol IAwaitable
+     (-await [_] [_ duration] "block current thread await termination")))

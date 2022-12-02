@@ -6,7 +6,7 @@
 
 (ns promesa.exec
   "Executors & Schedulers facilities."
-  (:refer-clojure :exclude [run! pmap])
+  (:refer-clojure :exclude [run! pmap await])
   (:require [promesa.protocols :as pt]
             [promesa.util :as pu]
             #?(:cljs [goog.object :as gobj]))
@@ -17,6 +17,8 @@
       java.time.Duration
       java.util.concurrent.Callable
       java.util.concurrent.CompletableFuture
+      java.util.concurrent.CompletionStage
+      java.util.concurrent.CountDownLatch
       java.util.concurrent.Executor
       java.util.concurrent.ExecutorService
       java.util.concurrent.Executors
@@ -656,14 +658,63 @@
    (.interrupt thread))))
 
 #?(:clj
-(defn join!
-  "Waits for the specified thread to terminate."
-  ([^Thread thread]
-   (.join thread))
-  ([^Thread thread duration]
-   (if (instance? Duration duration)
-     (.join thread ^Duration duration)
-     (.join thread (long duration))))))
+   (extend-protocol clojure.core/Inst
+     Duration
+     (inst-ms* [v] (.toMillis ^Duration v))))
+
+#?(:clj
+   (extend-protocol pt/IAwaitable
+     Thread
+     (-await
+       ([it] (.join ^Thread it))
+       ([it duration]
+        (if (instance? Duration duration)
+          (.join ^Thread it ^Duration duration)
+          (.join ^Thread it (int duration)))))
+
+     CountDownLatch
+     (-await
+       ([it]
+        (.await ^CountDownLatch it))
+       ([it duration]
+        (if (instance? Duration duration)
+          (.await ^CountDownLatch it (int (inst-ms duration)))
+          (.await ^CountDownLatch it (int duration)))))
+
+     CompletableFuture
+     (-await
+       ([it]
+        (try
+          (.get ^CompletableFuture it)
+          (catch TimeoutException _
+            ::timeout)))
+
+       ([it duration]
+        (try
+          (let [ms (if (instance? Duration duration) (inst-ms duration) duration)]
+            (.get ^CompletableFuture it (int ms) TimeUnit/MILLISECONDS))
+          (catch TimeoutException _
+            ::timeout))))
+
+     CompletionStage
+     (-await
+       ([it]
+        (pt/-await (.toCompletableFuture ^CompletionStage it)))
+       ([it duration]
+        (pt/-await (.toCompletableFuture ^CompletionStage it) duration)))))
+
+
+#?(:clj
+(defn await
+  "Generic await operation. Block current thread until some operation
+  terminates. Initially implemented for Thread, CompletableFuture and
+  CountDownLatch.
+
+  The return value is implementation specific."
+  ([resource]
+   (pt/-await resource))
+  ([resource duration]
+   (pt/-await resource duration))))
 
 #?(:clj
 (defn thread?
