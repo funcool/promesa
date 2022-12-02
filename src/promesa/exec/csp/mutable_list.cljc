@@ -13,6 +13,8 @@
   #?(:clj
      (:import java.util.LinkedList)))
 
+#?(:clj (set! *warn-on-reflection* true))
+
 (defn create
   []
   #?(:clj (LinkedList.)

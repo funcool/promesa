@@ -278,29 +278,45 @@
        (when close?
          (pt/-close! ch))))))
 
-(defprotocol IMultiplexer
-  (^:no-doc -tap! [_ ch close?])
-  (^:no-doc -untap! [_ ch]))
-
 (defn mult
-  "Returns a multiplexer instance for a provided channel."
-  [ch]
-  (let [state (atom {})
-        mx    (reify
-                IMultiplexer
-                (-tap! [_ ch close?]
-                  (swap! state assoc ch close?))
-                (-untap! [_ ch]
-                  (swap! state dissoc ch))
+  "Returns a multiplexer channel instance. It implements the IChannel
+  protocol but can only used for put messages in. Channels containing
+  copies of this multiplexer can be attached using `tap!` and
+  dettached with `untap!`.
 
-                pt/ICloseable
-                (-close! [_]
-                  (pt/-close! ch)
-                  (->> @state
-                       (filter (comp true? peek))
-                       (run! (comp close! key)))))]
+  Each item is forwarded to all attached channels in parallel and
+  synchronously; use buffers to prevent slow taps from holding up the
+  multiplexer.
+
+  If there are no taps, all received items will be dropped. Closed
+  channels will be automatically removed from multiplexer."
+  ([] (mult nil nil nil))
+  ([buf] (mult buf nil nil))
+  ([buf xform] (mult buf xform nil))
+  ([buf xform exh]
+   (let [state (atom {})
+         cdown (pu/count-down-latch 1)
+         ch    (chan buf xform exh)
+         mx    (reify
+                 pt/IChannelMultiplexer
+                 (-tap! [_ ch close?]
+                   (swap! state assoc ch close?))
+                 (-untap! [_ ch]
+                   (swap! state dissoc ch))
+
+                 pt/ICloseable
+                 (-close! [_]
+                   (pt/-close! ch)
+                   (->> @state
+                        (filter (comp true? peek))
+                        (run! (comp pt/-close! key))))
+
+                 pt/IWriteChannel
+                 (-put! [_ val handler]
+                   (pt/-put! ch val handler)))]
 
     (go-loop []
+      (cdown)
       (if-let [v (<! ch)]
         (do
           (when-let [chs (-> @state keys seq)]
@@ -309,24 +325,26 @@
                (->> (put! ch v)
                     (p/fnly (fn [v _]
                               (when (nil? v)
-                                (-untap! mx ch))))))))
+                                (pt/-untap! mx ch))))))))
           (recur))
         (->> @state
              (filter (comp true? peek))
-             (run! (comp close! key)))))
-    mx))
+             (run! (comp pt/-close! key)))))
+
+    (pt/-await cdown)
+    mx)))
 
 (defn tap!
   "Copies the multiplexer source onto the provided channel."
   ([mult ch]
-   (-tap! mult ch true)
+   (pt/-tap! mult ch true)
    ch)
   ([mult ch close?]
-   (-tap! mult ch close?)
+   (pt/-tap! mult ch close?)
    ch))
 
 (defn untap!
   "Disconnects a channel from the multiplexer."
   [mult ch]
-  (-untap! mult ch)
+  (pt/-untap! mult ch)
   ch)

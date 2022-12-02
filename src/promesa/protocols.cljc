@@ -66,11 +66,19 @@
   (-lock! [_])
   (-unlock! [_]))
 
-(defprotocol IChannel
-  (-take! [_ _])
-  (-put! [_ _ _])
-  (-cleanup! [_])
-  (-abort! [_]))
+(defprotocol IReadChannel
+  (-take! [_ handler]))
+
+(defprotocol IWriteChannel
+  (-put! [_ val handler]))
+
+(defprotocol IChannelInternal
+  (^:no-doc -cleanup! [_])
+  (^:no-doc -abort! [_]))
+
+(defprotocol IChannelMultiplexer
+  (^:no-doc -tap! [_ ch close?])
+  (^:no-doc -untap! [_ ch]))
 
 (defprotocol ICloseable
   (-closed? [_])
@@ -79,7 +87,7 @@
 (defprotocol IBuffer
   (-full? [_])
   (-poll! [_])
-  (-offer! [_ _])
+  (-offer! [_ val])
   (-size [_]))
 
 (defprotocol IHandler

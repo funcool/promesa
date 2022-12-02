@@ -9,6 +9,8 @@
    [promesa.exec.csp.mutable-list :as mlist]
    [promesa.protocols :as pt]))
 
+#?(:clj (set! *warn-on-reflection* true))
+
 (defn fixed
   [n]
   (let [buf (mlist/create)]

@@ -12,6 +12,8 @@
    [promesa.protocols :as pt]
    [promesa.util :as util]))
 
+#?(:clj (set! *warn-on-reflection* true))
+
 (def ^{:dynamic true :no-doc true} *executor*
   (if px/vthreads-supported? :vthread :thread))
 
@@ -192,7 +194,7 @@
   (-unlock! [_]
     (pt/-unlock! lock))
 
-  pt/IChannel
+  pt/IChannelInternal
   (-cleanup! [_]
     (loop [items  (seq @takes)
            result (mlist/create)]
@@ -220,6 +222,7 @@
           (px/run! *executor* (partial put-fn false)))
         (recur (rest items)))))
 
+  pt/IWriteChannel
   (-put! [this val handler]
     (when (nil? val)
       (throw (ex-info "Can't put nil on channel" {})))
@@ -252,6 +255,7 @@
       (finally
         (pt/-unlock! this))))
 
+  pt/IReadChannel
   (-take! [this handler]
     (try
       (pt/-lock! this)
@@ -324,12 +328,32 @@
    (assert (not (nil? itm)))
    (pt/-offer! b itm)))
 
-(defn chan?
-  "Check if `o` is an instance of `Channel` or satisfies `IChannel`
-  protocol."
+(defn channel?
+  "Returns true if `o` is a channel instance or implements
+  IReadChannel or IWriteChannel protocol."
   [o]
   (or (instance? Channel o)
-      (satisfies? pt/IChannel o)))
+      (satisfies? pt/IReadChannel)
+      (satisfies? pt/IWriteChannel)))
+
+(defn chan?
+  "Returns true if `o` is a full duplex channel."
+  [o]
+  (or (instance? Channel o)
+      (and (satisfies? pt/IReadChannel o)
+           (satisfies? pt/IWriteChannel o))))
+
+(defn rchan?
+  "Returns true if `o` is a channel that supports read operations."
+  [o]
+  (or (instance? Channel o)
+      (satisfies? pt/IReadChannel o)))
+
+(defn wchan?
+  "Returns true if `o` is a channel that supports write operations."
+  [o]
+  (or (instance? Channel o)
+      (satisfies? pt/IReadChannel o)))
 
 (defn chan
   "Create a channel instance."

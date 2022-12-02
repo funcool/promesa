@@ -77,18 +77,17 @@
 
 
 (t/deftest operations-with-mult
-  (let [ch1 (sp/chan)
-        mx  (sp/mult ch1)]
+  (let [mch (sp/mult)]
     (try
       (let [ch2 (sp/chan 1)
             ch3 (sp/chan 1)]
-        (sp/offer! ch1 :a)
+        (sp/offer! mch :a)
         (px/sleep 200)
-        (sp/tap! mx ch2)
-        (sp/tap! mx ch3)
-        (sp/>! ch1 :b)
+        (sp/tap! mch ch2)
+        (sp/tap! mch ch3)
+        (sp/>! mch :b)
         (t/is (= :b (sp/<! ch2)))
         (t/is (= :b (sp/<! ch3)))
         )
       (finally
-        (sp/close! mx)))))
+        (sp/close! mch)))))
