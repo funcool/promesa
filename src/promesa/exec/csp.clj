@@ -29,9 +29,8 @@
    [promesa.exec :as px]
    [promesa.exec.csp.buffers :as buffers]
    [promesa.exec.csp.channel :as channel]
-   [promesa.protocols :as pt])
-  (:import
-   java.util.concurrent.CountDownLatch))
+   [promesa.protocols :as pt]
+   [promesa.util :as pu]))
 
 (defmacro go
   "Schedules the body to be executed asychronously, potentially using
@@ -278,20 +277,11 @@
          (pt/-close! ch))))))
 
 (defprotocol IMultiplexer
-  (-tap! [_ ch close?])
-  (-untap! [_ ch]))
-
-(defn wait-all!
-  {:no-doc true}
-  [promises]
-  (let [^CountDownLatch cdown (CountDownLatch. (count promises))]
-    (doseq [p promises]
-      (->> p (p/fnly (fn [_ _] (.countDown cdown)))))
-    (.await ^CountDownLatch cdown)))
+  (^:no-doc -tap! [_ ch close?])
+  (^:no-doc -untap! [_ ch]))
 
 (defn mult
   "Returns a multiplexer instance for a provided channel."
-  {:no-doc true}
   [ch]
   (let [state (atom {})
         mx    (reify
@@ -299,24 +289,32 @@
                 (-tap! [_ ch close?]
                   (swap! state assoc ch close?))
                 (-untap! [_ ch]
-                  (swap! state dissoc ch)))]
+                  (swap! state dissoc ch))
+
+                pt/ICloseable
+                (-close! [_]
+                  (pt/-close! ch)
+                  (->> @state
+                       (filter (comp true? peek))
+                       (run! (comp close! key)))))]
+
     (go-loop []
       (if-let [v (<! ch)]
         (do
-          (wait-all!
-           (for [ch (keys @state)]
-             (->> (put! ch v)
-                  (p/fnly (fn [v _]
-                            (when (nil? v)
-                              (-untap! mx ch)))))))
+          (when-let [chs (-> @state keys seq)]
+            (pu/wait-all!
+             (for [ch chs]
+               (->> (put! ch v)
+                    (p/fnly (fn [v _]
+                              (when (nil? v)
+                                (-untap! mx ch))))))))
           (recur))
         (->> @state
              (filter (comp true? peek))
-             (run! close!))))
-
+             (run! (comp close! key)))))
     mx))
 
-(defn tap
+(defn tap!
   "Copies the multiplexer source onto the provided channel."
   ([mult ch]
    (-tap! mult ch true)

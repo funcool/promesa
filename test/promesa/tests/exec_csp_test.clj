@@ -74,3 +74,21 @@
         r1 (sp/take! ch)]
     (t/is (= :a @r1))
     (t/is (true? @p1))))
+
+
+(t/deftest operations-with-mult
+  (let [ch1 (sp/chan)
+        mx  (sp/mult ch1)]
+    (try
+      (let [ch2 (sp/chan 1)
+            ch3 (sp/chan 1)]
+        (sp/offer! ch1 :a)
+        (px/sleep 200)
+        (sp/tap! mx ch2)
+        (sp/tap! mx ch3)
+        (sp/>! ch1 :b)
+        (t/is (= :b (sp/<! ch2)))
+        (t/is (= :b (sp/<! ch3)))
+        )
+      (finally
+        (sp/close! mx)))))
