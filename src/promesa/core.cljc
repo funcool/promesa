@@ -23,6 +23,8 @@
       java.util.concurrent.CompletionStage
       java.util.concurrent.TimeoutException)))
 
+#?(:clj (set! *warn-on-reflection* true))
+
 ;; --- Promise
 
 (defn resolved
@@ -683,3 +685,44 @@
   `(run! (fn [~binding]
            (promesa.core/do ~@body))
          ~xs))
+
+#?(:clj
+(defn await!
+  "Generic await operation. Block current thread until some operation
+  terminates. Returns `::timeout` on timeout; does not catch any other
+  exception.
+
+  Default implementation for Thread, CompletableFuture and
+  CountDownLatch.
+
+  The return value is implementation specific."
+  ([resource]
+   (pt/-await resource))
+  ([resource duration]
+   (try
+     (pt/-await resource duration)
+     (catch TimeoutException _
+       ::timeout)))))
+
+#?(:clj
+(defn await
+  "A exception safer variant of `await!`. Returns `::timeout` on timeout
+  exception, forwards interrupted exception and all other exceptions
+  are returned as value, so user is responsible for checking if the returned
+  value is exception or not."
+  ([resource]
+   (try
+     (pt/-await resource)
+     (catch InterruptedException cause
+       (throw cause))
+     (catch Throwable cause
+       cause)))
+  ([resource duration]
+   (try
+     (pt/-await resource duration)
+     (catch TimeoutException _
+       ::timeout)
+     (catch InterruptedException cause
+       (throw cause))
+     (catch Throwable cause
+       cause)))))

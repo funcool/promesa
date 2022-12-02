@@ -9,18 +9,23 @@
   (:require [promesa.protocols :as pt]
             [promesa.util :as pu]
             [promesa.exec :as exec])
-  #?(:clj (:import
-           java.util.concurrent.CompletableFuture
-           java.util.concurrent.CompletionStage
-           java.util.concurrent.TimeoutException
-           java.util.concurrent.ExecutionException
-           java.util.concurrent.CompletionException
-           java.util.concurrent.Executor
-           java.util.function.Function
-           java.util.function.Supplier)))
+  #?(:clj
+     (:import
+      java.time.Duration
+      java.util.concurrent.CompletableFuture
+      java.util.concurrent.CompletionException
+      java.util.concurrent.CompletionStage
+      java.util.concurrent.CountDownLatch
+      java.util.concurrent.ExecutionException
+      java.util.concurrent.Executor
+      java.util.concurrent.TimeUnit
+      java.util.concurrent.TimeoutException
+      java.util.function.Function
+      java.util.function.Supplier)))
 
 ;; --- Global Constants
 
+#?(:clj (set! *warn-on-reflection* true))
 #?(:cljs (def ^:dynamic *default-promise* js/Promise))
 
 (defn resolved
@@ -40,7 +45,7 @@
      {:no-doc true}
      [cause]
      (if (instance? CompletionException cause)
-       (.getCause cause)
+       (.getCause ^CompletionException cause)
        cause)))
 
 #?(:clj (def fw-identity (pu/->FunctionWrapper identity)))
@@ -192,6 +197,41 @@
 
      (-pending? [it]
        (not (.isDone it)))))
+
+
+
+#?(:clj
+   (extend-protocol pt/IAwaitable
+     Thread
+     (-await
+       ([it] (.join ^Thread it))
+       ([it duration]
+        (if (instance? Duration duration)
+          (.join ^Thread it ^Duration duration)
+          (.join ^Thread it (int duration)))))
+
+     CountDownLatch
+     (-await
+       ([it]
+        (.await ^CountDownLatch it))
+       ([it duration]
+        (if (instance? Duration duration)
+          (.await ^CountDownLatch it (long (inst-ms duration)) TimeUnit/MILLISECONDS)
+          (.await ^CountDownLatch it (long duration) TimeUnit/MILLISECONDS))))
+
+     CompletableFuture
+     (-await
+       ([it] (.get ^CompletableFuture it))
+       ([it duration]
+        (let [ms (if (instance? Duration duration) (inst-ms duration) duration)]
+          (.get ^CompletableFuture it (int ms) TimeUnit/MILLISECONDS))))
+
+     CompletionStage
+     (-await
+       ([it]
+        (pt/-await (.toCompletableFuture ^CompletionStage it)))
+       ([it duration]
+        (pt/-await (.toCompletableFuture ^CompletionStage it) duration)))))
 
 ;; --- Promise Factory
 

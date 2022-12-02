@@ -9,13 +9,22 @@
   #?(:clj
      (:import
       java.lang.reflect.Method
-      java.util.function.Function
-      java.util.function.BiFunction
-      java.util.function.BiConsumer
-      java.util.function.Supplier
-      java.util.function.Consumer
+      java.time.Duration
+      java.util.concurrent.CountDownLatch
       java.util.concurrent.locks.ReentrantLock
-      java.util.concurrent.CountDownLatch)))
+      java.util.function.BiConsumer
+      java.util.function.BiFunction
+      java.util.function.Consumer
+      java.util.function.Function
+      java.util.function.Supplier)))
+
+#?(:clj (set! *warn-on-reflection* true))
+
+
+#?(:clj
+   (extend-protocol clojure.core/Inst
+     Duration
+     (inst-ms* [v] (.toMillis ^Duration v))))
 
 #?(:clj
    (deftype SupplierWrapper [f]
