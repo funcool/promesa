@@ -38,7 +38,9 @@
   "Schedules the body to be executed asychronously, potentially using
   virtual thread if available (a normal thread will be used in other
   case). Returns a promise instance that resolves with the return
-  value when the asynchronous block finishes."
+  value when the asynchronous block finishes.
+
+  Forwards dynamic bindings."
   [& body]
   `(->> (px/wrap-bindings (fn [] ~@body))
         (p/thread-call channel/*executor*)))
