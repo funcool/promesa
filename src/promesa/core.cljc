@@ -578,12 +578,10 @@
   [& body]
   `(thread-call :default (^once fn [] ~@body)))
 
+(defrecord Recur [bindings])
 (defn recur?
-  {:no-doc true}
-  [m]
-  (and
-   (map? m)
-   (= (:type m) ::recur)))
+  [o]
+  (instance? Recur o))
 
 (defmacro loop
   [bindings & body]
@@ -609,7 +607,7 @@
                                         (promesa.exec/run!
                                          (promesa.exec/wrap-bindings
                                           ~(if (seq names)
-                                             `(fn [] (apply ~tsym (:args ~res-s)))
+                                             `(fn [] (apply ~tsym (:bindings ~res-s)))
                                            tsym)))
                                       nil)
                                       (~rsv-s ~res-s)))))))]
@@ -621,7 +619,7 @@
 
 (defmacro recur
   [& args]
-  `(array-map :type :promesa.core/recur :args [~@args]))
+  `(->Recur [~@args]))
 
 (defmacro ->
   "Like the clojure.core/->, but it will handle promises in values
