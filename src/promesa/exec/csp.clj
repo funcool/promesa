@@ -81,39 +81,47 @@
   "Schedules a put operation on the channel. Returns a promise
   instance that will resolve to: false if channel is closed, true if
   put is succeed. If channel has buffer, it will return immediatelly
-  with resolved promise."
+  with resolved promise.
+
+  Optionally accepts a timeout-duration and timeout-value. The
+  `timeout-duration` can be a long or Duration instance measured in
+  milliseconds."
   ([port val]
    (let [d (p/deferred)]
      (pt/-put! port val (channel/promise->handler d))
      d))
-  ([port val timeout-ms]
-   (put! port val timeout-ms nil))
-  ([port val timeout-ms timeout-val]
+  ([port val timeout-duration]
+   (put! port val timeout-duration nil))
+  ([port val timeout-duration timeout-value]
    (let [d (p/deferred)
          h (channel/promise->handler d)
-         t (px/schedule! timeout-ms
+         t (px/schedule! timeout-duration
                          #(when-let [f (channel/commit! h)]
-                            (f timeout-val)))]
+                            (f timeout-value)))]
      (pt/-put! port val h)
      (p/finally d (fn [_ _] (p/cancel! t))))))
 
 (defn take!
-  "Schedules a take operation on the channel. Returns a promise
-  instance that will resolve to: nil if channel is closed, obj if
-  value is found. If channel has non-empty buffer the take operation
-  will succeed immediatelly with resolved promise."
+  "Schedules a take operation on the channel. Returns a promise instance
+  that will resolve to: nil if channel is closed, obj if value is
+  found. If channel has non-empty buffer the take operation will
+  succeed immediatelly with resolved promise.
+
+  Optionally accepts a timeout-duration and timeout-value. The
+  `timeout-duration` can be a long or Duration instance measured in
+  milliseconds."
   ([port]
    (let [d (p/deferred)]
      (pt/-take! port (channel/promise->handler d))
      d))
-  ([port timeout-ms]
-   (take! port timeout-ms nil))
-  ([port timeout-ms timeout-val]
+  ([port timeout-duration]
+   (take! port timeout-duration nil))
+  ([port timeout-duration timeout-value]
    (let [d (p/deferred)
          h (channel/promise->handler d)
-         t (px/schedule! timeout-ms
+         t (px/schedule! timeout-duration
                          #(when-let [f (channel/commit! h)]
-                            (f timeout-val)))]
+                            (f timeout-value)))]
      (pt/-take! port h)
      (p/finally d (fn [_ _] (p/cancel! t))))))
 
@@ -121,19 +129,19 @@
   "A blocking version of `put!`"
   ([port val]
    (deref (put! port val)))
-  ([port val timeout-ms]
-   (deref (put! port val timeout-ms nil)))
-  ([port val timeout-ms timeout-val]
-   (deref (put! port val timeout-ms timeout-val))))
+  ([port val timeout-duration]
+   (deref (put! port val timeout-duration nil)))
+  ([port val timeout-duration timeout-value]
+   (deref (put! port val timeout-duration timeout-value))))
 
 (defn <!
   "A blocking version of `take!`"
   ([port]
    (deref (take! port)))
-  ([port timeout-ms]
-   (deref (take! port timeout-ms nil)))
-  ([port timeout-ms timeout-val]
-   (deref (take! port timeout-ms timeout-val))))
+  ([port timeout-duration]
+   (deref (take! port timeout-duration nil)))
+  ([port timeout-duration timeout-value]
+   (deref (take! port timeout-duration timeout-value))))
 
 (defn- alts*
   [ports {:keys [priority]}]
