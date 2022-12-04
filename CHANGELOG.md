@@ -1,5 +1,22 @@
 # Changelog #
 
+## Version 10.0.xxx
+
+- Add `promesa.exec.csp/mult*` alternative multiplexer constructor
+  more similar to the `clojure.core.async/mult` one
+- Fix `promesa.exec/run!` and `promesa.exec/submit!`; make them
+  respect the `promesa.exec/*default-executor*` dynamic var value when
+  no explicit executor is provided
+- Improve internal implementation of `promesa.core/loop` macro (making
+  it a little bit more efficient
+- Add general purpose `promesa.core/await!` and `promesa.core/await`
+  helpers that serves for blocking current thread waiting the
+  termination/completion of some resource; (**EXPERIMENTAL**, **JVM
+  only**, look at ref-docs for details). Implemented by default for
+  `Thread`, `CountDownLatch`, `CompletionStage` and
+  `CompletableFuture`.
+
+
 ## Version 10.0.544
 
 **This release includes internal protocols changes that breaks
