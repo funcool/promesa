@@ -191,7 +191,7 @@
 (defn run!
   "Run the task in the provided executor."
   ([f]
-   (pt/-run! (resolve-executor) f))
+   (pt/-run! (resolve-executor *default-executor*) f))
   ([executor f]
    (pt/-run! (resolve-executor executor) f)))
 
@@ -202,7 +202,7 @@
 
   A task is a plain clojure function."
   ([f]
-   (pt/-submit! (resolve-executor) f))
+   (pt/-submit! (resolve-executor *default-executor*) f))
   ([executor f]
    (pt/-submit! (resolve-executor executor) f)))
 
