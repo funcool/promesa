@@ -24,6 +24,7 @@
   virtual threads and seamless blocking operations on channels.
 
   **EXPERIMENTAL API**"
+  (:refer-clojure :exclude [take])
   (:require
    [promesa.core :as p]
    [promesa.exec :as px]
@@ -77,7 +78,7 @@
                buf)]
      (channel/chan buf xf exh))))
 
-(defn put!
+(defn put
   "Schedules a put operation on the channel. Returns a promise
   instance that will resolve to: false if channel is closed, true if
   put is succeed. If channel has buffer, it will return immediatelly
@@ -91,7 +92,7 @@
      (pt/-put! port val (channel/promise->handler d))
      d))
   ([port val timeout-duration]
-   (put! port val timeout-duration nil))
+   (put port val timeout-duration nil))
   ([port val timeout-duration timeout-value]
    (let [d (p/deferred)
          h (channel/promise->handler d)
@@ -101,7 +102,25 @@
      (pt/-put! port val h)
      (p/finally d (fn [_ _] (p/cancel! t))))))
 
-(defn take!
+(defn put!
+  "A blocking version of `put`."
+  ([port val]
+   (p/await! (put port val)))
+  ([port val timeout-duration]
+   (p/await! (put port val timeout-duration nil)))
+  ([port val timeout-duration timeout-value]
+   (p/await! (put port val timeout-duration timeout-value))))
+
+(defn >!
+  "A convenience alias for `put!`."
+  ([port val]
+   (p/await! (put port val)))
+  ([port val timeout-duration]
+   (p/await! (put port val timeout-duration nil)))
+  ([port val timeout-duration timeout-value]
+   (p/await! (put port val timeout-duration timeout-value))))
+
+(defn take
   "Schedules a take operation on the channel. Returns a promise instance
   that will resolve to: nil if channel is closed, obj if value is
   found. If channel has non-empty buffer the take operation will
@@ -115,7 +134,7 @@
      (pt/-take! port (channel/promise->handler d))
      d))
   ([port timeout-duration]
-   (take! port timeout-duration nil))
+   (take port timeout-duration nil))
   ([port timeout-duration timeout-value]
    (let [d (p/deferred)
          h (channel/promise->handler d)
@@ -125,23 +144,23 @@
      (pt/-take! port h)
      (p/finally d (fn [_ _] (p/cancel! t))))))
 
-(defn >!
-  "A blocking version of `put!`"
-  ([port val]
-   (deref (put! port val)))
-  ([port val timeout-duration]
-   (deref (put! port val timeout-duration nil)))
-  ([port val timeout-duration timeout-value]
-   (deref (put! port val timeout-duration timeout-value))))
+(defn take!
+  "Blocking version of `take`."
+  ([port]
+   (p/await! (take port)))
+  ([port timeout-duration]
+   (p/await! (take port timeout-duration nil)))
+  ([port timeout-duration timeout-value]
+   (p/await! (take port timeout-duration timeout-value))))
 
 (defn <!
   "A blocking version of `take!`"
   ([port]
-   (deref (take! port)))
+   (p/await! (take port)))
   ([port timeout-duration]
-   (deref (take! port timeout-duration nil)))
+   (p/await! (take port timeout-duration nil)))
   ([port timeout-duration timeout-value]
-   (deref (take! port timeout-duration timeout-value))))
+   (p/await! (take port timeout-duration timeout-value))))
 
 (defn- alts*
   [ports {:keys [priority]}]
@@ -189,7 +208,7 @@
 (defn alts!
   "A blocking variant of `alts`."
   [ports & {:as opts}]
-  (deref (alts* ports opts)))
+  (p/await! (alts* ports opts)))
 
 (defn close!
   "Close the channel."

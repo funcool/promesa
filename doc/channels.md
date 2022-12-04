@@ -64,13 +64,13 @@ Lets create a channel and put value in-to:
 
 (def ch (sp/chan 2))
 
-;; perform a blocking put operation using a speicific blocking helper
-(sp/>! ch :a)
+;; perform a blocking put operation using a blocking operation
+(sp/put! ch :a)
 ;; => true
 
-;; Or perform a blocking put operation using default `put!` function
+;; Or perform a blocking put operation using `put` function
 ;; that returns a promise/future-like object (CompletableFuture)
-@(sp/put! ch :b)
+@(sp/put ch :b)
 ;; => true
 ```
 
@@ -78,20 +78,24 @@ Now, lets try to retrieve data from channel:
 
 ```clojure
 ;; Using a blocking helper, analogous to clojure.core.async/<!!
-(sp/<! ch)
+(sp/take! ch)
 ;; => :a
 
 ;; Or blocking on promise
-@(sp/take! ch)
+@(sp/take ch)
 ;; => :b
 ```
 
 You also can take with timeout:
 
 ```clojure
-@(sp/take! ch 1000 :not-found)
+@(sp/take ch 1000 :not-found)
 ;; => :not-found
 ```
+
+For convenience and `core.async` familiarity, there are also `<!` and
+`>!` functions that have the same api as their counterpart `take!` and
+`put!`
 
 #### The go blocks
 

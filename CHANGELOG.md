@@ -17,6 +17,12 @@
   `CompletableFuture`.
 
 
+BREAKING CHANGE ON EXPERIMENTAL API:
+
+- Make `put!` as blocking API, and move future returning api to `put`.
+- Make `take!` as blocking API, and move future returning api to `take`.
+
+
 ## Version 10.0.544
 
 **This release includes internal protocols changes that breaks

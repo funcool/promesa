@@ -22,52 +22,56 @@
 ;; Or using a transducer
 (sp/chan 10 (map inc))
 
-;; `close!` a channel to stop accepting puts. Remaining values are still available to take and
-;; pending puts are cancelled. Drained channels return nil on take. Nils may not be sent over a
-;; channel explicitly.
+;; `close!` a channel to stop accepting puts. Remaining values are
+;; still available to take and pending puts are cancelled. Drained
+;; channels return nil on take. Nils may not be sent over a channel
+;; explicitly.
 
 (let [c (sp/chan)]
   (sp/close! c)
   (assert (true? (sp/closed? c))))
 
-;; The put and take operations; we use `>!` (blocking put) and `<!` (blocking take) to communicate
-;; via channels
+;; The put and take operations; we use `put!` (blocking put) and
+;; `take!` (blocking take) to communicate via channels
 
 (let [c (sp/chan 1)]
-  (sp/>! c "hello")
-  (assert (= "hello" (sp/<! c)))
+  (sp/put! c "hello")
+  (assert (= "hello" (sp/take! c)))
   (sp/close! c))
 
-;; Because these are blocking calls, if we try to put on an unbuffered channel, we will block the
-;; main thread. We can use `p/thread` (like `future`) to execute a body in a separated thread. Here
-;; we launch a background task to put "hello" on a channel, then read that value in the current
-;; thread.
+;; Because these are blocking calls, if we try to put on an unbuffered
+;; channel, we will block the main thread. We can use `p/thread` (like
+;; `future`) to execute a body in a separated thread. Here we launch a
+;; background task to put "hello" on a channel, then read that value
+;; in the current thread.
 
 (let [c (sp/chan)]
-  (p/thread (sp/>! c "hello"))
-  (assert (= "hello" (sp/<! c)))
+  (p/thread (sp/put! c "hello"))
+  (assert (= "hello" (sp/take! c)))
   (sp/close! c))
 
-;; There are non-blocking promise returning API for put & take operations, we use the clojure
-;; standard way do get a future value: with `@` or `deref`.
+;; There are non-blocking promise returning API for put & take
+;; operations, we use the clojure standard way do get a future value:
+;; with `@` or `deref`.
 
 (let [c (sp/chan)]
   ;; this does not blocks, just returns a promise (completable future)
   ;; what we ignore in this concrete example
-  (sp/put! c "hello")
-  (assert (= "hello" @(sp/take! c)))
+  (sp/put c "hello")
+  (assert (= "hello" @(sp/take c)))
   (sp/close! c))
 
 ;;;; GO BLOCKS
 
-;; The `go` macro asynchronously executes its body in a virtual thread. Channel operations that
-;; would block will pause execution instead, blocking no real system threads. There are no
-;; difference with normal threads, you continue using the standard blocking API.
+;; The `go` macro asynchronously executes its body in a virtual
+;; thread. Channel operations that would block will pause execution
+;; instead, blocking no real system threads. There are no difference
+;; with normal threads, you continue using the standard blocking API.
 
 ;; Here we convert our prior channel example to use go blocks:
 (let [c (sp/chan)]
-  (sp/go (sp/>! c "hello"))
-  (assert (= "hello" (sp/<! c)))
+  (sp/go (sp/put! c "hello"))
+  (assert (= "hello" (sp/take! c)))
   (sp/close! c))
 
 ;; The go block/macro returns a promise which will be eventually resolved with last-expr/return
@@ -75,7 +79,7 @@
 
 @(sp/go
    ;; blocks the virtual thread for 1s
-   (sp/<! (sp/timeout-chan 1000))
+   (sp/take! (sp/timeout-chan 1000))
 
    ;; return value
    1)

@@ -71,7 +71,7 @@
 (t/deftest unbuffered-chan
   (let [ch (sp/chan)
         p1 (sp/go (sp/>! ch :a))
-        r1 (sp/take! ch)]
+        r1 (sp/take ch)]
     (t/is (= :a @r1))
     (t/is (true? @p1))))
 
