@@ -578,8 +578,6 @@
   [& body]
   `(thread-call :default (^once fn [] ~@body)))
 
-(def ^:dynamic *loop-run-fn* exec/run!)
-
 (defn recur?
   {:no-doc true}
   [m]
