@@ -75,6 +75,33 @@
     (t/is (= :a @r1))
     (t/is (true? @p1))))
 
+(t/deftest pipe-operation
+  (let [ch1 (sp/chan)
+        ch2 (sp/chan)]
+    (sp/pipe ch1 ch2)
+
+    (p/thread
+      (sp/put! ch1 :a)
+      (sp/put! ch1 :b)
+      (sp/close! ch1))
+
+    (t/is (= :a (sp/take! ch2)))
+    (t/is (= :b (sp/take! ch2)))
+    (t/is (nil? (sp/take! ch2)))
+    (t/is (sp/closed? ch2))
+    (t/is (sp/closed? ch1))))
+
+(t/deftest onto-chan-operation
+  (let [ch (sp/chan)
+        rs (sp/onto-chan! ch [:a :b :c])]
+
+    (t/is (p/promise? rs))
+    (t/is (= :a (sp/take! ch 1000)))
+    (t/is (= :b (sp/take! ch 1000)))
+    (t/is (= :c (sp/take! ch 1000)))
+    (t/is (nil? (sp/take! ch 1000)))
+    (t/is (sp/closed? ch))
+    (t/is (nil? (p/await! rs 1000)))))
 
 (t/deftest operations-with-mult
   (let [mch (sp/mult)]

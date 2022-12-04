@@ -282,7 +282,10 @@
   "Takes elements from the from channel and supplies them to the to
   channel. By default, the to channel will be closed when the from
   channel closes, but can be determined by the close?  parameter. Will
-  stop consuming the from channel if the to channel closes."
+  stop consuming the from channel if the to channel closes.
+
+  Do not creates vthreads (or threads).
+  "
   ([from to] (pipe from to true))
   ([from to close?]
    (p/loop []
@@ -302,16 +305,22 @@
   "Puts the contents of coll into the supplied channel.
 
   By default the channel will be closed after the items are copied,
-  but can be determined by the close? parameter. Returns a channel
-  which will close after the items are copied."
+  but can be determined by the close? parameter. Returns a promise
+  that will be resolved with `nil` once the items are copied.
+
+  Do not creates vthreads (or threads)."
+
   ([ch coll] (onto-chan! ch coll true))
   ([ch coll close?]
-   (go-loop [items (seq coll)]
-     (if (and items (>! ch (first items)))
-       (recur (next items))
+   (p/loop [items (seq coll)]
+     (if items
+       (->> (put ch (first items))
+            (p/map (fn [res]
+                     (if res
+                       (p/recur (next items))
+                       (p/recur nil)))))
        (when close?
          (pt/-close! ch))))))
-
 
 (defn mult*
   "Create a multiplexer with an externally provided channel. From now,

@@ -15,11 +15,11 @@
   only**, look at ref-docs for details). Implemented by default for
   `Thread`, `CountDownLatch`, `CompletionStage` and
   `CompletableFuture`.
-- Reimplement `promesa.exec.csp/pipe` using simple promise API,
-  removing go-block usage and make it safe for runtimes that only
-  support platform threads (no vthread; because it does not create
-  additional thred for operate).
-
+- Reimplement `promesa.exec.csp/pipe` using promise API; removing
+  internal go-block and make it more friendly to non-vthread JVM.
+- Reimplement `promesa.exec.csp/onto-chan!` using promise API;
+  removing internal go-block and make it more friendly to non-vthread
+  JVM.
 
 BREAKING CHANGE ON EXPERIMENTAL CSP API:
 
