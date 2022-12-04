@@ -523,7 +523,8 @@
    (extend-type ScheduledExecutorService
      pt/IScheduler
      (-schedule! [this ms f]
-       (let [fut (.schedule this ^Callable f ^long ms TimeUnit/MILLISECONDS)]
+       (let [ms  (if (instance? Duration ms) (inst-ms ms) ms)
+             fut (.schedule this ^Callable f (long ms) TimeUnit/MILLISECONDS)]
          (ScheduledTask. fut)))))
 
 #?(:cljs
