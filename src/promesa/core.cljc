@@ -488,7 +488,19 @@
      (exec/schedule! scheduler t #(resolve! d v))
      d)))
 
-(defmacro do!
+(defmacro do*
+  "An exception unsafe do-like macro. Supposes that we are already
+  wrapped in promise context so avoids defensive wrapping."
+  [& exprs]
+  (condp = (count exprs)
+    0 `(pt/-promise nil)
+    1 `(pt/-promise ~(first exprs))
+    (reduce (fn [acc e]
+              `(pt/-bind (pt/-promise ~e) (fn [_#] ~acc)))
+            `(pt/-promise ~(last exprs))
+            (reverse (butlast exprs)))))
+
+(defmacro do
   "Execute potentially side effectful code and return a promise resolved
   to the last expression after awaiting the result of each
   expression."
@@ -496,31 +508,31 @@
   `(pt/-bind
     (pt/-promise nil)
     (fn [_#]
-      ~(condp = (count exprs)
-         0 `(pt/-promise nil)
-         1 `(pt/-promise ~(first exprs))
-         (reduce (fn [acc e]
-                   `(pt/-bind (pt/-promise ~e) (fn [_#] ~acc)))
-                 `(pt/-promise ~(last exprs))
-                 (reverse (butlast exprs)))))))
+      (promesa.core/do* ~@exprs))))
 
-
-(defmacro do
-  "An alias for do!"
+(defmacro do!
+  "A convenience alias for `do` macro."
   [& exprs]
-  `(do! ~@exprs))
+  `(promesa.core/do ~@exprs))
+
+(defmacro let*
+  "An exception unsafe let-like macro. Supposes that we are already
+  wrapped in promise context so avoids defensive wrapping."
+  [bindings & body]
+  (c/->> (reverse (partition 2 bindings))
+         (reduce (fn [acc [l r]]
+                   `(pt/-bind (pt/-promise ~r) (fn [~l] ~acc)))
+                 `(do* ~@body))))
 
 (defmacro let
   "A `let` alternative that always returns promise and waits for all the
   promises on the bindings."
   [bindings & body]
-  `(pt/-bind
-    (pt/-promise nil)
-    (fn [_#]
-      ~(c/->> (reverse (partition 2 bindings))
-              (reduce (fn [acc [l r]]
-                        `(pt/-bind (pt/-promise ~r) (fn [~l] ~acc)))
-                      `(do! ~@body))))))
+  (if (seq bindings)
+    `(pt/-bind
+      (pt/-promise nil)
+      (fn [_#] (promesa.core/let* ~bindings ~@body)))
+    `(promesa.core/do ~@body)))
 
 (defmacro plet
   "A parallel let; executes all the bindings in parallel and when all
@@ -531,8 +543,8 @@
     (fn [_#]
       ~(c/let [bindings (partition 2 bindings)]
          `(c/-> (all ~(mapv second bindings))
-                (then (fn [[~@(mapv first bindings)]]
-                        (do! ~@body))))))))
+                (bind (fn [[~@(c/map first bindings)]]
+                        (promesa.core/do* ~@body))))))))
 
 (defn thread-call
   "Analogous to `clojure.core.async/thread` that returns a promise
@@ -568,36 +580,46 @@
 
 (def ^:dynamic *loop-run-fn* exec/run!)
 
+(defn recur?
+  {:no-doc true}
+  [m]
+  (and
+   (map? m)
+   (= (:type m) ::recur)))
+
 (defmacro loop
   [bindings & body]
-  (c/let [bindings (partition 2 2 bindings)
-          names (mapv first bindings)
-          fvals (mapv second bindings)
-          tsym (gensym "loop")
-          dsym (gensym "deferred")
-          rsym (gensym "run")]
-    `(c/let [~rsym *loop-run-fn*
-             ~dsym (promesa.core/deferred)
-             ~tsym (fn ~tsym [params#]
-                     (c/-> (promesa.core/all params#)
-                           (promesa.core/then (fn [[~@names]]
-                                                ;; (prn "exec" ~@names)
-                                                (do! ~@body)))
-                           (promesa.core/handle
-                            (fn [res# err#]
-                              ;; (prn "result" res# err#)
-                              (cond
-                                (not (nil? err#))
-                                (promesa.core/reject! ~dsym err#)
-
-                                (and (map? res#) (= (:type res#) :promesa.core/recur))
-                                (do (~rsym (fn [] (~tsym (:args res#))))
-                                    nil)
-
-                                :else
-                                (promesa.core/resolve! ~dsym res#))))))]
-       (~rsym (fn [] (~tsym ~fvals)))
-       ~dsym)))
+  (c/let [binds (partition 2 2 bindings)
+          names (c/map first binds)
+          fvals (c/map second binds)
+          tsym  (gensym "loop-fn-")
+          res-s (gensym "res-")
+          err-s (gensym "err-")
+          rej-s (gensym "reject-fn-")
+          rsv-s (gensym "resolve-fn-")]
+    `(create
+      (fn [~rsv-s ~rej-s]
+        (c/let [~tsym (fn ~tsym [~@names]
+                        (c/->> (promesa.core/let [~@(c/mapcat (fn [nsym] [nsym nsym]) names)] ~@body)
+                               (promesa.core/fnly
+                                (fn [~res-s ~err-s]
+                                  ;; (prn "result" res# err#)
+                                  (if (some? ~err-s)
+                                    (~rej-s ~err-s)
+                                    (if (recur? ~res-s)
+                                      (do
+                                        (promesa.exec/run!
+                                         (promesa.exec/wrap-bindings
+                                          ~(if (seq names)
+                                             `(fn [] (apply ~tsym (:args ~res-s)))
+                                           tsym)))
+                                      nil)
+                                      (~rsv-s ~res-s)))))))]
+          (promesa.exec/run!
+           (promesa.exec/wrap-bindings
+            ~(if (seq names)
+               `(fn [] (~tsym ~@fvals))
+               tsym))))))))
 
 (defmacro recur
   [& args]
@@ -683,7 +705,7 @@
   runs over it using `promesa.core/run!`"
   [[binding xs] & body]
   `(run! (fn [~binding]
-           (promesa.core/do ~@body))
+           (promesa.core/do* ~@body))
          ~xs))
 
 #?(:clj
