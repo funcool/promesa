@@ -4,9 +4,11 @@
 
 A promise library & concurrency toolkit for Clojure and ClojureScript.
 
-This library exposes a bunch of usefull syntactic abstractions that will considerably simplify to
-work with promises (in a very similar way as you will do it in JS with async/await) and many helpers
-from executors to concurrency patterns (bulkhead & CSP).
+This library exposes a bunch of usefull syntactic abstractions that
+will considerably simplify to work with promises (in a very similar
+way as you will do it in JS with async/await) and many helpers from
+executors to concurrency patterns (bulkhead & CSP). With 0 runtime
+external dependencies.
 
 Here you can look a detailed [documentation][1].
 
@@ -16,13 +18,13 @@ Here you can look a detailed [documentation][1].
 deps.edn:
 
 ```clojure
-funcool/promesa {:mvn/version "10.0.544"}
+funcool/promesa {:mvn/version "10.0.569"}
 ```
 
 Leiningen:
 
 ```clojure
-[funcool/promesa "10.0.544"]
+[funcool/promesa "10.0.569"]
 ```
 
 ## On the REPL
