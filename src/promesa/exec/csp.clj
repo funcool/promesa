@@ -278,12 +278,53 @@
        (when close?
          (pt/-close! ch))))))
 
-(defn mult
-  "Returns a multiplexer channel instance. It implements the
-  IWriteChannel protocol so it acts like a half duplex channel.
 
-  Channels containing copies of this multiplexer can be attached using
-  `tap!` and dettached with `untap!`.
+(defn mult*
+  "Create a multiplexer with an externally provided channel. From now,
+  you can use the external channel or the multiplexer instace to put
+  values in because multiplexer implements the IWriteChannel protocol.
+
+  Optionally accepts `close?` argument, that determines if the channel will
+  be closed when `close!` is called on multiplexer o not."
+  ([ch] (mult* ch false))
+  ([ch close?]
+   (let [state (atom {})
+         mx    (reify
+                 pt/IChannelMultiplexer
+                 (-tap! [_ ch close?]
+                   (swap! state assoc ch close?))
+                 (-untap! [_ ch]
+                   (swap! state dissoc ch))
+
+                 pt/ICloseable
+                 (-close! [_]
+                   (when close? (pt/-close! ch))
+                   (->> @state
+                        (filter (comp true? peek))
+                        (run! (comp pt/-close! key))))
+
+                 pt/IWriteChannel
+                 (-put! [_ val handler]
+                   (pt/-put! ch val handler)))]
+     (go-loop []
+       (if-let [v (<! ch)]
+         (do
+           (pu/wait-all! (for [ch (-> @state keys vec)]
+                           (->> (put! ch v)
+                                (p/fnly (fn [v _]
+                                          (when (nil? v)
+                                            (pt/-untap! mx ch)))))))
+           (recur))
+         (pt/-close! mx)))
+     mx)))
+
+(defn mult
+  "Creates an instance of multiplexer.
+
+  A multiplexer instance acts like a write-only channel what enables a
+  broadcast-like (instead of a queue-like) behavior. Channels
+  containing copies of this multiplexer can be attached using `tap!`
+  and dettached with `untap!`.
 
   Each item is forwarded to all attached channels in parallel and
   synchronously; use buffers to prevent slow taps from holding up the
@@ -295,44 +336,8 @@
   ([buf] (mult buf nil nil))
   ([buf xform] (mult buf xform nil))
   ([buf xform exh]
-   (let [state (atom {})
-         cdown (pu/count-down-latch 1)
-         ch    (chan buf xform exh)
-         mx    (reify
-                 pt/IChannelMultiplexer
-                 (-tap! [_ ch close?]
-                   (swap! state assoc ch close?))
-                 (-untap! [_ ch]
-                   (swap! state dissoc ch))
-
-                 pt/ICloseable
-                 (-close! [_]
-                   (pt/-close! ch)
-                   (->> @state
-                        (filter (comp true? peek))
-                        (run! (comp pt/-close! key))))
-
-                 pt/IWriteChannel
-                 (-put! [_ val handler]
-                   (pt/-put! ch val handler)))]
-
-     (go
-       (cdown)
-       (loop []
-         (when-let [v (<! ch)]
-           (pu/wait-all! (for [ch (-> @state keys vec)]
-                           (->> (put! ch v)
-                                (p/fnly (fn [v _]
-                                          (when (nil? v)
-                                            (pt/-untap! mx ch)))))))
-           (recur)))
-
-       (->> @state
-            (filter (comp true? peek))
-            (run! (comp pt/-close! key))))
-
-     (pt/-await cdown)
-     mx)))
+   (let [ch (chan buf xform exh)]
+     (mult* ch true))))
 
 (defn tap!
   "Copies the multiplexer source onto the provided channel."
