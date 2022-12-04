@@ -349,6 +349,29 @@
                  pt/IWriteChannel
                  (-put! [_ val handler]
                    (pt/-put! ch val handler)))]
+
+     ;; (p/loop []
+     ;;   (->> (take ch)
+     ;;        (p/mcat (fn [v]
+     ;;                  (if v
+     ;;                    (let [chs (-> @state keys vec)
+     ;;                          res (if (seq chs)
+     ;;                                (let [dff  (p/deferred)
+     ;;                                      cnt (atom (count chs))]
+     ;;                                  (doseq [ch chs]
+     ;;                                    (->> (put ch v)
+     ;;                                         (p/fnly (fn [v _]
+     ;;                                                   (when (nil? v) (pt/-untap! mx ch))
+     ;;                                                   (let [n (swap! cnt dec)]
+     ;;                                                     (when (zero? n)
+     ;;                                                       (p/resolve! dff nil)))))))
+     ;;                                  dff)
+     ;;                                (p/resolved nil))]
+     ;;                      (p/map (fn [_] (p/recur)) res))
+     ;;                    (p/resolved nil))))))
+     ;;
+     ;; mx)))
+
      (go-loop []
        (if-let [v (<! ch)]
          (do
