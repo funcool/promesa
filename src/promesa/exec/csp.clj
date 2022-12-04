@@ -285,12 +285,17 @@
   stop consuming the from channel if the to channel closes."
   ([from to] (pipe from to true))
   ([from to close?]
-   (go-loop []
-     (let [v (<! from)]
-       (if (nil? v)
-         (when close? (pt/-close! to))
-         (when (>! to v)
-           (recur)))))
+   (p/loop []
+     (->> (take from)
+          (p/mcat (fn [v]
+                    (if (nil? v)
+                      (do
+                        (when close? (pt/-close! to))
+                        (p/resolved nil))
+                      (->> (put to v)
+                           (p/map (fn [res]
+                                    (when res
+                                      (p/recur))))))))))
    to))
 
 (defn onto-chan!

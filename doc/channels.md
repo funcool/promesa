@@ -49,6 +49,9 @@ There are also some internal differences that you should know:
 - The promesa implementation takes a bit less grandular locking than
   core.async, but on the end it should not have any effect on the
   final performance or usability.
+- The `promesa.exec.csp/pipe` helper does not uses go-blocks, so it
+  can be safelly used with no-vthreads support because it will not
+  create additional platform threads.
 
 ## Getting Started
 
