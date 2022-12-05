@@ -1,6 +1,6 @@
 # Changelog #
 
-## Version 10.0.569
+## Version 10.0.570
 
 - Add `promesa.exec.csp/mult*` alternative multiplexer constructor
   more similar to the `clojure.core.async/mult` one

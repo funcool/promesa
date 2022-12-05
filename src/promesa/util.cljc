@@ -76,6 +76,7 @@
        (-lock! [_])
        (-unlock! [_]))))
 
+#?(:clj
 (defn count-down-latch
   [n]
   (let [cdown (CountDownLatch. (int n))]
@@ -90,8 +91,9 @@
       (invoke [_ _]
         (.countDown ^CountDownLatch cdown))
       (invoke [_ _ _]
-        (.countDown ^CountDownLatch cdown)))))
+        (.countDown ^CountDownLatch cdown))))))
 
+#?(:clj
 (defn wait-all!
   [promises]
   (let [total (count promises)]
@@ -99,4 +101,4 @@
       (let [cdown-fn (count-down-latch total)]
         (doseq [p promises]
           (pt/-finally p cdown-fn))
-        (pt/-await cdown-fn)))))
+        (pt/-await cdown-fn))))))
