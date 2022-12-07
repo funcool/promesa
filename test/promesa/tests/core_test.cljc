@@ -90,14 +90,14 @@
 (t/deftest promise-from-nil-value
   #?(:cljs
      (t/async done
-       (p/then (p/promise nil)
-               (fn [v]
-                 (t/is (= v nil))
-                 (done))))
+       (p/then' (p/promise nil)
+                (fn [v]
+                  (t/is (= v nil))
+                  (done))))
      :clj
-     @(p/then (p/promise nil)
-              (fn [v]
-                (t/is (= v nil))))))
+     @(p/then' (p/promise nil)
+               (fn [v]
+                 (t/is (= v nil))))))
 
 
 (t/deftest promise-from-factory
@@ -440,6 +440,19 @@
      :clj
      (let [p1 (promise-ok 100 2)
            p2 (p/chain p1 inc inc inc)]
+       (t/is (= @p2 5)))))
+
+(t/deftest chaining-using-chain'
+  #?(:cljs
+     (t/async done
+       (let [p1 (promise-ok 100 2)
+             p2 (p/chain' p1 inc inc inc)]
+         (p/then p2 (fn [v]
+                      (t/is (= v 5))
+                      (done)))))
+     :clj
+     (let [p1 (promise-ok 100 2)
+           p2 (p/chain' p1 inc inc inc)]
        (t/is (= @p2 5)))))
 
 (t/deftest promisify

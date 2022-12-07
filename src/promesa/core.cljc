@@ -147,8 +147,14 @@
    (pt/-bind (pt/-promise p) (comp pt/-promise f) executor)))
 
 (defn then'
-  {:deprecated "9.3"
-   :no-doc true}
+  "Chains a function `f` to be executed when the promise `p` is
+  successfully resolved. Returns a promise that will be resolved with
+  the return value of calling `f` with value as single argument; `f`
+  should return a plain value, no automatic unwrapping will be
+  performed.
+
+  The computation will be executed in the completion thread by
+  default; you also can provide a custom executor."
   ([p f]
    (pt/-map (pt/-promise p) f))
   ([p f executor]
@@ -214,12 +220,13 @@
   "Chain variable number of functions to be executed serially using
   `then`."
   ([p f] (then p f))
-  ([p f & fs] (reduce #(then %1 %2) p (cons f fs))))
+  ([p f & fs] (reduce then p (cons f fs))))
 
 (defn chain'
-  {:deprecated "9.3" :no-doc true}
+  "Chain variable number of functions to be executed serially using
+  `map`."
   ([p f] (then' p f))
-  ([p f & fs] (reduce pt/-map (pt/-promise p) (cons f fs))))
+  ([p f & fs] (reduce #(map %2 %1) (pt/-promise p) (cons f fs))))
 
 (defn handle
   "Chains a function `f` to be executed when the promise `p` is completed
@@ -361,6 +368,23 @@
             (c/->> (CompletableFuture/allOf (into-array CompletableFuture promises))
                    (map (fn [_]
                           (c/mapv pt/-extract promises)))))))
+
+(defn wait-all
+  "Given a variable number of promises, returns a promise which resolves
+  to `nil` when all provided promises complete (rejected or resolved).
+
+  **EXPERIMENTAL**"
+  [& promises]
+  (c/let [state (atom (into #{} promises))
+          d     (deferred)]
+    (c/run! (fn [p]
+              (fnly (fn [_ _]
+                      (when-not (seq (swap! state disj p))
+                        (pt/-resolve! d nil)))
+                    p))
+            promises)
+    d))
+
 (defn race
   [promises]
   #?(:cljs (.race impl/*default-promise* (into-array (c/map pt/-promise promises)))

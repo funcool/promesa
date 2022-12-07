@@ -1,5 +1,11 @@
 # Changelog #
 
+## Version 10.0.571
+
+- Revert deprecation of `then'` and `chain'`
+- Add **experimental** `promesa.core/wait-all` helper
+
+
 ## Version 10.0.570
 
 - Add `promesa.exec.csp/mult*` alternative multiplexer constructor

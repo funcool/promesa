@@ -382,6 +382,7 @@
                                             (pt/-untap! mx ch)))))))
            (recur))
          (pt/-close! mx)))
+
      mx)))
 
 (defn mult
