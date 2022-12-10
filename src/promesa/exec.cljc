@@ -37,9 +37,13 @@
 
 ;; --- Globals & Defaults (with CLJS Impl)
 
-(declare #?(:clj scheduled-executor :cljs ->ScheduledExecutor))
-(declare #?(:clj cached-executor :cljs ->MicrotaskExecutor))
-(declare ->SameThreadExecutor)
+(declare scheduled-executor)
+(declare current-thread-executor)
+(declare ->ScheduledTask)
+
+#?(:clj  (declare cached-executor))
+#?(:cljs (declare ->MicrotaskExecutor))
+#?(:cljs (declare microtask-executor))
 
 (def ^:dynamic *default-scheduler* nil)
 (def ^:dynamic *default-executor* nil)
@@ -54,49 +58,52 @@
                    false)))
      :cljs false))
 
-(def noop (constantly nil))
+(def ^{:no-doc true} noop (constantly nil))
 
-(defn- get-available-processors
-  []
-  #?(:clj (.availableProcessors (Runtime/getRuntime))
-     :cljs 1))
+#?(:clj
+   (defn- get-available-processors
+     []
+     (.availableProcessors (Runtime/getRuntime))))
 
 (defonce
-  ^{:no-doc true}
+  ^{:doc "Default scheduled executor instance."}
   default-scheduler
-  (delay #?(:clj (scheduled-executor :parallelism (get-available-processors))
-            :cljs (->ScheduledExecutor))))
+  (delay
+    #?(:clj  (scheduled-executor :parallelism (get-available-processors))
+       :cljs (scheduled-executor))))
 
 (defonce
-  ^{:no-doc true}
+  ^{:doc "Default executor instance, ForkJoinPool/commonPool in JVM, MicrotaskExecutor on JS."}
   default-executor
-  (delay #?(:clj (ForkJoinPool/commonPool)
-            :cljs (->MicrotaskExecutor))))
+  (delay
+    #?(:clj  (ForkJoinPool/commonPool)
+       :cljs (microtask-executor))))
 
-(defonce
-  ^{:doc "A global thread executor that uses the same thread to run the code."}
-  same-thread-executor
-  (delay (->SameThreadExecutor)))
+;; Executor that executes the task in the calling thread
+(def ^{:doc "Default Executor instance that runs the task in the same thread."}
+  default-current-thread-executor
+  (delay (current-thread-executor)))
 
 (defonce
   ^{:doc "A global, virtual thread per task executor service."
     :no-doc true}
-  vthread-executor
+  default-vthread-executor
   #?(:clj  (delay (when vthreads-supported?
                     (eval '(java.util.concurrent.Executors/newVirtualThreadPerTaskExecutor))))
-     :cljs (delay (->MicrotaskExecutor))))
+     :cljs default-executor))
 
 (defonce
   ^{:doc "A global, thread per task executor service."
     :no-doc true}
-  thread-executor
+  default-thread-executor
   #?(:clj  (delay (cached-executor))
-     :cljs (delay (->MicrotaskExecutor))))
+     :cljs default-executor))
 
 (defn executor?
-  "Returns true if `o` is an instane of Executor."
+  "Returns true if `o` is an instane of Executor or satisfies IExecutor protocol."
   [o]
-  #?(:clj (instance? Executor o)
+  #?(:clj  (or (instance? Executor o)
+               (satisfies? pt/IExecutor o))
      :cljs (satisfies? pt/IExecutor o)))
 
 #?(:clj
@@ -124,8 +131,9 @@
    (if (or (nil? executor) (= :default executor))
      @default-executor
      (case executor
-       :thread  (pu/maybe-deref thread-executor)
-       :vthread (pu/maybe-deref vthread-executor)
+       :thread         (pu/maybe-deref default-thread-executor)
+       :vthread        (pu/maybe-deref default-vthread-executor)
+       :current-thread (pu/maybe-deref default-current-thread-executor)
        (pu/maybe-deref executor)))))
 
 (defn resolve-scheduler
@@ -378,17 +386,81 @@
                        (thread-factory :name "promesa/single/%s"))]
        (Executors/newSingleThreadExecutor factory))))
 
-#?(:clj
-   (defn scheduled-executor
-     "A scheduled thread pool constructor."
-     [& {:keys [parallelism factory] :or {parallelism 1}}]
+(defn current-thread-executor
+  "Creates an executor instance that run tasks in the same thread."
+  []
+  #?(:clj
+     (reify
+       Executor
+       (^void execute [_ ^Runnable f] (.run f))
+
+       pt/IExecutor
+       (-run! [this f]
+         (-> (pt/-promise nil)
+             (pt/-finally (fn [_ _]
+                            (f)))))
+       (-submit! [this f]
+         (-> (pt/-promise nil)
+             (pt/-map (fn [_] (f))))))
+
+     :cljs
+     (reify
+       pt/IExecutor
+       (-run! [this f]
+         (try
+           (pt/-promise (comp noop f))
+           (catch :default cause
+             (pt/-promise cause))))
+
+       (-submit! [this f]
+         (try
+           (pt/-promise (f))
+           (catch :default cause
+             (pt/-promise cause)))))))
+
+#?(:cljs
+   (defn microtask-executor
+     "An IExecutor that schedules tasks to be executed in the MicrotasksQueue."
+     []
+     (reify
+       pt/IExecutor
+       (-run! [this f]
+         (-> (pt/-promise nil)
+             (pt/-map (fn [_]
+                        (try (f) (catch :default _ nil))))
+             (pt/-map noop)))
+
+       (-submit! [this f]
+         (-> (pt/-promise nil)
+             (pt/-map (fn [_] (f))))))))
+
+
+(defn scheduled-executor
+  "A scheduled thread pool constructor. A ScheduledExecutor (IScheduler
+  in CLJS) instance allows execute asynchronous tasks some time later."
+  [& {:keys [parallelism factory] :or {parallelism 1}}]
+  #?(:clj
      (let [parallelism (or parallelism (get-available-processors))
            factory     (or (some-> factory resolve-thread-factory)
                            (thread-factory :name "promesa/scheduled/%s"))]
 
 
        (doto (java.util.concurrent.ScheduledThreadPoolExecutor. (int parallelism) ^ThreadFactory factory)
-         (.setRemoveOnCancelPolicy true)))))
+         (.setRemoveOnCancelPolicy true)))
+
+     :cljs
+     (reify pt/IScheduler
+       (-schedule! [_ ms f]
+         (let [done (volatile! false)
+               task #(try
+                       (f)
+                       (finally
+                         (vreset! done true)))
+               tid (js/setTimeout task ms)
+               cancel #(js/clearTimeout tid)]
+           (->ScheduledTask #js {:done done
+                                 :cancelled false
+                                 :cancel-fn cancel}))))))
 
 #?(:clj
    (when vthreads-supported?
@@ -442,34 +514,6 @@
      (-submit! [this f]
        (CompletableFuture/supplyAsync ^Supplier (pu/->SupplierWrapper f) ^Executor this))))
 
-;; Default executor that executes cljs/js tasks in the microtask
-;; queue.
-#?(:cljs
-   (deftype MicrotaskExecutor []
-     pt/IExecutor
-     (-run! [this f]
-       (-> (pt/-submit! this f)
-           (pt/-map noop)))
-
-     (-submit! [this f]
-       (-> (pt/-promise nil)
-           (pt/-map (fn [_] (f)))
-           (pt/-catch (fn [e] (js/setTimeout #(throw e)) nil))))))
-
-;; Executor that executes the task in the calling thread
-#?(:clj
-   (deftype SameThreadExecutor []
-     Executor
-     (^void execute [_ ^Runnable f]
-       (.run f)))
-
-   :cljs
-   (deftype SameThreadExecutor []
-     pt/IExecutor
-     (-run! [this f]
-       (pt/-promise (comp noop f)))
-     (-submit! [this f]
-       (pt/-promise (f)))))
 
 ;; --- Scheduler & ScheduledTask
 
@@ -526,21 +570,6 @@
        (let [ms  (if (instance? Duration ms) (inst-ms ms) ms)
              fut (.schedule this ^Callable f (long ms) TimeUnit/MILLISECONDS)]
          (ScheduledTask. fut)))))
-
-#?(:cljs
-   (deftype ScheduledExecutor []
-     pt/IScheduler
-     (-schedule! [_ ms f]
-       (let [done (volatile! false)
-             task #(try
-                     (f)
-                     (finally
-                       (vreset! done true)))
-             tid (js/setTimeout task ms)
-             cancel #(js/clearTimeout tid)]
-         (->ScheduledTask #js {:done done
-                               :cancelled false
-                               :cancel-fn cancel})))))
 
 (defmacro with-dispatch
   "Helper macro for dispatch execution of the body to an executor

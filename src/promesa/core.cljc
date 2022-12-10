@@ -434,7 +434,7 @@
 
 (defn run!
   "A promise aware run! function. Executed in terms of `then` rules."
-  ([f coll] (run! f coll exec/same-thread-executor))
+  ([f coll] (run! f coll exec/default-current-thread-executor))
   ([f coll executor] (reduce #(then %1 (fn [_] (f %2))) (promise nil executor) coll)))
 
 ;; Cancellation
