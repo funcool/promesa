@@ -42,7 +42,6 @@
 (declare ->ScheduledTask)
 
 #?(:clj  (declare cached-executor))
-#?(:cljs (declare ->MicrotaskExecutor))
 #?(:cljs (declare microtask-executor))
 
 (def ^:dynamic *default-scheduler* nil)
