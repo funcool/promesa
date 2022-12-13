@@ -563,6 +563,7 @@
   "A parallel let; executes all the bindings in parallel and when all
   bindings are resolved, executes the body."
   [bindings & body]
+  (assert (even? (count bindings)) (str "Uneven binding vector: " bindings))
   `(pt/-bind
     (pt/-promise nil)
     (fn [_#]

@@ -626,9 +626,9 @@
 
 #?(:clj
    (t/deftest let-syntax-test
-     (t/is (thrown? AssertionError
+     (t/is (thrown? clojure.lang.Compiler$CompilerException
                     (eval `(p/let* [uneven#]))))
-     (t/is (thrown? AssertionError
+     (t/is (thrown? clojure.lang.Compiler$CompilerException
                     (eval `(p/let [uneven#]))))
-     (t/is (thrown? AssertionError
+     (t/is (thrown? clojure.lang.Compiler$CompilerException
                     (eval `(p/plet [uneven#]))))))
