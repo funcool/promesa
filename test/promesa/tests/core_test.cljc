@@ -623,3 +623,12 @@
                 (t/is (= xs @state)))]
     #?(:cljs (t/async done (p/do (test) (done)))
        :clj @(test))))
+
+#?(:clj
+   (t/deftest let-syntax-test
+     (t/is (thrown? AssertionError
+                    (eval `(p/let* [uneven#]))))
+     (t/is (thrown? AssertionError
+                    (eval `(p/let [uneven#]))))
+     (t/is (thrown? AssertionError
+                    (eval `(p/plet [uneven#]))))))
