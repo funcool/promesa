@@ -527,6 +527,7 @@
   "An exception unsafe let-like macro. Supposes that we are already
   wrapped in promise context so avoids defensive wrapping."
   [bindings & body]
+  (assert (even? (count bindings)) (str "Uneven binding vector: " bindings))
   (c/->> (reverse (partition 2 bindings))
          (reduce (fn [acc [l r]]
                    `(pt/-bind (pt/-promise ~r) (fn [~l] ~acc)))
@@ -546,6 +547,7 @@
   "A parallel let; executes all the bindings in parallel and when all
   bindings are resolved, executes the body."
   [bindings & body]
+  (assert (even? (count bindings)) (str "Uneven binding vector: " bindings))
   `(pt/-bind
     (pt/-promise nil)
     (fn [_#]

@@ -626,3 +626,12 @@
                 (t/is (= xs @state)))]
     #?(:cljs (t/async done (p/do (test) (done)))
        :clj @(test))))
+
+#?(:clj
+   (t/deftest let-syntax-test
+     (t/is (thrown? clojure.lang.Compiler$CompilerException
+                    (eval `(p/let* [uneven#]))))
+     (t/is (thrown? clojure.lang.Compiler$CompilerException
+                    (eval `(p/let [uneven#]))))
+     (t/is (thrown? clojure.lang.Compiler$CompilerException
+                    (eval `(p/plet [uneven#]))))))
