@@ -1,9 +1,10 @@
 (ns promesa.tests.core-test
-  (:require #?(:cljs [cljs.test :as t]
-               :clj [clojure.test :as t])
-            [promesa.tests.util :refer [promise-ok promise-ko normalize-to-value]]
-            [promesa.core :as p :include-macros true]
-            [promesa.exec :as e])
+  (:require
+   [clojure.test :as t]
+   [promesa.tests.util :refer [promise-ok promise-ko normalize-to-value]]
+   [promesa.core :as p :include-macros true]
+   [promesa.protocols :as pt]
+   [promesa.exec :as e])
   #?(:clj
      (:import java.util.concurrent.TimeoutException)))
 
@@ -13,6 +14,8 @@
   (t/is (string? (pr-str (p/promise nil))))
   (t/is (false? (p/promise? {})))
   (t/is (false? (p/promise? nil)))
+
+  (t/is (p/promise? (pt/-promise nil)))
 
   #?(:cljs (t/is (false? (p/promise? #js {})))
      :clj  (t/is (false? (p/promise? (Object.)))))
