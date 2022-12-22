@@ -303,6 +303,7 @@
             (recur (rest items))))
 
         (pt/-abort! this)
+        (some-> buf pt/-close!)
 
         (finally
           (pt/-unlock! this))))))

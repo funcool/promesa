@@ -32,7 +32,11 @@
             (mlist/add-first! buf o)
             true)))
       (-size [_]
-        (mlist/size buf)))))
+        (mlist/size buf))
+
+      pt/ICloseable
+      (-closed? [this] nil)
+      (-close! [this] nil))))
 
 (defn expanding
   "Fixed but with the ability to expand.
@@ -52,7 +56,11 @@
         (mlist/add-first! buf o)
         true)
       (-size [_]
-        (mlist/size buf)))))
+        (mlist/size buf))
+
+      pt/ICloseable
+      (-closed? [this] nil)
+      (-close! [this] nil))))
 
 (defn dropping
   [n]
@@ -67,9 +75,15 @@
           (mlist/add-first! buf o))
         true)
       (-size [_]
-        (mlist/size buf)))))
+        (mlist/size buf))
+
+      pt/ICloseable
+      (-closed? [this] nil)
+      (-close! [this] nil))))
 
 (defn sliding
+  "A buffer that works as sliding window, if max capacity is reached,
+  the oldest items will start to discard."
   [n]
   (let [buf (mlist/create)]
     (reify
@@ -83,4 +97,42 @@
         (mlist/add-first! buf o)
         true)
       (-size [_]
-        (mlist/size buf)))))
+        (mlist/size buf))
+
+      pt/ICloseable
+      (-closed? [this] nil)
+      (-close! [this] nil))))
+
+(def no-val
+  #?(:clj (Object.)
+     :cljs (js/Symbol "sem")))
+
+(deftype OnceBuffer [^:unsynchronized-mutable ^Object value
+                     ^:unsynchronized-mutable ^Boolean closed]
+  pt/IBuffer
+  (-full? [_] false)
+  (-poll! [this]
+    (when-not closed
+      value))
+
+  (-offer! [this o]
+    (when (identical? value no-val)
+      (set! value o)
+      true))
+
+  (-size [_]
+    (if (or (true? closed)
+            (identical? value no-val))
+      0
+      1))
+
+  pt/ICloseable
+  (-closed? [this] closed)
+  (-close! [this] (set! closed true)))
+
+(defn once
+  "Creates a promise like buffer that holds a single value and only
+  the first one. Once filled, the only option for it to be emptied is
+  closing."
+  []
+  (OnceBuffer. no-val false))

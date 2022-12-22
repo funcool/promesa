@@ -261,6 +261,11 @@
   [n]
   (buffers/fixed n))
 
+(defn once-buffer
+  "Create a once buffer instance."
+  []
+  (buffers/once))
+
 (defn expanding-buffer
   "Create a fixed size (but expanding) buffer instance.
 
