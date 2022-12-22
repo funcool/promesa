@@ -12,6 +12,11 @@
 #?(:clj (set! *warn-on-reflection* true))
 
 (defn fixed
+  "Fixed size buffer, does not expands it size under any circumstance.
+
+  Take care when used with transducers that can insert multiple
+  elements at once (like mapcat), if buffer is full, it will discard
+  all other values."
   [n]
   (let [buf (mlist/create)]
     (reify
@@ -26,6 +31,26 @@
           (do
             (mlist/add-first! buf o)
             true)))
+      (-size [_]
+        (mlist/size buf)))))
+
+(defn expanding
+  "Fixed but with the ability to expand.
+
+  Usefull when used with mapcat-like transducers that can insert
+  multiple items in a single operation and can temporary exceed the
+  predetermined size."
+  [n]
+  (let [buf (mlist/create)]
+    (reify
+      pt/IBuffer
+      (-full? [_]
+        (>= (mlist/size buf) n))
+      (-poll! [this]
+        (mlist/remove-last! buf))
+      (-offer! [this o]
+        (mlist/add-first! buf o)
+        true)
       (-size [_]
         (mlist/size buf)))))
 

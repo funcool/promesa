@@ -1,5 +1,13 @@
 # Changelog #
 
+## Version 10.0.575
+
+- Add `expanding-buffer` as more flexible alternative to `fixed-buffer`.
+- Use `expanding-buffer` by default on channels initialized with
+  buffer size.
+- Fix unexpected exception when channel is used with mapcat
+  transducer.
+
 ## Version 10.0.571
 
 - Revert deprecation of `then'` and `chain'`

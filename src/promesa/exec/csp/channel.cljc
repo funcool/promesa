@@ -326,7 +326,8 @@
   ([b] b)
   ([b itm]
    (assert (not (nil? itm)))
-   (pt/-offer! b itm)))
+   (pt/-offer! b itm)
+   b))
 
 (defn channel?
   "Returns true if `o` is a channel instance or implements

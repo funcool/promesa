@@ -25,6 +25,25 @@
     (t/is (= 0 (pt/-size buf)))
     ))
 
+(t/deftest fixed-buffer
+  (let [buf (buffers/expanding 2)]
+    (t/is (nil? (pt/-poll! buf)))
+    (t/is (false? (pt/-full? buf)))
+    (t/is (= 0 (pt/-size buf)))
+
+    (t/is (true?  (pt/-offer! buf :a)))
+    (t/is (true?  (pt/-offer! buf :b)))
+    (t/is (true? (pt/-offer! buf :c)))
+
+    (t/is (true? (pt/-full? buf)))
+    (t/is (= :a (pt/-poll! buf)))
+    (t/is (= :b (pt/-poll! buf)))
+    (t/is (= :c (pt/-poll! buf)))
+
+    (t/is (false? (pt/-full? buf)))
+    (t/is (= 0 (pt/-size buf)))
+    ))
+
 (t/deftest dropping-buffer
   (let [buf (buffers/dropping 2)]
     (t/is (nil? (pt/-poll! buf)))

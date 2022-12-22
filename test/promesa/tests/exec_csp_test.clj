@@ -22,6 +22,21 @@
     (t/is (sp/chan? c6))
     ))
 
+(t/deftest chan-with-mapcat-transducer-1
+  (let [ch (sp/chan 2 (mapcat identity))]
+    (t/is (true? (sp/offer! ch [1 2 3])))
+    (t/is (= 1 (sp/poll! ch)))
+    (t/is (= 2 (sp/poll! ch)))
+    (t/is (= 3 (sp/poll! ch)))
+    (t/is (= nil (sp/poll! ch)))))
+
+(t/deftest chan-with-mapcat-transducer-2
+  (let [ch (sp/chan (sp/fixed-buffer 2) (mapcat identity))]
+    (t/is (true? (sp/offer! ch [1 2 3])))
+    (t/is (= 1 (sp/poll! ch)))
+    (t/is (= 2 (sp/poll! ch)))
+    (t/is (= nil (sp/poll! ch)))))
+
 (t/deftest non-blocking-ops-buffered-chan
   (let [ch (sp/chan 3)]
     (t/is (true? (sp/offer! ch :a)))

@@ -68,13 +68,14 @@
 
 (defn chan
   "Creates a new channel instance, it optionally accepts buffer,
-  transducer and error handler."
+  transducer and error handler. If buffer is an integer, it will be
+  used as initial capacity for the expanding buffer."
   ([] (chan nil nil nil))
   ([buf] (chan buf nil nil))
   ([buf xf] (chan buf xf nil))
   ([buf xf exh]
    (let [buf (if (number? buf)
-               (buffers/fixed buf)
+               (buffers/expanding buf)
                buf)]
      (channel/chan buf xf exh))))
 
@@ -259,6 +260,14 @@
   "Create a fixed size buffer instance."
   [n]
   (buffers/fixed n))
+
+(defn expanding-buffer
+  "Create a fixed size (but expanding) buffer instance.
+
+  This buffer is used by default if you pass an integer as buffer on
+  channel constructor."
+  [n]
+  (buffers/expanding n))
 
 (defn offer!
   "Puts a val into channel if it's possible to do so immediately.
