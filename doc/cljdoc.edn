@@ -1,5 +1,5 @@
 {:cljdoc.doc/tree [["Promises"
-                    {:file "doc/user-guide.md"}]
+                    {:file "doc/promises.md"}]
                    ["Scheduling & Executors"
                     {:file "doc/executors.md"}]
                    ["Channels (CSP pattern)"
