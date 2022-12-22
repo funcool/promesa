@@ -1,2 +1,9 @@
-{:cljdoc.doc/tree [["User Guide" {:file "doc/user-guide.md"}]
+{:cljdoc.doc/tree [["Promises"
+                    {:file "doc/user-guide.md"}]
+                   ["Scheduling & Executors"
+                    {:file "doc/executors.md"}]
+                   ["Channels (CSP pattern)"
+                    {:file "doc/channels.md"}]
+                   ["Bulkhead (concurrency limiter)"
+                    {:file "doc/bulkhead.md"}]
                    ["Changelog" {:file "CHANGELOG.md"}]]}
