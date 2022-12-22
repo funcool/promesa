@@ -37,6 +37,17 @@
     (t/is (= 2 (sp/poll! ch)))
     (t/is (= nil (sp/poll! ch)))))
 
+
+(t/deftest chan-with-terminating-transducer
+  (let [ch (sp/chan 5 (take 2))]
+    (t/is (true? (sp/offer! ch 1)))
+    (t/is (true? (sp/offer! ch 2)))
+    (t/is (false? (sp/offer! ch 3)))
+    (t/is (sp/closed? ch))
+    (t/is (= 1 (sp/poll! ch)))
+    (t/is (= 2 (sp/poll! ch)))
+    (t/is (= nil (sp/poll! ch)))))
+
 (t/deftest non-blocking-ops-buffered-chan
   (let [ch (sp/chan 3)]
     (t/is (true? (sp/offer! ch :a)))

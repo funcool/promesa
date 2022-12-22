@@ -215,13 +215,6 @@
                  result))
         (vreset! puts result))))
 
-  (-abort! [_]
-    (loop [items (seq @puts)]
-      (when-let [[putter] (first items)]
-        (when-let [put-fn (commit! putter)]
-          (px/run! *executor* (partial put-fn false)))
-        (recur (rest items)))))
-
   pt/IWriteChannel
   (-put! [this val handler]
     (when (nil? val)
@@ -240,7 +233,7 @@
             (when (commit-and-run! handler true)
               (let [done?     (reduced? (add-fn buf val))
                     takes-fns (lookup-pending-takes @takes buf)]
-                (when done? (pt/-abort! this))
+                (when done? (pt/-close! this))
                 (run! (partial px/run! *executor*) takes-fns)
                 nil)))
 
@@ -269,7 +262,7 @@
             (let [take-fn     (when-let [take-fn (commit! handler)]
                                 (partial take-fn (pt/-poll! buf)))
                   [done? fns] (lookup-pending-puts @puts add-fn buf)]
-              (when done? (pt/-abort! this))
+              (when done? (pt/-close! this))
               (run! #(px/run! *executor* (fn [] (% true))) fns)
               (when take-fn (take-fn))
               nil)
@@ -302,10 +295,14 @@
               (px/run! *executor* (partial take-fn (some-> buf pt/-poll!))))
             (recur (rest items))))
 
-        (pt/-abort! this)
-        (some-> buf pt/-close!)
+        (loop [items (seq @puts)]
+          (when-let [[putter] (first items)]
+            (when-let [put-fn (commit! putter)]
+              (px/run! *executor* (partial put-fn false)))
+            (recur (rest items))))
 
         (finally
+          (some-> buf pt/-close!)
           (pt/-unlock! this))))))
 
 (defn- ex-handler

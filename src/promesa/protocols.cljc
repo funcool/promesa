@@ -73,8 +73,7 @@
   (-put! [_ val handler]))
 
 (defprotocol IChannelInternal
-  (^:no-doc -cleanup! [_])
-  (^:no-doc -abort! [_]))
+  (^:no-doc -cleanup! [_]))
 
 (defprotocol IChannelMultiplexer
   (^:no-doc -tap! [_ ch close?])
