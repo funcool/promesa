@@ -32,7 +32,7 @@ The main highlights and differences with [core.async][3] are:
   macro, mainly thanks to the JDK19 with preview enabled Virtual
   Threads.
 - **No callbacks**, functions returns promises or blocks; you can use
-  the promise composition API or thrad blocking API, whatever you
+  the promise composition API or thread blocking API, whatever you
   wants.
 - **No take/put limits**; you can attach more than 1024 pending tasks
   to a channel.
