@@ -1,6 +1,6 @@
 # Changelog #
 
-## Version 10.0.xxx
+## Version 10.0.581
 
 - Add `once-buffer` (analogous to core.async `promise-buffer`).
 - Fix incorrect handling of terminating transducers on channels.
