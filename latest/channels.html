@@ -9,7 +9,7 @@
 <p>The main highlights and differences with <a href="https://github.com/clojure/core.async">core.async</a> are:</p>
 <ul>
 <li><strong>There are no macro transformations</strong>, the <code>go</code> macro is a convenient alias for <code>p/vthread</code> (or <code>p/thread</code> when vthreads are not available); there are not limitation on using blocking calls inside <code>go</code> macro neither many other inconveniences of core.async go macro, mainly thanks to the JDK19 with preview enabled Virtual Threads.</li>
-<li><strong>No callbacks</strong>, functions returns promises or blocks; you can use the promise composition API or thrad blocking API, whatever you wants.</li>
+<li><strong>No callbacks</strong>, functions returns promises or blocks; you can use the promise composition API or thread blocking API, whatever you wants.</li>
 <li><strong>No take/put limits</strong>; you can attach more than 1024 pending tasks to a channel.</li>
 <li><strong>Simplier mental model</strong>, there are no differences between parking and blocking operations.</li>
 <li><strong>Analogous performance</strong>; in my own stress tests it has the same performance as core.async.</li>
