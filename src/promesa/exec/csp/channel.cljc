@@ -15,7 +15,7 @@
 #?(:clj (set! *warn-on-reflection* true))
 
 (def ^{:dynamic true :no-doc true} *executor*
-  (if px/vthreads-supported? :vthread :thread))
+  (if px/virtual-threads-available? :vthread :thread))
 
 (defn fn->handler
   {:no-doc true}

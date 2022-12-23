@@ -31,7 +31,7 @@
                  (p/thread (+ *my-dyn-var* 1)))]
     (t/is (= 11 @result))))
 
-(when px/vthreads-supported?
+(when px/virtual-threads-available?
   (t/deftest check-dynamic-vars-vthread
     (let [result (binding [*my-dyn-var* 10]
                    (p/vthread (+ *my-dyn-var* 1)))]

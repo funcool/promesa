@@ -47,15 +47,21 @@
 (def ^:dynamic *default-scheduler* nil)
 (def ^:dynamic *default-executor* nil)
 
-(def vthreads-supported?
-  "A var that indicates if virtual threads are supported or not in the current runtime."
-  #?(:clj (and (pu/has-method? Thread "startVirtualThread")
+(def virtual-threads-available?
+  "Var that indicates the availability of virtual threads."
+  #?(:clj (and (pu/has-method? Thread "ofVirtual")
                (try
-                 (eval '(Thread/startVirtualThread (constantly nil)))
+                 (eval '(Thread/ofVirtual))
                  true
                  (catch Throwable cause
                    false)))
      :cljs false))
+
+;; DEPRECATED
+(def ^{:deprecated true
+       :doc "backward compatibility alias for `virtual-threads-available?`"}
+  vthread-supported?
+  virtual-threads-available?)
 
 (def ^{:no-doc true} noop (constantly nil))
 
@@ -87,7 +93,7 @@
   ^{:doc "A global, virtual thread per task executor service."
     :no-doc true}
   default-vthread-executor
-  #?(:clj  (delay (when vthreads-supported?
+  #?(:clj  (delay (when virtual-threads-available?
                     (eval '(java.util.concurrent.Executors/newVirtualThreadPerTaskExecutor))))
      :cljs default-executor))
 
@@ -462,7 +468,7 @@
                                  :cancel-fn cancel}))))))
 
 #?(:clj
-   (when vthreads-supported?
+   (when virtual-threads-available?
      (eval
       '(defn thread-per-task-executor
          [& {:keys [factory]}]
@@ -471,7 +477,7 @@
            (Executors/newThreadPerTaskExecutor ^ThreadFactory factory))))))
 
 #?(:clj
-   (when vthreads-supported?
+   (when virtual-threads-available?
      (eval
       '(defn vthread-per-task-executor
          []
@@ -631,19 +637,43 @@
      (pmap #(apply f %) (step-fn (cons coll colls)))))))
 
 #?(:clj
-   (defmacro thread
-     "A low-level, not-pooled thread constructor."
-     [opts & body]
-     (let [[opts body] (if (map? opts)
-                         [opts body]
-                         [nil (cons opts body)])]
-       `(let [opts# ~opts
-              thr#  (Thread. (^:once fn* [] ~@body))]
-          (.setName thr# (str (or (:name opts#) (format "promesa/unpooled-thread/%s" (get-next)))))
-          (.setDaemon thr# (boolean (:daemon opts# true)))
-          (.setPriority thr# (int (:priority opts# Thread/NORM_PRIORITY)))
-          (.start thr#)
-          thr#))))
+(defmacro thread
+  "A low-level, not-pooled thread constructor, it accepts an optional
+  map as first argument and the body. The options map is interepreted
+  as options if a literal map is provided. The available options are:
+  `:name`, `:priority`, `:daemon` and `:virtual`. The `:virtual`
+  option is ignored if you are using a JVM that has no support for
+  Virtual Threads."
+  [opts & body]
+  (let [[opts body] (if (map? opts)
+                      [opts body]
+                      [nil (cons opts body)])
+        tname (or (:name opts)
+                  (format "promesa/unpooled-thread/%s" (get-next)))
+        tprio (:priority opts Thread/NORM_PRIORITY)
+        tdaem (:daemon opts true)
+        tvirt (:virtual opts false)
+        thr-s (-> (gensym "thread-")
+                  (vary-meta assoc :type `Thread))
+        run-s (-> (gensym "runnable-")
+                  (vary-meta assoc :type `Runnable))]
+    `(let [~run-s (^:once fn* [] ~@body)
+           ~thr-s ~(if virtual-threads-available?
+                     `(if ~tvirt
+                        (.. (Thread/ofVirtual)
+                            (name ~tname)
+                            (unstarted ~run-s))
+                        (.. (Thread/ofPlatform)
+                            (name ~tname)
+                            (priority (int ~tprio))
+                            (daemon (boolean ~tdaem))
+                            (unstarted ~run-s)))
+                     `(doto (Thread. ~run-s)
+                        (.setName ~tname)
+                        (.setPriority (int ~tprio))
+                        (.setDaemon (boolean ~tdaem))))]
+       (.start ~thr-s)
+       ~thr-s))))
 
 #?(:clj
 (defn current-thread

@@ -1,10 +1,16 @@
 # Changelog #
 
+## Version 10.0.xxx
+
+- Enable creation of virtual threads on `promesa.exec/thread`
+  low-level macro.
+- Change internal vars naming for checking if the Virtual Threads
+  ara available.
+
 ## Version 10.0.582
 
 - Add `once-buffer` (analogous to core.async `promise-buffer`).
 - Fix incorrect handling of terminating transducers on channels.
-
 
 ## Version 10.0.575
 
