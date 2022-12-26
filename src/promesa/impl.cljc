@@ -203,7 +203,7 @@
 #?(:clj
    (extend-protocol pt/IAwaitable
      Thread
-     (-await
+     (-await!
        ([it] (.join ^Thread it))
        ([it duration]
         (if (instance? Duration duration)
@@ -211,7 +211,7 @@
           (.join ^Thread it (int duration)))))
 
      CountDownLatch
-     (-await
+     (-await!
        ([it]
         (.await ^CountDownLatch it))
        ([it duration]
@@ -220,18 +220,18 @@
           (.await ^CountDownLatch it (long duration) TimeUnit/MILLISECONDS))))
 
      CompletableFuture
-     (-await
+     (-await!
        ([it] (.get ^CompletableFuture it))
        ([it duration]
         (let [ms (if (instance? Duration duration) (inst-ms duration) duration)]
           (.get ^CompletableFuture it (int ms) TimeUnit/MILLISECONDS))))
 
      CompletionStage
-     (-await
+     (-await!
        ([it]
-        (pt/-await (.toCompletableFuture ^CompletionStage it)))
+        (pt/-await! (.toCompletableFuture ^CompletionStage it)))
        ([it duration]
-        (pt/-await (.toCompletableFuture ^CompletionStage it) duration)))))
+        (pt/-await! (.toCompletableFuture ^CompletionStage it) duration)))))
 
 ;; --- Promise Factory
 

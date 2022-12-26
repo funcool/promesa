@@ -96,4 +96,4 @@
 
 #?(:clj
    (defprotocol IAwaitable
-     (-await [_] [_ duration] "block current thread await termination")))
+     (-await! [_] [_ duration] "block current thread await termination")))

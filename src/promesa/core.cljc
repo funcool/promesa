@@ -723,10 +723,10 @@
 
   The return value is implementation specific."
   ([resource]
-   (pt/-await resource))
+   (pt/-await! resource))
   ([resource duration]
    (try
-     (pt/-await resource duration)
+     (pt/-await! resource duration)
      (catch TimeoutException _
        nil)))))
 
@@ -738,14 +738,14 @@
   value is exception or not."
   ([resource]
    (try
-     (pt/-await resource)
+     (pt/-await! resource)
      (catch InterruptedException cause
        (throw cause))
      (catch Throwable cause
        cause)))
   ([resource duration]
    (try
-     (pt/-await resource duration)
+     (pt/-await! resource duration)
      (catch TimeoutException _
        nil)
      (catch InterruptedException cause

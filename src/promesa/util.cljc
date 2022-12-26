@@ -82,8 +82,8 @@
   (let [cdown (CountDownLatch. (int n))]
     (reify
       pt/IAwaitable
-      (-await [_] (pt/-await cdown))
-      (-await [_ d] (pt/-await cdown d))
+      (-await! [_] (pt/-await! cdown))
+      (-await! [_ d] (pt/-await! cdown d))
 
       clojure.lang.IFn
       (invoke [_]
@@ -101,4 +101,4 @@
       (let [cdown-fn (count-down-latch total)]
         (doseq [p promises]
           (pt/-finally p cdown-fn))
-        (pt/-await cdown-fn))))))
+        (pt/-await! cdown-fn))))))
