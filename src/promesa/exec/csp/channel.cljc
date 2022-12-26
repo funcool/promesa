@@ -218,12 +218,25 @@
      (pt/-put! port val h)
      (p/finally d (fn [_ _] (p/cancel! t))))))
 
+
+#?(:clj
+   (defn- chan->seq
+     "Creates a seq that traverses channel until it is closed."
+     [ch]
+     (lazy-seq
+      (when-let [val (pt/-await! (take ch))]
+        (cons val (chan->seq ch))))))
+
 (deftype Channel [takes puts buf closed lock add-fn]
   pt/ILock
   (-lock! [_]
     (pt/-lock! lock))
   (-unlock! [_]
     (pt/-unlock! lock))
+
+  #?@(:clj
+      [clojure.lang.Seqable
+       (seq [this] (chan->seq this))])
 
   pt/IChannelInternal
   (-cleanup! [_]
