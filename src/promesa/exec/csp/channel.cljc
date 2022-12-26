@@ -5,6 +5,7 @@
 ;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
 (ns ^:no-doc promesa.exec.csp.channel
+  (:refer-clojure :exclude [take])
   (:require
    [promesa.core :as p]
    [promesa.exec :as px]
@@ -186,6 +187,36 @@
     (vswap! puts mlist/add-last! [handler val])
     (commit-and-run! handler false))
   nil)
+
+(defn take
+  {:no-doc true}
+  ([port]
+   (let [d (p/deferred)]
+     (pt/-take! port (promise->handler d))
+     d))
+  ([port timeout-duration timeout-value]
+   (let [d (p/deferred)
+         h (promise->handler d)
+         t (px/schedule! timeout-duration
+                         #(when-let [f (commit! h)]
+                            (f timeout-value)))]
+     (pt/-take! port h)
+     (p/finally d (fn [_ _] (p/cancel! t))))))
+
+(defn put
+  {:no-doc true}
+  ([port val]
+   (let [d (p/deferred)]
+     (pt/-put! port val (promise->handler d))
+     d))
+  ([port val timeout-duration timeout-value]
+   (let [d (p/deferred)
+         h (promise->handler d)
+         t (px/schedule! timeout-duration
+                         #(when-let [f (commit! h)]
+                            (f timeout-value)))]
+     (pt/-put! port val h)
+     (p/finally d (fn [_ _] (p/cancel! t))))))
 
 (deftype Channel [takes puts buf closed lock add-fn]
   pt/ILock

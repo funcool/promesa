@@ -93,19 +93,11 @@
   `timeout-duration` can be a long or Duration instance measured in
   milliseconds."
   ([port val]
-   (let [d (p/deferred)]
-     (pt/-put! port val (channel/promise->handler d))
-     d))
+   (channel/put port val))
   ([port val timeout-duration]
-   (put port val timeout-duration nil))
+   (channel/put port val timeout-duration nil))
   ([port val timeout-duration timeout-value]
-   (let [d (p/deferred)
-         h (channel/promise->handler d)
-         t (px/schedule! timeout-duration
-                         #(when-let [f (channel/commit! h)]
-                            (f timeout-value)))]
-     (pt/-put! port val h)
-     (p/finally d (fn [_ _] (p/cancel! t))))))
+   (channel/put port val timeout-duration timeout-value)))
 
 (defn put!
   "A blocking version of `put`."
@@ -135,19 +127,11 @@
   `timeout-duration` can be a long or Duration instance measured in
   milliseconds."
   ([port]
-   (let [d (p/deferred)]
-     (pt/-take! port (channel/promise->handler d))
-     d))
+   (channel/take port))
   ([port timeout-duration]
-   (take port timeout-duration nil))
+   (channel/take port timeout-duration nil))
   ([port timeout-duration timeout-value]
-   (let [d (p/deferred)
-         h (channel/promise->handler d)
-         t (px/schedule! timeout-duration
-                         #(when-let [f (channel/commit! h)]
-                            (f timeout-value)))]
-     (pt/-take! port h)
-     (p/finally d (fn [_ _] (p/cancel! t))))))
+   (channel/take port timeout-duration timeout-value)))
 
 (defn take!
   "Blocking version of `take`."
