@@ -74,6 +74,10 @@
   ([buf] (chan buf nil nil))
   ([buf xf] (chan buf xf nil))
   ([buf xf exh]
+   (assert (or (nil? buf) (pos? buf))
+           "`buf` can be nil or positive int")
+   (assert (or (nil? xf) (and (fn? xf) (some? buf)))
+           "xf can be nil or fn (if fn, buf should be present")
    (let [buf (if (number? buf)
                (buffers/expanding buf)
                buf)]
