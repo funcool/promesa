@@ -423,44 +423,72 @@
   (pt/-untap! mult ch)
   ch)
 
-;; (defn prn!
-;;   [& args]
-;;   (locking prn
-;;     (apply prn args)))
-
 (defn pipeline
-  ([n to f from]
-   (pipeline n to f from true :thread nil))
-  ([n to f from close?]
-   (pipeline n to f from close? :thread nil))
-  ([n to f from close? type]
-   (pipeline n to f from close? type nil))
-  ([n to f from close? type exh]
-   (assert (pos? n) "the worker number should be positive number")
-   (let [exh (or exh channel/ex-handler)
-         jch (chan n)
-         rch (chan n)
-         xfm (comp
-              (map (fn [i]
-                     #(try
-                        (loop []
-                          (when-let [[val rch] (<! jch)]
-                            (f val rch)
-                            (recur)))
-                        #_(prn! "TERMINASTED" i)
-                        (catch Throwable cause
-                          (exh cause)
-                          (close! jch)
-                          (close! rch)
-                          (when close?
-                            (close! to))))))
-              (map (fn [f]
-                     (if (= type :vthread)
-                       (p/vthread (f))
-                       (p/thread (f))))))]
+  "Create a processing pipeline with the ability to specify the process
+  function `proc-fn`, the type of concurrency primitive to
+  use (`:thread` or `:vthread`) and the parallelism.
+
+  The `proc-fn` should be a function that takes the value and the
+  result channel; the result channel should be closed once the
+  processing unit is finished.
+
+  By default the output channel is closed when pipeline is terminated,
+  but it can be specified by user using the `:close?` parameter.
+
+  Returns a promise which will be resolved once the pipeline is
+  terminated.
+
+  Example:
+
+    (def inp (sp/chan))
+    (def out (sp/chan (map inc)))
+
+    (sp/pipeline :typ :vthread
+                 :close? true
+                 :n 10
+                 :in inp
+                 :out out
+                 :f proc-fn)
+
+    (sp/go
+      (loop []
+        (when-let [val (sp/<! out)]
+          (prn \"RES:\" val)
+          (recur)))
+      (prn \"RES: END\"))
+
+    (p/await! (sp/onto-chan! inp [\"1\" \"2\" \"3\" \"4\"] true))
+
+  EXPERIMENTAL: API subject to be changed or removed in future
+  releases."
+  [& {:keys [typ in out f close? n exh]
+      :or {typ :thread close? true exh channel/ex-handler}}]
+  (assert (pos? n) "the worker number should be positive number")
+  (assert (chan? in) "`in` parameter is required")
+  (assert (chan? out) "`outpu` parameter is required")
+  (assert (fn? f) "`f` parameter is required")
+  (let [jch (chan n)
+        rch (chan n)
+        xfm (comp
+             (map (fn [i]
+                    #(try
+                       (loop []
+                         (when-let [[val rch] (<! jch)]
+                           (f val rch)
+                           (recur)))
+                       (catch Throwable cause
+                         (exh cause)
+                         (close! jch)
+                         (close! rch)
+                         (when close?
+                           (close! out))))))
+             (map (fn [f]
+                    (if (= typ :vthread)
+                      (p/vthread (f))
+                      (p/thread (f))))))]
 
      (go-loop []
-       (if-let [val (<! from)]
+       (if-let [val (<! in)]
          (let [res-ch (chan)]
            (if (>! jch [val res-ch])
              (if (>! rch res-ch)
@@ -472,15 +500,18 @@
            (close! jch))))
 
      (go-loop []
-       (when-let [rch' (<! rch)]
-         (loop []
-           (when-let [val (<! rch')]
-             (if (>! to val)
-               (recur)
-               (do
-                 (close! jch)
-                 (close! rch)))))
-         (recur)))
+       (if-let [rch' (<! rch)]
+         (do
+           (loop []
+             (when-let [val (<! rch')]
+               (if (>! out val)
+                 (recur)
+                 (do
+                   (close! jch)
+                   (close! rch)))))
+           (recur))
+         (when close?
+           (close! out))))
 
      (-> (into #{} xfm (range n))
-         (p/wait-all*)))))
+         (p/wait-all*))))
