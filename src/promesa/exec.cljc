@@ -90,18 +90,19 @@
   (delay (current-thread-executor)))
 
 (defonce
-  ^{:doc "A global, virtual thread per task executor service."
-    :no-doc true}
-  default-vthread-executor
-  #?(:clj  (delay (when virtual-threads-available?
-                    (eval '(java.util.concurrent.Executors/newVirtualThreadPerTaskExecutor))))
-     :cljs default-executor))
-
-(defonce
   ^{:doc "A global, thread per task executor service."
     :no-doc true}
   default-thread-executor
   #?(:clj  (delay (cached-executor))
+     :cljs default-executor))
+
+(defonce
+  ^{:doc "A global, virtual thread per task executor service."
+    :no-doc true}
+  default-vthread-executor
+  #?(:clj  (if virtual-threads-available?
+             (delay (eval '(java.util.concurrent.Executors/newVirtualThreadPerTaskExecutor)))
+             default-thread-executor)
      :cljs default-executor))
 
 (defn executor?

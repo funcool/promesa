@@ -369,22 +369,6 @@
                    (map (fn [_]
                           (c/mapv pt/-extract promises)))))))
 
-(defn wait-all
-  "Given a variable number of promises, returns a promise which resolves
-  to `nil` when all provided promises complete (rejected or resolved).
-
-  **EXPERIMENTAL**"
-  [& promises]
-  (c/let [state (atom (into #{} promises))
-          d     (deferred)]
-    (c/run! (fn [p]
-              (fnly (fn [_ _]
-                      (when-not (seq (swap! state disj p))
-                        (pt/-resolve! d nil)))
-                    p))
-            promises)
-    d))
-
 (defn race
   [promises]
   #?(:cljs (.race impl/*default-promise* (into-array (c/map pt/-promise promises)))
@@ -768,3 +752,24 @@
        (throw cause))
      (catch Throwable cause
        cause)))))
+
+(defn wait-all*
+  [promises]
+  (assert (set? promises) "expected a set instance")
+  (c/let [state (atom promises)
+          d     (deferred)]
+    (c/run! (fn [p]
+              (fnly (fn [_ _]
+                      (when-not (seq (swap! state disj p))
+                        (pt/-resolve! d nil)))
+                    p))
+            promises)
+    d))
+
+(defn wait-all
+  "Given a variable number of promises, returns a promise which resolves
+  to `nil` when all provided promises complete (rejected or resolved).
+
+  **EXPERIMENTAL**"
+  [& promises]
+  (wait-all* (into #{} promises)))

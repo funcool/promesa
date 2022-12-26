@@ -434,3 +434,65 @@
   [mult ch]
   (pt/-untap! mult ch)
   ch)
+
+;; (defn prn!
+;;   [& args]
+;;   (locking prn
+;;     (apply prn args)))
+
+(defn pipeline
+  ([n to f from]
+   (pipeline n to f from true :thread nil))
+  ([n to f from close?]
+   (pipeline n to f from close? :thread nil))
+  ([n to f from close? type]
+   (pipeline n to f from close? type nil))
+  ([n to f from close? type exh]
+   (assert (pos? n) "the worker number should be positive number")
+   (let [exh (or exh channel/ex-handler)
+         jch (chan n)
+         rch (chan n)
+         xfm (comp
+              (map (fn [i]
+                     #(try
+                        (loop []
+                          (when-let [[val rch] (<! jch)]
+                            (f val rch)
+                            (recur)))
+                        #_(prn! "TERMINASTED" i)
+                        (catch Throwable cause
+                          (exh cause)
+                          (close! jch)
+                          (close! rch)
+                          (when close?
+                            (close! to))))))
+              (map (fn [f]
+                     (if (= type :vthread)
+                       (p/vthread (f))
+                       (p/thread (f))))))]
+
+     (go-loop []
+       (if-let [val (<! from)]
+         (let [res-ch (chan)]
+           (if (>! jch [val res-ch])
+             (if (>! rch res-ch)
+               (recur)
+               (close! jch))
+             (close! rch)))
+         (do
+           (close! rch)
+           (close! jch))))
+
+     (go-loop []
+       (when-let [rch' (<! rch)]
+         (loop []
+           (when-let [val (<! rch')]
+             (if (>! to val)
+               (recur)
+               (do
+                 (close! jch)
+                 (close! rch)))))
+         (recur)))
+
+     (-> (into #{} xfm (range n))
+         (p/wait-all*)))))

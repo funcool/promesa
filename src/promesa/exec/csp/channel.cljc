@@ -305,7 +305,8 @@
           (some-> buf pt/-close!)
           (pt/-unlock! this))))))
 
-(defn- ex-handler
+(defn ex-handler
+  {:no-doc true}
   [ex]
   #?(:clj (-> (Thread/currentThread)
               (.getUncaughtExceptionHandler)
