@@ -6,6 +6,9 @@
   low-level macro.
 - Change internal vars naming for checking if the Virtual Threads
   ara available.
+- Properly unwrap completion exception on finally.
+- Define cljs Scheduler type statically, with deftype instead of reify
+  (bacause of https://clojure.atlassian.net/browse/CLJS-3207)
 
 ## Version 10.0.582
 

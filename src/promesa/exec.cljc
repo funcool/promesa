@@ -440,6 +440,20 @@
          (-> (pt/-promise nil)
              (pt/-map (fn [_] (f))))))))
 
+#?(:cljs
+   (deftype Scheduler []
+     pt/IScheduler
+     (-schedule! [_ ms f]
+       (let [done (volatile! false)
+             task #(try
+                     (f)
+                     (finally
+                       (vreset! done true)))
+             tid (js/setTimeout task ms)
+             cancel #(js/clearTimeout tid)]
+         (->ScheduledTask #js {:done done
+                               :cancelled false
+                               :cancel-fn cancel})))))
 
 (defn scheduled-executor
   "A scheduled thread pool constructor. A ScheduledExecutor (IScheduler
@@ -455,18 +469,7 @@
          (.setRemoveOnCancelPolicy true)))
 
      :cljs
-     (reify pt/IScheduler
-       (-schedule! [_ ms f]
-         (let [done (volatile! false)
-               task #(try
-                       (f)
-                       (finally
-                         (vreset! done true)))
-               tid (js/setTimeout task ms)
-               cancel #(js/clearTimeout tid)]
-           (->ScheduledTask #js {:done done
-                                 :cancelled false
-                                 :cancel-fn cancel}))))))
+     (->Scheduler)))
 
 #?(:clj
    (when virtual-threads-available?
@@ -518,7 +521,7 @@
        (CompletableFuture/runAsync ^Runnable f ^Executor this))
 
      (-submit! [this f]
-       (CompletableFuture/supplyAsync ^Supplier (pu/->SupplierWrapper f) ^Executor this))))
+       (CompletableFuture/supplyAsync ^Supplier (pu/->Supplier f) ^Executor this))))
 
 
 ;; --- Scheduler & ScheduledTask

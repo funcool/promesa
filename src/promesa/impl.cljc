@@ -40,22 +40,6 @@
             (.completeExceptionally ^CompletableFuture p v)
             p)))
 
-#?(:clj
-   (defn unwrap-completion-exception
-     {:no-doc true}
-     [cause]
-     (if (instance? CompletionException cause)
-       (.getCause ^CompletionException cause)
-       cause)))
-
-#?(:clj (def fw-identity (pu/->FunctionWrapper identity)))
-
-#?(:clj
-   (defn unwrap-completion-stage
-     {:no-doc true}
-     [it]
-     (.thenCompose ^CompletionStage it ^Function fw-identity)))
-
 ;; --- Promise Impl
 
 (defn deferred
@@ -107,61 +91,52 @@
      (-map
        ([it f]
         (.thenApply ^CompletionStage it
-                    ^Function (pu/->FunctionWrapper f)))
+                    ^Function (pu/->Function f)))
 
        ([it f executor]
         (.thenApplyAsync ^CompletionStage it
-                         ^Function (pu/->FunctionWrapper f)
+                         ^Function (pu/->Function f)
                          ^Executor (exec/resolve-executor executor))))
 
      (-bind
        ([it f]
         (.thenCompose ^CompletionStage it
-                      ^Function (pu/->FunctionWrapper f)))
+                      ^Function (pu/->Function f)))
 
        ([it f executor]
         (.thenComposeAsync ^CompletionStage it
-                           ^Function (pu/->FunctionWrapper f)
+                           ^Function (pu/->Function f)
                            ^Executor (exec/resolve-executor executor))))
 
      (-catch
        ([it f]
         (-> ^CompletionStage it
-            (.handle ^BiFunction (pu/->BiFunctionWrapper
-                                  (fn [v e]
-                                    (if e
-                                      (f (unwrap-completion-exception e))
-                                      it))))
-            (.thenCompose ^Function fw-identity)))
+            (.handle ^BiFunction (pu/->Function2 #(if %2 (f %2) it)))
+            (.thenCompose ^Function pu/f-identity)))
 
        ([it f executor]
         (-> ^CompletionStage it
-            (.handleAsync ^BiFunction (pu/->BiFunctionWrapper
-                                       (fn [v e]
-                                         (if e
-                                           (f (unwrap-completion-exception e))
-                                           it)))
+            (.handleAsync ^BiFunction (pu/->Function2 #(if %2 (f %2) it))
                           ^Executor (exec/resolve-executor executor))
-            (.thenCompose ^Function fw-identity))))
+            (.thenCompose ^Function pu/f-identity))))
 
      (-handle
        ([it f]
         (.handle ^CompletionStage it
-                 ^BiFunction (pu/->BiFunctionWrapper #(f %1 (unwrap-completion-exception %2)))))
-
+                 ^BiFunction (pu/->Function2 f)))
        ([it f executor]
         (.handleAsync ^CompletionStage it
-                      ^BiFunction (pu/->BiFunctionWrapper f #(f %1 (unwrap-completion-exception %2)))
+                      ^BiFunction (pu/->Function2 f)
                       ^Executor (exec/resolve-executor executor))))
 
      (-finally
        ([it f]
         (.whenComplete ^CompletionStage it
-                       ^BiConsumer (pu/->BiConsumerWrapper f)))
+                       ^BiConsumer (pu/->Consumer2 f)))
 
        ([it f executor]
         (.whenCompleteAsync ^CompletionStage it
-                            ^BiConsumer (pu/->BiConsumerWrapper f)
+                            ^BiConsumer (pu/->Consumer2 f)
                             ^Executor (exec/resolve-executor executor))))
 
      ))

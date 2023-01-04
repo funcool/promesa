@@ -242,11 +242,11 @@
   ([p f]
    #?(:cljs (pt/-handle (pt/-promise p) f)
       :clj  (c/-> (pt/-handle (pt/-promise p) (comp pt/-promise f))
-                  (impl/unwrap-completion-stage))))
+                  (util/unwrap-completion-stage))))
   ([p f executor]
    #?(:cljs (pt/-handle (pt/-promise p) f executor)
       :clj  (c/-> (pt/-handle (pt/-promise p) (comp pt/-promise f) executor)
-                  (impl/unwrap-completion-stage)))))
+                  (util/unwrap-completion-stage)))))
 
 (defn finally
   "Like `handle` but ignores the return value. Returns a promise that
@@ -284,11 +284,11 @@
   ([f p]
    #?(:cljs (pt/-handle (pt/-promise p) f)
       :clj  (c/-> (pt/-handle (pt/-promise p) f)
-                  (impl/unwrap-completion-stage))))
+                  (util/unwrap-completion-stage))))
   ([executor f p]
    #?(:cljs (pt/-handle (pt/-promise p) f executor)
       :clj  (c/-> (pt/-handle (pt/-promise p) f executor)
-                  (impl/unwrap-completion-stage)))))
+                  (util/unwrap-completion-stage)))))
 
 (defn fnly
   "Inverted arguments version of `finally`; intended to be used with
