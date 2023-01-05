@@ -25,7 +25,7 @@
     (t/is (= 0 (pt/-size buf)))
     ))
 
-(t/deftest fixed-buffer
+(t/deftest expanding-buffer
   (let [buf (buffers/expanding 2)]
     (t/is (nil? (pt/-poll! buf)))
     (t/is (false? (pt/-full? buf)))
