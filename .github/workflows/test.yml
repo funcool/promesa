@@ -20,22 +20,22 @@ jobs:
         java: ['11', '17', '18', '19']
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: ${{ matrix.java }}
 
-      - uses: DeLaGuardo/setup-clojure@3.5
+      - uses: DeLaGuardo/setup-clojure@10.1
         with:
-          cli: 1.11.1.1189
+          cli: 1.11.1.1208
 
       - run: clojure -X:dev:test
 
   test-cljs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
@@ -43,9 +43,9 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '18.12.1'
-      - uses: DeLaGuardo/setup-clojure@3.5
+      - uses: DeLaGuardo/setup-clojure@10.1
         with:
-          cli: 1.11.1.1189
+          cli: 1.11.1.1208
       - run: npm install
       - run: npm test
 
