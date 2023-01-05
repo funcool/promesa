@@ -1,6 +1,6 @@
 # Changelog #
 
-## Version 10.0.xxx
+## Version 10.0.594
 
 - Enable creation of virtual threads on `promesa.exec/thread`
   low-level macro.
@@ -9,6 +9,7 @@
 - Properly unwrap completion exception on finally.
 - Define cljs Scheduler type statically, with deftype instead of reify
   (bacause of https://clojure.atlassian.net/browse/CLJS-3207)
+- Update github actions
 
 ## Version 10.0.582
 
