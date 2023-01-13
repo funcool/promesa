@@ -131,7 +131,7 @@ Finally, _promesa_ exposes a `future` macro very similar to the
 ;; => "result-of-complex-task"
 ```
 
-## Chaining computatons
+## Chaining computations
 
 This section explains the helpers and macros that **promesa** provides
 for chain different (high-probably asynchonous) operations in a
