@@ -3,7 +3,7 @@
 ## Introduction
 
 A **promise** is an abstraction that represents the result of an
-asynchronous operation that has the notion of error. Backedn with
+asynchronous operation that has the notion of error. Backend with
 [CompletebleFuture][0] on the JVM and [Promise][1] on JS.
 
 This is a list of all possible states for a promise:
