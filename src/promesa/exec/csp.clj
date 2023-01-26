@@ -145,7 +145,7 @@
    (p/await! (take port timeout-duration timeout-value))))
 
 (defn <!
-  "A blocking version of `take!`"
+  "A convenience alias for `take!`."
   ([port]
    (p/await! (take port)))
   ([port timeout-duration]
@@ -313,7 +313,6 @@
   that will be resolved with `nil` once the items are copied.
 
   Do not creates vthreads (or threads)."
-
   ([ch coll] (onto-chan! ch coll true))
   ([ch coll close?]
    (p/loop [items (seq coll)]
@@ -354,33 +353,11 @@
                  (-put! [_ val handler]
                    (pt/-put! ch val handler)))]
 
-     ;; (p/loop []
-     ;;   (->> (take ch)
-     ;;        (p/mcat (fn [v]
-     ;;                  (if v
-     ;;                    (let [chs (-> @state keys vec)
-     ;;                          res (if (seq chs)
-     ;;                                (let [dff  (p/deferred)
-     ;;                                      cnt (atom (count chs))]
-     ;;                                  (doseq [ch chs]
-     ;;                                    (->> (put ch v)
-     ;;                                         (p/fnly (fn [v _]
-     ;;                                                   (when (nil? v) (pt/-untap! mx ch))
-     ;;                                                   (let [n (swap! cnt dec)]
-     ;;                                                     (when (zero? n)
-     ;;                                                       (p/resolve! dff nil)))))))
-     ;;                                  dff)
-     ;;                                (p/resolved nil))]
-     ;;                      (p/map (fn [_] (p/recur)) res))
-     ;;                    (p/resolved nil))))))
-     ;;
-     ;; mx)))
-
      (go-loop []
-       (if-let [v (<! ch)]
+       (if-let [v (take! ch)]
          (do
            (pu/wait-all! (for [ch (-> @state keys vec)]
-                           (->> (put! ch v)
+                           (->> (put ch v)
                                 (p/fnly (fn [v _]
                                           (when (nil? v)
                                             (pt/-untap! mx ch)))))))
