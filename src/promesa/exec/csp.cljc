@@ -33,7 +33,7 @@
    [promesa.protocols :as pt]
    [promesa.util :as pu]))
 
-(set! *warn-on-reflection* true)
+#?(:clj (set! *warn-on-reflection* true))
 
 (defmacro go
   "Schedules the body to be executed asychronously, potentially using
@@ -43,6 +43,8 @@
 
   Forwards dynamic bindings."
   [& body]
+  (when (:ns &env)
+    (throw (UnsupportedOperationException. "cljs not supported")))
   `(->> (px/wrap-bindings (fn [] ~@body))
         (p/thread-call channel/*executor*)))
 
@@ -101,23 +103,25 @@
   ([port val timeout-duration timeout-value]
    (channel/put port val timeout-duration timeout-value)))
 
-(defn put!
-  "A blocking version of `put`."
-  ([port val]
-   (p/await! (put port val)))
-  ([port val timeout-duration]
-   (p/await! (put port val timeout-duration nil)))
-  ([port val timeout-duration timeout-value]
-   (p/await! (put port val timeout-duration timeout-value))))
+#?(:clj
+   (defn put!
+     "A blocking version of `put`."
+     ([port val]
+      (p/await! (put port val)))
+     ([port val timeout-duration]
+      (p/await! (put port val timeout-duration nil)))
+     ([port val timeout-duration timeout-value]
+      (p/await! (put port val timeout-duration timeout-value)))))
 
-(defn >!
-  "A convenience alias for `put!`."
-  ([port val]
-   (p/await! (put port val)))
-  ([port val timeout-duration]
-   (p/await! (put port val timeout-duration nil)))
-  ([port val timeout-duration timeout-value]
-   (p/await! (put port val timeout-duration timeout-value))))
+#?(:clj
+   (defn >!
+     "A convenience alias for `put!`."
+     ([port val]
+      (p/await! (put port val)))
+     ([port val timeout-duration]
+      (p/await! (put port val timeout-duration nil)))
+     ([port val timeout-duration timeout-value]
+      (p/await! (put port val timeout-duration timeout-value)))))
 
 (defn take
   "Schedules a take operation on the channel. Returns a promise instance
@@ -135,23 +139,25 @@
   ([port timeout-duration timeout-value]
    (channel/take port timeout-duration timeout-value)))
 
-(defn take!
-  "Blocking version of `take`."
-  ([port]
-   (p/await! (take port)))
-  ([port timeout-duration]
-   (p/await! (take port timeout-duration nil)))
-  ([port timeout-duration timeout-value]
-   (p/await! (take port timeout-duration timeout-value))))
+#?(:clj
+   (defn take!
+     "Blocking version of `take`."
+     ([port]
+      (p/await! (take port)))
+     ([port timeout-duration]
+      (p/await! (take port timeout-duration nil)))
+     ([port timeout-duration timeout-value]
+      (p/await! (take port timeout-duration timeout-value)))))
 
-(defn <!
-  "A convenience alias for `take!`."
-  ([port]
-   (p/await! (take port)))
-  ([port timeout-duration]
-   (p/await! (take port timeout-duration nil)))
-  ([port timeout-duration timeout-value]
-   (p/await! (take port timeout-duration timeout-value))))
+#?(:clj
+   (defn <!
+     "A convenience alias for `take!`."
+     ([port]
+      (p/await! (take port)))
+     ([port timeout-duration]
+      (p/await! (take port timeout-duration nil)))
+     ([port timeout-duration timeout-value]
+      (p/await! (take port timeout-duration timeout-value)))))
 
 (defn- alts*
   [ports {:keys [priority]}]
@@ -196,10 +202,11 @@
   [ports & {:as opts}]
   (alts* ports opts))
 
-(defn alts!
-  "A blocking variant of `alts`."
-  [ports & {:as opts}]
-  (p/await! (alts* ports opts)))
+#?(:clj
+   (defn alts!
+     "A blocking variant of `alts`."
+     [ports & {:as opts}]
+     (p/await! (alts* ports opts))))
 
 (defn close!
   "Close the channel."
@@ -234,7 +241,7 @@
   "Returns a promise that will be resolved in the specified timeout. The
   default scheduler will be used."
   [ms]
-  (go (Thread/sleep (int ms))))
+  (p/delay ms nil :default))
 
 (defn sliding-buffer
   "Create a sliding buffer instance."
@@ -331,7 +338,9 @@
   values in because multiplexer implements the IWriteChannel protocol.
 
   Optionally accepts `close?` argument, that determines if the channel will
-  be closed when `close!` is called on multiplexer o not."
+  be closed when `close!` is called on multiplexer o not.
+
+  Do not creates vthreads (or threads)."
   ([ch] (mult* ch false))
   ([ch close?]
    (let [state (atom {})
@@ -353,16 +362,17 @@
                  (-put! [_ val handler]
                    (pt/-put! ch val handler)))]
 
-     (go-loop []
-       (if-let [v (take! ch)]
-         (do
-           (pu/wait-all! (for [ch (-> @state keys vec)]
-                           (->> (put ch v)
-                                (p/fnly (fn [v _]
-                                          (when (nil? v)
-                                            (pt/-untap! mx ch)))))))
-           (recur))
-         (pt/-close! mx)))
+     (p/loop []
+       (->> (take ch)
+            (p/mcat (fn [v]
+                      (if (nil? v)
+                        (do (pt/-close! mx) (p/resolved nil))
+                        (->> (p/wait-all* (for [ch (-> @state keys vec)]
+                                            (->> (put ch v)
+                                                 (p/fnly (fn [v _]
+                                                           (when (nil? v)
+                                                             (pt/-untap! mx ch)))))))
+                             (p/finally (fn [_ _] (p/recur)))))))))
 
      mx)))
 
@@ -379,7 +389,9 @@
   multiplexer.
 
   If there are no taps, all received items will be dropped. Closed
-  channels will be automatically removed from multiplexer."
+  channels will be automatically removed from multiplexer.
+
+  Do not creates vthreads (or threads)."
   ([] (mult nil nil nil))
   ([buf] (mult buf nil nil))
   ([buf xform] (mult buf xform nil))
@@ -402,6 +414,7 @@
   (pt/-untap! mult ch)
   ch)
 
+#?(:clj
 (defn pipeline
   "Create a processing pipeline with the ability to specify the process
   function `proc-fn`, the type of concurrency primitive to
@@ -493,4 +506,4 @@
            (close! out))))
 
      (-> (into #{} xfm (range n))
-         (p/wait-all*))))
+         (p/wait-all*)))))

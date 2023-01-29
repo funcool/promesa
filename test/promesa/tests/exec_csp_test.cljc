@@ -4,7 +4,8 @@
    [promesa.core :as p]
    [promesa.exec :as px]
    [promesa.exec.csp :as sp]
-   [promesa.protocols :as pt]))
+   [promesa.protocols :as pt]
+   [promesa.tests.util :as u]))
 
 (t/deftest chan-factory
   (let [c1 (sp/chan)
@@ -19,8 +20,7 @@
     (t/is (sp/chan? c3))
     (t/is (sp/chan? c4))
     (t/is (sp/chan? c5))
-    (t/is (sp/chan? c6))
-    ))
+    (t/is (sp/chan? c6))))
 
 (t/deftest chan-with-mapcat-transducer-1
   (let [ch (sp/chan 2 (mapcat identity))]
@@ -36,7 +36,6 @@
     (t/is (= 1 (sp/poll! ch)))
     (t/is (= 2 (sp/poll! ch)))
     (t/is (= nil (sp/poll! ch)))))
-
 
 (t/deftest chan-with-terminating-transducer
   (let [ch (sp/chan 5 (take 2))]
@@ -96,51 +95,101 @@
 
 (t/deftest unbuffered-chan
   (let [ch (sp/chan)
-        p1 (sp/go (sp/>! ch :a))
+        p1 (sp/put ch :a)
         r1 (sp/take ch)]
     (t/is (= :a @r1))
-    (t/is (true? @p1))))
+    #?(:cljs
+       (t/async done
+         (p/then p1 (fn [v]
+                      (t/is (true? v))
+                      (done)))))))
 
 (t/deftest pipe-operation
   (let [ch1 (sp/chan)
-        ch2 (sp/chan)]
+        ch2 (sp/chan 2)]
     (sp/pipe ch1 ch2)
 
-    (p/thread
-      (sp/put! ch1 :a)
-      (sp/put! ch1 :b)
-      (sp/close! ch1))
+    #?(:clj
+       (do
+         (sp/put! ch1 :a)
+         (sp/put! ch1 :b)
+         (sp/close! ch1)
+         (t/is (= :a (sp/take! ch2)))
+         (t/is (= :b (sp/take! ch2)))
+         (t/is (nil? (sp/take! ch2)))
+         (t/is (sp/closed? ch2))
+         (t/is (sp/closed? ch1)))
 
-    (t/is (= :a (sp/take! ch2)))
-    (t/is (= :b (sp/take! ch2)))
-    (t/is (nil? (sp/take! ch2)))
-    (t/is (sp/closed? ch2))
-    (t/is (sp/closed? ch1))))
+       :cljs
+       (t/async done
+         (-> (p/all [(sp/put ch1 :a)
+                     (sp/put ch1 :b)])
+             (p/then (fn [result]
+                       (sp/close! ch1)
+                       (p/let [v1 (sp/take ch2)
+                               v2 (sp/take ch2)
+                               v3 (sp/take ch2)]
+                         (t/is (= v1 :a))
+                         (t/is (= v2 :b))
+                         (t/is (nil? v3))
+                         (t/is (sp/closed? ch2))
+                         (t/is (sp/closed? ch1))
+                         (done)))))))))
 
 (t/deftest onto-chan-operation
-  (let [ch (sp/chan)
+  (let [ch (sp/chan 3)
         rs (sp/onto-chan! ch [:a :b :c])]
 
     (t/is (p/promise? rs))
-    (t/is (= :a (sp/take! ch 1000)))
-    (t/is (= :b (sp/take! ch 1000)))
-    (t/is (= :c (sp/take! ch 1000)))
-    (t/is (nil? (sp/take! ch 1000)))
-    (t/is (sp/closed? ch))
-    (t/is (nil? (p/await! rs 1000)))))
+    #?(:clj
+       (do
+         (p/await! rs)
+         (t/is (= :a (sp/poll! ch)))
+         (t/is (= :b (sp/poll! ch)))
+         (t/is (= :c (sp/poll! ch)))
+         (t/is (nil? (sp/poll! ch)))
+         (t/is (sp/closed? ch)))
+       :cljs
+       (t/async done
+         (->> (p/wait-all rs)
+              (p/fnly (fn []
+                        (t/is (= :a (sp/poll! ch)))
+                        (t/is (= :b (sp/poll! ch)))
+                        (t/is (= :c (sp/poll! ch)))
+                        (t/is (nil? (sp/poll! ch)))
+                        (t/is (sp/closed? ch))))
+
+              (p/fnly done))))))
 
 (t/deftest operations-with-mult
   (let [mch (sp/mult)]
-    (try
-      (let [ch2 (sp/chan 1)
-            ch3 (sp/chan 1)]
-        (sp/offer! mch :a)
-        (px/sleep 200)
-        (sp/tap! mch ch2)
-        (sp/tap! mch ch3)
-        (sp/>! mch :b)
-        (t/is (= :b (sp/<! ch2)))
-        (t/is (= :b (sp/<! ch3)))
-        )
-      (finally
-        (sp/close! mch)))))
+    #?(:clj
+       (try
+         (let [ch2 (sp/chan 1)
+               ch3 (sp/chan 1)]
+           (sp/offer! mch :a)
+           (px/sleep 200)
+           (sp/tap! mch ch2)
+           (sp/tap! mch ch3)
+           (sp/>! mch :b)
+           (t/is (= :b (sp/<! ch2)))
+           (t/is (= :b (sp/<! ch3)))
+           )
+         (finally
+           (sp/close! mch)))
+       :cljs
+       (t/async done
+         (let [ch2 (sp/chan 1)
+               ch3 (sp/chan 1)]
+           (sp/offer! mch :a)
+           (sp/tap! mch ch2)
+           (sp/tap! mch ch3)
+
+           (->> (sp/put mch :b)
+                (p/mcat #(p/delay 200))
+                (p/fnly (fn []
+                          (t/is (= :b (sp/poll! ch2)))
+                          (t/is (= :b (sp/poll! ch3)))))
+                (p/fnly done)))))))
+
+

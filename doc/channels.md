@@ -1,57 +1,46 @@
 # Channels (CSP pattern)
 
-An implementation of channel abstraction and CSP patterns for Clojure;
-is a [core.async][3] alternative implementation that laverages JDK19
-Virtual Threads. 
+An implementation of channel abstraction and CSP patterns for Clojure and ClojureScript.
+It's a [core.async][3] alternative implementation of channel abstraction that laverages
+platform facilities for concurrency (no go macro transformations, laverages JDK19 Virtual
+Threads on the JVM).
 
-There are [Code Walkthrought][0] where you can learn the main API
-usage patterns. Also, you can read the [core.async rationale][1] for
-better understanding the main ideas of the CSP pattern.
+There are [Code Walkthrought][0] where you can learn the main API usage patterns. Also,
+you can read the [core.async rationale][1] for better understanding the main ideas of the
+CSP pattern.
 
-The promesa channel and csp patterns implementation do not intend to
-be a replacement for core.async; and there are cases where
-[core.async][3] is preferable; the main usage target for promesa
-channels and csp patterns implementation is for JVM based backends
-with JDK>=19.
-
-**NOTE: Although the main focus is the use in JVM, where is all the
-potential; the channel implementation and all internal buffers are
-implemented in CLJC. This means that, if there is interest, we can
-think about exposing channels API using promises. In any case, _the
-usefulness of channel implementation in CLJS remains to be seen._**
+**NOTE**: Although the main focus is the use in JVM, where is all the potential; the
+channel implementation is also available on CLJS. There are no go macros on CLJS, but all
+the operators (including `alts`) can be used with alredy available promesa API and
+syntactic abstractions (such that `promesa.core/loop` and `promesa.core/recur`). Read the
+docstring for know if the operator/helper internally uses vthreads or not.
 
 
 ## Differences with `core.async`
 
 The main highlights and differences with [core.async][3] are:
 
-- **There are no macro transformations**, the `go` macro is a
-  convenient alias for `p/vthread` (or `p/thread` when vthreads are
-  not available); there are not limitation on using blocking calls
-  inside `go` macro neither many other inconveniences of core.async go
-  macro, mainly thanks to the JDK19 with preview enabled Virtual
-  Threads.
-- **No callbacks**, functions returns promises or blocks; you can use
-  the promise composition API or thread blocking API, whatever you
-  wants.
-- **No take/put limits**; you can attach more than 1024 pending tasks
-  to a channel.
-- **Simplier mental model**, there are no differences between parking
-  and blocking operations.
-- **Analogous performance**; in my own stress tests it has the same
-  performance as core.async.
+- **There are no macro transformations**, the `go` macro is a convenient alias for
+  `p/vthread` (or `p/thread` when vthreads are not available); there are not limitation on
+  using blocking calls inside `go` macro neither many other inconveniences of core.async
+  go macro, mainly thanks to the JDK19 with preview enabled Virtual Threads. _They are
+  only available on JVM_.
+- **No callbacks**, functions returns promises or blocks; you can use the promise
+  composition API or thread blocking API, whatever you wants.
+- **No take/put limits**; you can attach more than 1024 pending tasks to a channel.
+- **Simplier mental model**, there are no differences between parking and blocking
+  operations.
+- **Analogous performance**; in my own stress tests it has the same performance as
+  core.async.
 
 There are also some internal differences that you should know:
 
-- The promesa implementation cancells immediatelly all pending puts
-  when channel is closed in contrast to core.async that leaves them
-  operative until all puts are succeded.
-- The promesa implementation takes a bit less grandular locking than
-  core.async, but on the end it should not have any effect on the
-  final performance or usability.
-- The `promesa.exec.csp/pipe` helper does not uses go-blocks, so it
-  can be safelly used with no-vthreads support because it will not
-  create additional platform threads.
+- The promesa implementation cancells immediatelly all pending puts when channel is closed
+  in contrast to core.async that leaves them operative until all puts are succeded.
+- The promesa implementation takes a bit less grandular locking than core.async, but on
+  the end it should not have any effect on the final performance orq usability.
+- Operators or channel helpers do not use vthreads internally so they can be used safelly
+  on CLJS or JVM without virtual threads.
 
 ## Getting Started
 
@@ -99,6 +88,7 @@ You also can take with timeout:
 For convenience and `core.async` familiarity, there are also `<!` and
 `>!` functions that have the same api as their counterpart `take!` and
 `put!`
+
 
 #### The go blocks
 
