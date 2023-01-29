@@ -144,10 +144,18 @@ goog.scope(function() {
   }
 
   const nextTick = (() => {
-    if (root.process && typeof root.process.nextTick === "function") {
+    if (typeof root.queueMicrotask === "function") {
+      return function queueMicrotask (f, p) {
+        root.queueMicrotask(() => f(p));
+      };
+    } else if (root.process && typeof root.process.nextTick === "function") {
       return root.process.nextTick;
     } else if (typeof root.setImmediate === "function") {
       return root.setImmediate;
+    } else if (typeof root.Promise === "function") {
+      return function queueMicrotaskWithPromise(f, p) {
+        root.Promise.resolve(null).then(() => f(p));
+      };
     } else if (typeof root.setTimeout === "function") {
       return (f, p) => root.setTimeout(f, 0, p);
     } else {
