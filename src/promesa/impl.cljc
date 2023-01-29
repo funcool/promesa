@@ -8,7 +8,9 @@
   "Implementation of promise protocols."
   (:require [promesa.protocols :as pt]
             [promesa.util :as pu]
-            [promesa.exec :as exec])
+            [promesa.exec :as exec]
+            #?(:cljs [promesa.impl.promise :as impl]))
+
   #?(:clj
      (:import
       java.time.Duration
@@ -26,7 +28,7 @@
 ;; --- Global Constants
 
 #?(:clj (set! *warn-on-reflection* true))
-#?(:cljs (def ^:dynamic *default-promise* js/Promise))
+#?(:cljs (def ^:dynamic *default-promise* impl/PromiseImpl))
 
 (defn resolved
   [v]
@@ -45,18 +47,7 @@
 (defn deferred
   []
   #?(:clj (CompletableFuture.)
-     :cljs
-     (let [state #js {}
-           obj (new *default-promise*
-                    (fn [resolve reject]
-                      (set! (.-resolve state) resolve)
-                      (set! (.-reject state) reject)))]
-       (specify! obj
-         pt/ICompletable
-         (-resolve! [_ v]
-           (.resolve state v))
-         (-reject! [_ v]
-           (.reject state v))))))
+     :cljs (impl/deferred)))
 
 #?(:cljs
    (defn extend-promise!
@@ -82,8 +73,42 @@
          ([it f] (.then it #(f % nil) #(f nil %)) it)
          ([it f executor] (.then it #(f % nil) #(f nil %)) it)))))
 
+#?(:cljs (extend-promise! js/Promise))
+#?(:cljs (extend-promise! impl/PromiseImpl))
+
 #?(:cljs
-   (extend-promise! js/Promise))
+   (extend-type impl/PromiseImpl
+     cljs.core/IDeref
+     (-deref [it]
+       (let [state (unchecked-get it "state")
+             value (unchecked-get it "value")]
+         (if (identical? state impl/REJECTED)
+           (throw value)
+           value)))
+
+     pt/IState
+     (-extract [it]
+       (cljs.core/-deref it))
+
+     (-resolved? [it]
+       (let [state (unchecked-get it "state")]
+         (identical? state impl/FULFILLED)))
+
+     (-rejected? [it]
+       (let [state (unchecked-get it "state")]
+         (identical? state impl/REJECTED)))
+
+     (-pending? [it]
+       (let [state (unchecked-get it "state")]
+         (identical? state impl/PENDING)))))
+
+#?(:cljs
+   (extend-type impl/DeferredImpl
+     pt/ICompletable
+     (-resolve! [it v]
+       (.resolve ^js it v))
+     (-reject! [it v]
+       (.reject ^js it v))))
 
 #?(:clj
    (extend-protocol pt/IPromise

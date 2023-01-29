@@ -4,7 +4,7 @@
    [promesa.tests.util :refer [promise-ok promise-ko normalize-to-value]]
    [promesa.core :as p :include-macros true]
    [promesa.protocols :as pt]
-   [promesa.exec :as e])
+   [promesa.exec :as px])
   #?(:clj
      (:import java.util.concurrent.TimeoutException)))
 
@@ -14,17 +14,32 @@
   (t/is (string? (pr-str (p/promise nil))))
   (t/is (false? (p/promise? {})))
   (t/is (false? (p/promise? nil)))
-
   (t/is (p/promise? (pt/-promise nil)))
-
-  #?(:cljs (t/is (false? (p/promise? #js {})))
-     :clj  (t/is (false? (p/promise? (Object.)))))
-
+  (t/is (false? (p/promise? #?(:cljs #js {} :clj (Object.)))))
   (t/is (false? (p/promise? [])))
   (t/is (false? (p/promise? #{})))
-
   (t/is (true? (p/promise? (p/promise nil))))
   (t/is (true? (p/promise? (p/promise 1)))))
+
+(t/deftest promise-inspect
+  (let [p (p/promise :foo)]
+    (t/is (p/promise? p))
+    (t/is (not (p/deferred? p)))
+    (t/is (= :foo @p)))
+
+  (let [d (p/deferred)]
+    (t/is (p/promise? d))
+    (t/is (p/deferred? d))
+    (t/is (p/pending? d))
+    (t/is (nil? (deref d))))
+
+  (let [d (p/deferred)]
+    (p/resolve! d :foo)
+    (t/is (not (p/pending? d)))
+    (t/is (p/done? d))
+    (t/is (= :foo (deref d)))
+    (t/is (= :foo (p/extract d))))
+  )
 
 (t/deftest common-tests-2
   #?(:cljs
@@ -39,13 +54,14 @@
 (t/deftest with-dispatch-test-1
   #?(:cljs
      (t/async done
-       (-> (e/with-dispatch :default
-             (+ 1 1))
-           (p/then (fn [res]
-                     (t/is (= res 2))
-                     (done)))))
+       (do
+         (-> (px/with-dispatch :default
+               (+ 1 1))
+             (p/then (fn [res]
+                       (t/is (= res 2))
+                       (done))))))
      :clj
-     (let [o (e/with-dispatch :default
+     (let [o (px/with-dispatch :default
                (+ 1 1))]
        (t/is (= @o 2)))))
 
@@ -53,13 +69,13 @@
 (t/deftest with-dispatch-test-2
   #?(:cljs
      (t/async done
-       (-> (e/with-dispatch :default
+       (-> (px/with-dispatch :default
              (p/wrap (+ 1 1)))
            (p/then (fn [res]
                      (t/is (= res 2))
                      (done)))))
      :clj
-     (let [o (e/with-dispatch :default
+     (let [o (px/with-dispatch :default
                (p/wrap (+ 1 1)))]
        (t/is (= @o 2)))))
 
@@ -87,7 +103,7 @@
 
      :clj
      (let [p (p/deferred)]
-       (e/schedule! 200 #(p/resolve! p 1))
+       (px/schedule! 200 #(p/resolve! p 1))
        (t/is (= @p 1)))))
 
 (t/deftest promise-from-nil-value
@@ -119,14 +135,14 @@
   #?(:cljs
      (t/async done
        (let [p1 (p/create (fn [resolve reject]
-                            (e/schedule! 50 #(resolve 1))))]
+                            (px/schedule! 50 #(resolve 1))))]
          ;; (t/is (p/pending? p1))
          (p/then p1 (fn [v]
                       (t/is (= v 1))
                       (done)))))
      :clj
      (let [p1 (p/create (fn [resolve reject]
-                          (e/schedule! 500 #(resolve 1))))]
+                          (px/schedule! 500 #(resolve 1))))]
        (t/is (p/pending? p1))
        (t/is (= @p1 1)))))
 
@@ -143,8 +159,6 @@
          (p/catch p1 (fn [x]
                        (t/is (= e x))
                        (done)))))))
-
-
 
 (t/deftest promise-from-exception-2
   #?(:clj
@@ -383,10 +397,10 @@
   #?(:cljs
      (t/async done
        (let [value (volatile! nil)
-             c1 (e/schedule! 100 #(vreset! value 1))
-             c2 (e/schedule! 100 #(vreset! value 2))]
+             c1 (px/schedule! 100 #(vreset! value 1))
+             c2 (px/schedule! 100 #(vreset! value 2))]
          (p/cancel! c1)
-         (e/schedule! 300
+         (px/schedule! 300
                       (fn []
                         (t/is (= @value 2))
                         (t/is (realized? c2))
@@ -395,10 +409,10 @@
                         (done)))))
      :clj
      (let [value (volatile! nil)
-           c1 (e/schedule! 500 #(vreset! value 1))
-           c2 (e/schedule! 500 #(vreset! value 2))]
+           c1 (px/schedule! 500 #(vreset! value 1))
+           c2 (px/schedule! 500 #(vreset! value 2))]
        (p/cancel! c1)
-       @(e/schedule! 1100 (constantly nil))
+       @(px/schedule! 1100 (constantly nil))
        (t/is (realized? c2))
        (t/is (not (realized? c1)))
        (t/is (p/cancelled? c1))

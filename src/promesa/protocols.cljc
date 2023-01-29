@@ -26,13 +26,12 @@
     "Apply function to a computation identpendently if is failed or
     successful; the return value is ignored."))
 
-#?(:clj
-   (defprotocol IState
-     "Additional state/introspection abstraction."
-     (-extract [_] "Extract the current value.")
-     (-resolved? [_] "Returns true if a promise is resolved.")
-     (-rejected? [_] "Returns true if a promise is rejected.")
-     (-pending? [_] "Retutns true if a promise is pending.")))
+(defprotocol IState
+  "Additional state/introspection abstraction."
+  (-extract [_] "Extract the current value.")
+  (-resolved? [_] "Returns true if a promise is resolved.")
+  (-rejected? [_] "Returns true if a promise is rejected.")
+  (-pending? [_] "Retutns true if a promise is pending."))
 
 (defprotocol IPromiseFactory
   "A promise constructor abstraction."

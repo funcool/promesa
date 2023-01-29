@@ -90,8 +90,7 @@
 (defn deferred?
   "Return true if `v` is a promise instance (alias to `promise?`)."
   [v]
-  #?(:clj (instance? CompletionStage v)
-     :cljs (instance? impl/*default-promise* v)))
+  (satisfies? pt/ICompletable v))
 
 #?(:cljs
    (defn thenable?
@@ -101,34 +100,30 @@
 
 ;; Predicates
 
-#?(:clj
-   (defn resolved?
-     "Returns true if promise `p` is already fulfilled."
-     [p]
-     (pt/-resolved? p)))
+(defn resolved?
+  "Returns true if promise `p` is already fulfilled."
+  [p]
+  (pt/-resolved? p))
 
-#?(:clj
-   (defn rejected?
-     "Returns true if promise `p` is already rejected."
-     [p]
-     (pt/-rejected? p)))
+(defn rejected?
+  "Returns true if promise `p` is already rejected."
+  [p]
+  (pt/-rejected? p))
 
-#?(:clj
-   (defn pending?
-     "Returns true if promise `p` is stil pending."
-     [p]
-     (pt/-pending? p)))
+(defn pending?
+  "Returns true if promise `p` is stil pending."
+  [p]
+  (pt/-pending? p))
 
-#?(:clj
-   (defn extract
-     "Returns the current promise value."
-     [p]
-     (pt/-extract p)))
+(defn extract
+  "Returns the current promise value."
+  [p]
+  (pt/-extract p))
 
-#?(:clj
-   (def done?
-     "Returns true if promise `p` is already done."
-     (complement pending?)))
+(defn done?
+  "Returns true if promise `p` is already done."
+  [p]
+  (not (pt/-pending? p)))
 
 ;; Chaining
 
