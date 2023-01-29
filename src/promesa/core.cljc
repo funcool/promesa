@@ -415,6 +415,47 @@
                (finally
                  (pt/-unlock! lock)))))))))))
 
+(defn wait-all*
+  "Given an array of promises, return a promise that is fulfilled when
+  all the items in the array are resolved (independently if
+  successfully or exceptionally).
+
+  Example:
+
+  ```
+  (->> (p/wait-all* [(promise :first-promise)
+                     (promise :second-promise)])
+       (p/fmap (fn [_]
+                 (println \"done\"))))
+  ```
+
+  Rejected promises also counts as resolved."
+  [promises]
+  (c/let [promises (set promises)
+          total    (count promises)
+          prom     (deferred)]
+    (if (pos? total)
+      (c/let [counter (atom total)]
+        (c/run! #(pt/-finally % (fn [_ _]
+                                  (when (= 0 (swap! counter dec))
+                                    (pt/-resolve! prom nil))))
+                promises))
+      (pt/-resolve! prom nil))
+    prom))
+
+(defn wait-all
+  "Given a variable number of promises, returns a promise which resolves
+  to `nil` when all provided promises complete (rejected or resolved).
+
+  **EXPERIMENTAL**"
+  [& promises]
+  (wait-all* (into #{} promises)))
+
+#?(:clj
+   (defn wait-all!
+     "A blocking version of `wait-all`."
+     [promises]
+     (pt/-await! (wait-all promises))))
 
 (defn run!
   "A promise aware run! function. Executed in terms of `then` rules."
@@ -754,24 +795,3 @@
        (throw cause))
      (catch Throwable cause
        cause)))))
-
-(defn wait-all*
-  [promises]
-  (assert (set? promises) "expected a set instance")
-  (c/let [state (atom promises)
-          d     (deferred)]
-    (c/run! (fn [p]
-              (fnly (fn [_ _]
-                      (when-not (seq (swap! state disj p))
-                        (pt/-resolve! d nil)))
-                    p))
-            promises)
-    d))
-
-(defn wait-all
-  "Given a variable number of promises, returns a promise which resolves
-  to `nil` when all provided promises complete (rejected or resolved).
-
-  **EXPERIMENTAL**"
-  [& promises]
-  (wait-all* (into #{} promises)))

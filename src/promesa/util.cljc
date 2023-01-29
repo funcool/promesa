@@ -95,30 +95,3 @@
        pt/ILock
        (-lock! [_])
        (-unlock! [_]))))
-
-#?(:clj
-(defn count-down-latch
-  [n]
-  (let [cdown (CountDownLatch. (int n))]
-    (reify
-      pt/IAwaitable
-      (-await! [_] (pt/-await! cdown))
-      (-await! [_ d] (pt/-await! cdown d))
-
-      clojure.lang.IFn
-      (invoke [_]
-        (.countDown ^CountDownLatch cdown))
-      (invoke [_ _]
-        (.countDown ^CountDownLatch cdown))
-      (invoke [_ _ _]
-        (.countDown ^CountDownLatch cdown))))))
-
-#?(:clj
-(defn wait-all!
-  [promises]
-  (let [total (count promises)]
-    (when (pos? total)
-      (let [cdown-fn (count-down-latch total)]
-        (doseq [p promises]
-          (pt/-finally p cdown-fn))
-        (pt/-await! cdown-fn))))))
