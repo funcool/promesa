@@ -1,5 +1,15 @@
 # Changelog #
 
+## Version 11.0.xx
+
+- Add internal Promise implementation that allows promise inspection. That enables the
+  `pending?` `done?` `resolved?` and `rejected?`  predicates to be used from CLJS.
+- Add `IDeref` implementation to promises (`@promise` or `(deref promise)` now can be used
+  on CLJS in a nonblocking way, if promise is not fulfilled, `nil` will be returned).
+- Expose almost all CSP API to CLJS (with the exception of go macros, because the JS
+  runtime has no vthreads).
+- Fix many bugs on current CSP impl.
+
 ## Version 10.0.594
 
 - Enable creation of virtual threads on `promesa.exec/thread`
