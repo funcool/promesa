@@ -377,8 +377,8 @@
   IReadChannel or IWriteChannel protocol."
   [o]
   (or (instance? Channel o)
-      (satisfies? pt/IReadChannel)
-      (satisfies? pt/IWriteChannel)))
+      (satisfies? pt/IReadChannel o)
+      (satisfies? pt/IWriteChannel o)))
 
 (defn chan?
   "Returns true if `o` is a full duplex channel."
@@ -409,12 +409,12 @@
                   ([buf]
                    (try
                      (add-fn buf)
-                     (catch Throwable t
+                     (catch #?(:clj Throwable :cljs :default) t
                        (handle buf exh t))))
                   ([buf val]
                    (try
                      (add-fn buf val)
-                     (catch Throwable t
+                     (catch #?(:clj Throwable :cljs :default) t
                        (handle buf exh t)))))]
      (Channel. (volatile! (mlist/create))
                (volatile! (mlist/create))
