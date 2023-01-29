@@ -88,7 +88,7 @@
 
      pt/IState
      (-extract [it]
-       (cljs.core/-deref it))
+       (unchecked-get it "value"))
 
      (-resolved? [it]
        (let [state (unchecked-get it "state")]
