@@ -30,12 +30,12 @@
 
 (defn resolved
   [v]
-  #?(:cljs (.resolve *default-promise* v)
+  #?(:cljs (.resolve ^js *default-promise* v)
      :clj (CompletableFuture/completedFuture v)))
 
 (defn rejected
   [v]
-  #?(:cljs (.reject *default-promise* v)
+  #?(:cljs (.reject ^js *default-promise* v)
      :clj (let [p (CompletableFuture.)]
             (.completeExceptionally ^CompletableFuture p v)
             p)))
