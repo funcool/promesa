@@ -54,8 +54,19 @@
     (sp/put ch 2) ; buffer is full - queued, then dropped by close!
     (sp/close! ch)
 
-    (t/is (= [1] (sp/take! ch)))
-    (t/is (= [2] (sp/take! ch)))))
+    #?(:clj
+       (do
+         (t/is (= [1] (sp/take! ch)))
+         (t/is (= [2] (sp/take! ch))))
+
+       :cljs
+       (t/async done
+          (p/let [v1 (sp/take ch)
+                  v2 (sp/take ch)]
+
+            (t/is (= [1] v1))
+            (t/is (= [2] v2))
+            (done))))))
 
 (t/deftest non-blocking-ops-buffered-chan
   (let [ch (sp/chan 3)]
