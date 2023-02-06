@@ -47,6 +47,16 @@
     (t/is (= 2 (sp/poll! ch)))
     (t/is (= nil (sp/poll! ch)))))
 
+(t/deftest chan-with-stateful-transducer
+  (let [ch (sp/chan 1 (partition-by identity))]
+    (sp/put ch 1) ; starts as transducer state, fills buffer when 2 arrives
+    (sp/put ch 2) ; closes 1 partition, added to transducer state, flushed by close!
+    (sp/put ch 2) ; buffer is full - queued, then dropped by close!
+    (sp/close! ch)
+
+    (t/is (= [1] (sp/take! ch)))
+    (t/is (= [2] (sp/take! ch)))))
+
 (t/deftest non-blocking-ops-buffered-chan
   (let [ch (sp/chan 3)]
     (t/is (true? (sp/offer! ch :a)))

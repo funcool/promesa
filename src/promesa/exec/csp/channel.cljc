@@ -330,8 +330,9 @@
     (when (compare-and-set! closed false true)
       (try
         (pt/-lock! this)
-        (when (and buf (zero? (mlist/size @puts)))
-          (add-fn buf))
+
+        ;; flush any transducer state
+        (some-> buf add-fn)
 
         (loop [items (seq @takes)]
           (when-let [taker (first items)]
