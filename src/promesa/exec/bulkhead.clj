@@ -61,12 +61,12 @@
           (do
             ;; (prn "Task.invoke0" "rval=" rval)
             (-> (pt/-promise rval)
-                (pt/-handle (fn [v e]
-                              (pt/-release! semaphore)
-                              (pt/-submit! executor bulkhead)
-                              (if e
-                                (pt/-reject! result e)
-                                (pt/-resolve! result v))))))
+                (pt/-fnly (fn [v e]
+                            (pt/-release! semaphore)
+                            (pt/-submit! executor bulkhead)
+                            (if e
+                              (pt/-reject! result e)
+                              (pt/-resolve! result v))))))
 
           (pt/-resolve! result nil))
         (catch Throwable cause
@@ -98,7 +98,7 @@
   pt/IExecutor
   (-run! [this task-fn]
     (-> (-offer! this task-fn)
-        (pt/-map px/noop)))
+        (pt/-fmap px/noop)))
 
   (-submit! [this task-fn]
     (-offer! this task-fn))

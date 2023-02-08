@@ -403,11 +403,11 @@
        pt/IExecutor
        (-run! [this f]
          (-> (pt/-promise nil)
-             (pt/-finally (fn [_ _]
-                            (f)))))
+             (pt/-fnly (fn [_ _]
+                         (f)))))
        (-submit! [this f]
          (-> (pt/-promise nil)
-             (pt/-map (fn [_] (f))))))
+             (pt/-fmap (fn [_] (f))))))
 
      :cljs
      (reify
@@ -432,13 +432,13 @@
        pt/IExecutor
        (-run! [this f]
          (-> (pt/-promise nil)
-             (pt/-map (fn [_]
+             (pt/-fmap (fn [_]
                         (try (f) (catch :default _ nil))))
-             (pt/-map noop)))
+             (pt/-fmap noop)))
 
        (-submit! [this f]
          (-> (pt/-promise nil)
-             (pt/-map (fn [_] (f))))))))
+             (pt/-fmap (fn [_] (f))))))))
 
 #?(:cljs
    (deftype Scheduler []
@@ -586,7 +586,7 @@
   executed independently of the cancellation)."
   [executor & body]
   `(-> (submit! ~executor (wrap-bindings (^:once fn* [] ~@body)))
-       (pt/-bind pt/-promise)))
+       (pt/-mcat pt/-promise)))
 
 (defmacro with-executor
   "Binds the *default-executor* var with the provided executor,

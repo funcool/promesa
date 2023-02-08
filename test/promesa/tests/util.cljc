@@ -1,7 +1,9 @@
 (ns promesa.tests.util
-  (:require [promesa.core :as p]
-            [promesa.exec :as e]
-            #?(:cljs [cljs.reader :refer [read-string]])))
+  (:require
+   [clojure.test :as t]
+   [promesa.core :as p]
+   [promesa.exec :as e]
+   #?(:cljs [cljs.reader :refer [read-string]])))
 
 (defn promise-ok
   [sleep value]
@@ -18,4 +20,4 @@
 (defn normalize-to-value
   [p]
   (p/catch p (fn [exc]
-               (read-string (ex-message exc)))))
+               (p/resolved (read-string (ex-message exc))))))

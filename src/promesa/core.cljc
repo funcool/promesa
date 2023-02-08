@@ -20,7 +20,9 @@
   #?(:clj
      (:import
       java.util.concurrent.CompletableFuture
+      java.util.concurrent.CompletionException
       java.util.concurrent.CompletionStage
+      java.util.concurrent.ExecutionException
       java.util.concurrent.TimeoutException)))
 
 #?(:clj (set! *warn-on-reflection* true))
@@ -51,7 +53,7 @@
   ([v]
    (pt/-promise v))
   ([v executor]
-   (pt/-map (pt/-promise v) identity executor)))
+   (pt/-fmap (pt/-promise v) identity executor)))
 
 (defn wrap
   "A convenience alias for `promise` coercion function that only accepts
@@ -85,12 +87,12 @@
 (defn promise?
   "Return true if `v` is a promise instance."
   [v]
-  (satisfies? pt/IPromise v))
+  (impl/promise? v))
 
 (defn deferred?
-  "Return true if `v` is a promise instance (alias to `promise?`)."
+  "Return true if `v` is a deferred instance."
   [v]
-  (satisfies? pt/ICompletable v))
+  (impl/deferred? v))
 
 #?(:cljs
    (defn thenable?
@@ -137,9 +139,9 @@
   The computation will be executed in the completion thread by
   default; you also can provide a custom executor."
   ([p f]
-   (pt/-bind (pt/-promise p) (comp pt/-promise f)))
+   (pt/-then (pt/-promise p) f))
   ([p f executor]
-   (pt/-bind (pt/-promise p) (comp pt/-promise f) executor)))
+   (pt/-then (pt/-promise p) f executor)))
 
 (defn then'
   "Chains a function `f` to be executed when the promise `p` is
@@ -151,9 +153,9 @@
   The computation will be executed in the completion thread by
   default; you also can provide a custom executor."
   ([p f]
-   (pt/-map (pt/-promise p) f))
+   (pt/-fmap (pt/-promise p) f))
   ([p f executor]
-   (pt/-map (pt/-promise p) f executor)))
+   (pt/-fmap (pt/-promise p) f executor)))
 
 (defn bind
   "Chains a function `f` to be executed with when the promise `p` is
@@ -164,9 +166,9 @@
   The computation will be executed in the completion thread by
   default; you also can provide a custom executor."
   ([p f]
-   (pt/-bind (pt/-promise p) f))
+   (pt/-mcat (pt/-promise p) f))
   ([p f executor]
-   (pt/-bind (pt/-promise p) f executor)))
+   (pt/-mcat (pt/-promise p) f executor)))
 
 (defn map
   "Chains a function `f` to be executed when the promise `p` is
@@ -178,16 +180,16 @@
 
   This function is intended to be used with `->>`."
   ([f p]
-   (pt/-map (pt/-promise p) f))
+   (pt/-fmap (pt/-promise p) f))
   ([executor f p]
-   (pt/-map (pt/-promise p) f executor)))
+   (pt/-fmap (pt/-promise p) f executor)))
 
 (defn fmap
   "A convenience alias for `map`."
   ([f p]
-   (pt/-map (pt/-promise p) f))
+   (pt/-fmap (pt/-promise p) f))
   ([executor f p]
-   (pt/-map (pt/-promise p) f executor)))
+   (pt/-fmap (pt/-promise p) f executor)))
 
 (defn mapcat
   "Chains a function `f` to be executed when the promise `p` is
@@ -200,16 +202,16 @@
 
   This funciton is intended to be used with `->>`."
   ([f p]
-   (pt/-bind (pt/-promise p) f))
+   (pt/-mcat (pt/-promise p) f))
   ([executor f p]
-   (pt/-bind (pt/-promise p) f executor)))
+   (pt/-mcat (pt/-promise p) f executor)))
 
 (defn mcat
   "A convenience alias for `mapcat`."
   ([f p]
-   (pt/-bind (pt/-promise p) f))
+   (pt/-mcat (pt/-promise p) f))
   ([executor f p]
-   (pt/-bind (pt/-promise p) f executor)))
+   (pt/-mcat (pt/-promise p) f executor)))
 
 (defn chain
   "Chain variable number of functions to be executed serially using
@@ -235,21 +237,29 @@
 
   For performance sensitive code, look at `hmap` and `hcat`."
   ([p f]
-   #?(:cljs (pt/-handle (pt/-promise p) f)
-      :clj  (c/-> (pt/-handle (pt/-promise p) (comp pt/-promise f))
+   #?(:cljs (c/-> (pt/-promise p)
+                  (pt/-hmap (comp pt/-promise f))
+                  (pt/-mcat identity))
+      :clj  (c/-> (pt/-promise p)
+                  (pt/-hmap (comp pt/-promise f))
                   (util/unwrap-completion-stage))))
   ([p f executor]
-   #?(:cljs (pt/-handle (pt/-promise p) f executor)
-      :clj  (c/-> (pt/-handle (pt/-promise p) (comp pt/-promise f) executor)
+   #?(:cljs (c/-> (pt/-promise p)
+                  (pt/-hmap (comp pt/-promise f) executor)
+                  (pt/-mcat identity executor))
+      :clj  (c/-> (pt/-promise p)
+                  (pt/-hmap (comp pt/-promise f) executor)
                   (util/unwrap-completion-stage)))))
 
 (defn finally
   "Like `handle` but ignores the return value. Returns a promise that
   will mirror the original one."
   ([p f]
-   (pt/-finally (pt/-promise p) f))
+   (c/-> (pt/-promise p)
+         (pt/-fnly f)))
   ([p f executor]
-   (pt/-finally (pt/-promise p) f executor)))
+   (c/-> (pt/-promise p)
+         (pt/-fnly f executor))))
 
 (defn hmap
   "Chains a function `f` to be executed when the promise `p` is completed
@@ -262,36 +272,42 @@
 
   Intended to be used with `->>`."
   ([f p]
-   (pt/-handle (pt/-promise p) f))
+   (pt/-hmap (pt/-promise p) f))
   ([executor f p]
-   (pt/-handle (pt/-promise p) f executor)))
+   (pt/-hmap (pt/-promise p) f executor)))
 
 (defn hcat
   "Chains a function `f` to be executed when the promise `p` is completed
   (resolved or rejected) and returns a promise that will mirror the
   promise instance returned by calling `f` with both: value and the
-  exception.
+  exception. The `f` function must return a promise instance.
 
   The computation will be executed in the completion thread by
   default; you also can provide a custom executor.
 
   Intended to be used with `->>`."
   ([f p]
-   #?(:cljs (pt/-handle (pt/-promise p) f)
-      :clj  (c/-> (pt/-handle (pt/-promise p) f)
+   #?(:cljs (c/-> (pt/-promise p)
+                  (pt/-hmap f)
+                  (pt/-mcat identity))
+      :clj  (c/-> (pt/-promise p)
+                  (pt/-hmap f)
                   (util/unwrap-completion-stage))))
   ([executor f p]
-   #?(:cljs (pt/-handle (pt/-promise p) f executor)
-      :clj  (c/-> (pt/-handle (pt/-promise p) f executor)
+   #?(:cljs (c/-> (pt/-promise p)
+                  (pt/-hmap f executor)
+                  (pt/-mcat identity executor))
+      :clj  (c/-> (pt/-promise p)
+                  (pt/-hmap f executor)
                   (util/unwrap-completion-stage)))))
 
 (defn fnly
   "Inverted arguments version of `finally`; intended to be used with
   `->>`."
   ([f p]
-   (pt/-finally (pt/-promise p) f))
+   (pt/-fnly (pt/-promise p) f))
   ([executor f p]
-   (pt/-finally (pt/-promise p) f executor)))
+   (pt/-fnly (pt/-promise p) f executor)))
 
 (defn catch
   "Chains a function `f` to be executed when the promise `p` is
@@ -304,40 +320,30 @@
   `merr` if you want the ability to schedule the computation to other
   thread."
   ([p f]
-   (pt/-catch (pt/-promise p) (comp pt/-promise f)))
+   (pt/-merr (pt/-promise p) #(pt/-promise (f %))))
   ([p pred-or-type f]
    (c/let [accept? (if (ifn? pred-or-type)
                      pred-or-type
                      #(instance? pred-or-type %))]
-     (pt/-catch
+     (pt/-merr
       (pt/-promise p)
       (fn [e]
         (if (accept? e)
           (pt/-promise (f e))
           (impl/rejected e)))))))
 
-(defn catch'
-  {:deprecated "9.3" :no-doc true}
-  ([p f] (catch p f))
-  ([p pred-or-type f] (catch p pred-or-type f)))
-
-(defn error
-  {:deprecated "9.3" :no-doc true}
-  ([f p] (catch p f))
-  ([f pred-or-type p] (catch p type f)))
-
 (defn merr
   "Chains a function `f` to be executed when the promise `p` is
   rejected. Returns a promise that will mirror the promise returned by
   calling `f` with exception as single argument; `f` **must** return a
-  promise instance.
+  promise instance or throw an exception.
 
   The computation will be executed in the completion thread by
   default; you also can provide a custom executor.
 
   This is intended to be used with `->>`."
-  ([f p] (pt/-catch p f))
-  ([executor f p] (pt/-catch p f executor)))
+  ([f p] (pt/-merr p f))
+  ([executor f p] (pt/-merr p f executor)))
 
 (defn all
   "Given an array of promises, return a promise that is fulfilled when
@@ -357,17 +363,11 @@
   If at least one of the promises is rejected, the resulting promise
   will be rejected."
   [promises]
-  #?(:cljs (c/-> (.all impl/*default-promise* (into-array promises))
-                 (then vec))
-     :clj (c/let [promises (clojure.core/map pt/-promise promises)]
-            (c/->> (CompletableFuture/allOf (into-array CompletableFuture promises))
-                   (map (fn [_]
-                          (c/mapv pt/-extract promises)))))))
+  (impl/all promises))
 
 (defn race
   [promises]
-  #?(:cljs (.race impl/*default-promise* (into-array (c/map pt/-promise promises)))
-     :clj (CompletableFuture/anyOf (into-array CompletableFuture (c/map pt/-promise promises)))))
+  (impl/race promises))
 
 (defn any
   "Given an array of promises, return a promise that is fulfilled when
@@ -383,7 +383,7 @@
      (create
       (fn [resolve reject]
         (c/doseq [p promises]
-          (pt/-handle
+          (pt/-fnly
            (pt/-promise p)
            (fn [v exception]
              (pt/-lock! lock)
@@ -431,9 +431,9 @@
           prom     (deferred)]
     (if (pos? total)
       (c/let [counter (atom total)]
-        (c/run! #(pt/-finally % (fn [_ _]
-                                  (when (= 0 (swap! counter dec))
-                                    (pt/-resolve! prom nil))))
+        (c/run! #(pt/-fnly % (fn [_ _]
+                               (when (= 0 (swap! counter dec))
+                                 (pt/-resolve! prom nil))))
                 promises))
       (pt/-resolve! prom nil))
     prom))
@@ -454,8 +454,12 @@
 
 (defn run!
   "A promise aware run! function. Executed in terms of `then` rules."
-  ([f coll] (run! f coll exec/default-current-thread-executor))
-  ([f coll executor] (reduce #(then %1 (fn [_] (f %2))) (promise nil executor) coll)))
+  ([f coll]
+   (c/-> (c/reduce #(then %1 (fn [_] (f %2))) (impl/resolved nil) coll)
+         (pt/-fmap (constantly nil))))
+  ([f coll executor]
+   (c/-> (c/reduce #(then %1 (fn [_] (f %2)) executor) (impl/resolved nil) coll)
+         (pt/-fmap (constantly nil)))))
 
 ;; Cancellation
 
@@ -537,10 +541,10 @@
   wrapped in promise context so avoids defensive wrapping."
   [& exprs]
   (condp = (count exprs)
-    0 `(pt/-promise nil)
+    0 `(impl/resolved nil)
     1 `(pt/-promise ~(first exprs))
     (reduce (fn [acc e]
-              `(pt/-bind (pt/-promise ~e) (fn [_#] ~acc)))
+              `(pt/-mcat (pt/-promise ~e) (fn [_#] ~acc)))
             `(pt/-promise ~(last exprs))
             (reverse (butlast exprs)))))
 
@@ -549,7 +553,7 @@
   to the last expression after awaiting the result of each
   expression."
   [& exprs]
-  `(pt/-bind
+  `(pt/-mcat
     (pt/-promise nil)
     (fn [_#]
       (promesa.core/do* ~@exprs))))
@@ -566,7 +570,7 @@
   (assert (even? (count bindings)) (str "Uneven binding vector: " bindings))
   (c/->> (reverse (partition 2 bindings))
          (reduce (fn [acc [l r]]
-                   `(pt/-bind (pt/-promise ~r) (fn [~l] ~acc)))
+                   `(pt/-mcat (pt/-promise ~r) (fn [~l] ~acc)))
                  `(do* ~@body))))
 
 (defmacro let
@@ -574,7 +578,7 @@
   promises on the bindings."
   [bindings & body]
   (if (seq bindings)
-    `(pt/-bind
+    `(pt/-mcat
       (pt/-promise nil)
       (fn [_#] (promesa.core/let* ~bindings ~@body)))
     `(promesa.core/do ~@body)))
@@ -584,7 +588,7 @@
   bindings are resolved, executes the body."
   [bindings & body]
   (assert (even? (count bindings)) (str "Uneven binding vector: " bindings))
-  `(pt/-bind
+  `(pt/-mcat
     (pt/-promise nil)
     (fn [_#]
       ~(c/let [bindings (partition 2 bindings)]

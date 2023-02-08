@@ -6,10 +6,12 @@
 
 (ns ^:no-doc promesa.impl
   "Implementation of promise protocols."
-  (:require [promesa.protocols :as pt]
-            [promesa.util :as pu]
-            [promesa.exec :as exec]
-            #?(:cljs [promesa.impl.promise :as impl]))
+  (:require
+   [clojure.core :as c]
+   [promesa.protocols :as pt]
+   [promesa.util :as pu]
+   [promesa.exec :as exec]
+   #?(:cljs [promesa.impl.promise :as impl]))
 
   #?(:clj
      (:import
@@ -28,19 +30,41 @@
 ;; --- Global Constants
 
 #?(:clj (set! *warn-on-reflection* true))
-#?(:cljs (def ^:dynamic *default-promise* impl/PromiseImpl))
+
+(defn promise?
+  "Return true if `v` is a promise instance."
+  [v]
+  (satisfies? pt/IPromise v))
+
+(defn deferred?
+  "Return true if `v` is a deferred instance."
+  [v]
+  (satisfies? pt/ICompletable v))
 
 (defn resolved
   [v]
-  #?(:cljs (.resolve ^js *default-promise* v)
+  #?(:cljs (impl/resolved v)
      :clj (CompletableFuture/completedFuture v)))
 
 (defn rejected
   [v]
-  #?(:cljs (.reject ^js *default-promise* v)
+  #?(:cljs (impl/rejected v)
      :clj (let [p (CompletableFuture.)]
             (.completeExceptionally ^CompletableFuture p v)
             p)))
+
+(defn all
+  [promises]
+  #?(:cljs (-> (impl/all (into-array promises))
+               (pt/-fmap vec))
+     :clj (let [promises (map pt/-promise promises)]
+            (-> (CompletableFuture/allOf (into-array CompletableFuture promises))
+                (pt/-fmap (fn [_] (mapv pt/-extract promises)))))))
+
+(defn race
+  [promises]
+  #?(:cljs (impl/race (into-array (map pt/-promise promises)))
+     :clj (CompletableFuture/anyOf (into-array CompletableFuture (map pt/-promise promises)))))
 
 ;; --- Promise Impl
 
@@ -57,19 +81,19 @@
        (-promise [p] p)
 
        pt/IPromise
-       (-map
+       (-fmap
          ([it f] (.then it #(f %)))
          ([it f e] (.then it #(f %))))
-       (-bind
+       (-mcat
          ([it f] (.then it #(f %)))
          ([it f e] (.then it #(f %))))
-       (-catch
-         ([it f] (.catch it #(f %)))
-         ([it f e] (.catch it #(f %))))
-       (-handle
+       (-merr
+         ([it f] (.then it nil #(f %)))
+         ([it f e] (.then it nil #(f %))))
+       (-hmap
          ([it f] (.then it #(f % nil) #(f nil %)))
          ([it f e] (.then it #(f % nil) #(f nil %))))
-       (-finally
+       (-fnly
          ([it f] (.then it #(f % nil) #(f nil %)) it)
          ([it f executor] (.then it #(f % nil) #(f nil %)) it)))))
 
@@ -78,6 +102,40 @@
 
 #?(:cljs
    (extend-type impl/PromiseImpl
+     pt/IPromiseFactory
+     (-promise [p] p)
+
+     pt/IPromise
+     (-fmap
+       ([it f] (.fmap it #(f %)))
+       ([it f e] (.fmap it #(f %))))
+
+     (-mcat
+       ([it f] (.fbind it #(f %)))
+       ([it f executor] (.fbind it #(f %))))
+
+     (-hmap
+       ([it f] (.fmap it #(f % nil) #(f nil %)))
+       ([it f e] (.fmap it #(f % nil) #(f nil %))))
+
+     (-merr
+       ([it f] (.fbind it pt/-promise #(f %)))
+       ([it f e] (.fbind it pt/-promise #(f %))))
+
+     (-fnly
+       ([it f] (.handle it f) it)
+       ([it f executor] (.handle it f) it))
+
+     (-then
+       ([it f] (.then it #(f %)))
+       ([it f executor] (.then it #(f %))))
+
+     pt/ICompletable
+     (-resolve! [it v]
+       (.resolve ^js it v))
+     (-reject! [it v]
+       (.reject ^js it v))
+
      cljs.core/IDeref
      (-deref [it]
        (let [state (unchecked-get it "state")
@@ -102,18 +160,20 @@
        (let [state (unchecked-get it "state")]
          (identical? state impl/PENDING)))))
 
-#?(:cljs
-   (extend-type impl/DeferredImpl
-     pt/ICompletable
-     (-resolve! [it v]
-       (.resolve ^js it v))
-     (-reject! [it v]
-       (.reject ^js it v))))
+(defn- unwrap
+  ([v]
+   (if (promise? v)
+     (pt/-mcat v unwrap)
+     (pt/-promise v)))
+  ([v executor]
+   (if (promise? v)
+     (pt/-mcat v unwrap executor)
+     (pt/-promise v))))
 
 #?(:clj
    (extend-protocol pt/IPromise
      CompletionStage
-     (-map
+     (-fmap
        ([it f]
         (.thenApply ^CompletionStage it
                     ^Function (pu/->Function f)))
@@ -123,7 +183,7 @@
                          ^Function (pu/->Function f)
                          ^Executor (exec/resolve-executor executor))))
 
-     (-bind
+     (-mcat
        ([it f]
         (.thenCompose ^CompletionStage it
                       ^Function (pu/->Function f)))
@@ -133,7 +193,17 @@
                            ^Function (pu/->Function f)
                            ^Executor (exec/resolve-executor executor))))
 
-     (-catch
+     (-hmap
+       ([it f]
+        (.handle ^CompletionStage it
+                 ^BiFunction (pu/->Function2 f)))
+
+       ([it f executor]
+        (.handleAsync ^CompletionStage it
+                      ^BiFunction (pu/->Function2 f)
+                      ^Executor (exec/resolve-executor executor))))
+
+     (-merr
        ([it f]
         (-> ^CompletionStage it
             (.handle ^BiFunction (pu/->Function2 #(if %2 (f %2) it)))
@@ -145,16 +215,14 @@
                           ^Executor (exec/resolve-executor executor))
             (.thenCompose ^Function pu/f-identity))))
 
-     (-handle
+     (-then
        ([it f]
-        (.handle ^CompletionStage it
-                 ^BiFunction (pu/->Function2 f)))
-       ([it f executor]
-        (.handleAsync ^CompletionStage it
-                      ^BiFunction (pu/->Function2 f)
-                      ^Executor (exec/resolve-executor executor))))
+        (pt/-mcat it (fn [v] (unwrap (f v)))))
 
-     (-finally
+       ([it f executor]
+        (pt/-mcat it (fn [v] (unwrap (f v) executor)) executor)))
+
+     (-fnly
        ([it f]
         (.whenComplete ^CompletionStage it
                        ^BiConsumer (pu/->Consumer2 f)))
@@ -188,17 +256,15 @@
            (.getCause e))))
 
      (-resolved? [it]
-       (and (not (.isCompletedExceptionally it))
-            (not (.isCancelled it))
-            (.isDone it)))
+       (and (.isDone it)
+            (not (.isCompletedExceptionally it))))
 
      (-rejected? [it]
-       (.isCompletedExceptionally it))
+       (and (.isDone it)
+            (.isCompletedExceptionally it)))
 
      (-pending? [it]
        (not (.isDone it)))))
-
-
 
 #?(:clj
    (extend-protocol pt/IAwaitable

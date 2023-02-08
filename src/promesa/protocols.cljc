@@ -8,23 +8,28 @@
   "A generic promise abstraction and related protocols.")
 
 (defprotocol IPromise
-  "A promise abstraction."
-  (-bind [_ f] [_ f executor]
-    "Apply function to a computation and flatten.")
-
-  (-map [_ f] [_ f executor]
+  (-fmap [_ f] [_ f executor]
     "Apply function to a computation")
 
-  (-catch [_ f] [_ f executor]
-    "Apply function to a failed computation. and flatten if promise found.")
+  (-merr [_ f] [_ f executor]
+    "Apply function to a failed computation and flatten 1 level")
 
-  (-handle [_ f] [_ f executor]
-    "Apply function to a computation identpendently if is failed or
-    successful and flatten if promise found.")
+  (-mcat [_ f] [_ f executor]
+    "Apply function to a computation and flatten 1 level")
 
-  (-finally [_ f] [_ f executor]
-    "Apply function to a computation identpendently if is failed or
-    successful; the return value is ignored."))
+  (-hmap [_ f] [_ f executor]
+    "Apply function to a computation independently if is failed or
+    successful.")
+
+  (-fnly [_ f] [_ f executor]
+    "Apply function to a computation independently if is failed or
+    successful; the return value is ignored.")
+
+  (-then [_ f] [_ f executor]
+    "Apply function to a computation and flatten multiple levels")
+
+  )
+
 
 (defprotocol IState
   "Additional state/introspection abstraction."
