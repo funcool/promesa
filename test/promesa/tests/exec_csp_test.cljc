@@ -61,12 +61,13 @@
 
        :cljs
        (t/async done
-          (p/let [v1 (sp/take ch)
-                  v2 (sp/take ch)]
-
-            (t/is (= [1] v1))
-            (t/is (= [2] v2))
-            (done))))))
+         (->> (p/let [v1 (sp/take ch)
+                      v2 (sp/take ch)]
+                (t/is (= [1] v1))
+                (t/is (= [2] v2)))
+              (p/fnly (fn [v c]
+                        (t/is (nil? c))
+                        (done))))))))
 
 (t/deftest non-blocking-ops-buffered-chan
   (let [ch (sp/chan 3)]
@@ -205,10 +206,9 @@
            (sp/offer! mch :a)
            (sp/tap! mch ch2)
            (sp/tap! mch ch3)
-
            (->> (sp/put mch :b)
                 (p/mcat #(p/delay 200))
-                (p/fnly (fn []
+                (p/fnly (fn [v c]
                           (t/is (= :b (sp/poll! ch2)))
                           (t/is (= :b (sp/poll! ch3)))))
                 (p/fnly done)))))))

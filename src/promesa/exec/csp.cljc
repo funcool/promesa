@@ -366,13 +366,15 @@
        (->> (take ch)
             (p/mcat (fn [v]
                       (if (nil? v)
-                        (do (pt/-close! mx) (p/resolved nil))
+                        (do
+                          (pt/-close! mx)
+                          (p/resolved nil))
                         (->> (p/wait-all* (for [ch (-> @state keys vec)]
                                             (->> (put ch v)
                                                  (p/fnly (fn [v _]
                                                            (when (nil? v)
                                                              (pt/-untap! mx ch)))))))
-                             (p/finally (fn [_ _] (p/recur)))))))))
+                             (p/fmap (fn [_] (p/recur)))))))))
 
      mx)))
 
