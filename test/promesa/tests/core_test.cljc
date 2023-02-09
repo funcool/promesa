@@ -783,6 +783,27 @@
                         (t/is (= [10 20 30] @s))
                         (done)))))))
 
+#?(:cljs
+   (t/deftest native-promise-coerce
+     (let [p1 (js/Promise. (fn [resolve reject]
+                             (px/schedule! 100 #(resolve 1))))
+           p2 (p/promise p1)]
+       (t/is (not (identical? p1 p2))))))
+
+#?(:cljs
+   (t/deftest native-promise-coerce-2
+     (let [p1 (js/Promise. (fn [resolve reject]
+                             (px/schedule! 100 #(resolve 1))))
+           p2 (->> p1
+                   (p/fmap inc)
+                   (p/mcat #(p/resolved (inc %))))]
+       (t/async done
+         (p/finally p2 (fn [v c]
+                         (t/is (nil? c))
+                         (t/is (= 3 v))
+                         (t/is (p/resolved? p2))
+                         (done)))))))
+
 #?(:clj
    (t/deftest let-syntax-test
      (t/is (thrown? clojure.lang.Compiler$CompilerException

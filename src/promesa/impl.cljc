@@ -53,6 +53,12 @@
             (.completeExceptionally ^CompletableFuture p v)
             p)))
 
+#?(:cljs
+   (defn coerce
+     "Coerce a thenable to built-in promise impl type."
+     [v]
+     (impl/coerce v)))
+
 (defn all
   [promises]
   #?(:cljs (-> (impl/all (into-array promises))
@@ -78,24 +84,8 @@
      [t]
      (extend-type t
        pt/IPromiseFactory
-       (-promise [p] p)
+       (-promise [p] (impl/coerce p)))))
 
-       pt/IPromise
-       (-fmap
-         ([it f] (.then it #(f %)))
-         ([it f e] (.then it #(f %))))
-       (-mcat
-         ([it f] (.then it #(f %)))
-         ([it f e] (.then it #(f %))))
-       (-merr
-         ([it f] (.then it nil #(f %)))
-         ([it f e] (.then it nil #(f %))))
-       (-hmap
-         ([it f] (.then it #(f % nil) #(f nil %)))
-         ([it f e] (.then it #(f % nil) #(f nil %))))
-       (-fnly
-         ([it f] (.then it #(f % nil) #(f nil %)) it)
-         ([it f executor] (.then it #(f % nil) #(f nil %)) it)))))
 
 #?(:cljs (extend-promise! js/Promise))
 #?(:cljs (extend-promise! impl/PromiseImpl))
