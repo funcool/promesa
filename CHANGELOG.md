@@ -2,6 +2,38 @@
 
 ## Version 11.0.xx
 
+**Important Notice**
+
+In this version, one of the problems that existed since the birth of this library has been
+corrected, related to the fact that the default implementation of js/Promise makes it
+impossible to nest promises. This fact has caused the library in the first place to have
+had a divergence with its counterpart in CLJ/JVM and, secondly, to the fact that
+mapcat-type operators could not be correctly implemented, making them practically useless.
+
+With this version, the problem is fixed and while it cannot technically be considered a
+backwards compatibility break, some operators with promises will not function
+identically. Basically the magical auto-unwrapping of promises is gone.
+
+Function docstrings have already been explicit about what they are expected to return, so
+if you've been relying on the js/Promise implementation detail in CLJS, it's possible that
+some pieces of code are broken, because now several operators already work the same way in
+CLJ and CLJS.
+
+It should be said that only a set of operators has been really affected by the change. The
+Promise library exposes two styles of APIs:
+
+- one that is designed to be used with the `->` (`then`, `catch`, `handle`, `finally`)
+  macro and is intended to emulate the behavior of js/Promise and that api hasn't changed,
+  keep going working as it worked;
+- and the second style of api designed to be used with the `->>` macro (the `fmap`,
+  `mcat`, `hmap`, `hcat`, `fnly` functions, where already the contract was more strict,
+  and that it was performance oriented); This is where this fix may have really affected
+  the most since it makes it even stricter regarding the return values of the
+  callbacks. As I have already commented before, the docstrings already had all this
+  specified for a few versions.
+
+**Relevant changes:**
+
 - Add internal Promise implementation that allows promise inspection. That enables the
   `pending?` `done?` `resolved?` and `rejected?`  predicates to be used from CLJS.
 - Add `IDeref` implementation to promises (`@promise` or `(deref promise)` now can be used
@@ -9,6 +41,7 @@
 - Expose almost all CSP API to CLJS (with the exception of go macros, because the JS
   runtime has no vthreads).
 - Fix many bugs on current CSP impl.
+
 
 ## Version 10.0.594
 
