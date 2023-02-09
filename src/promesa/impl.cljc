@@ -339,19 +339,33 @@
 
 (defn promise->str
   [p]
-  "#<Promise[~]>")
+  "#<js/Promise[~]>")
 
 #?(:clj
    (defmethod print-method java.util.concurrent.CompletionStage
      [p ^java.io.Writer writer]
      (let [status (cond
-                    (pt/-pending? p) "pending"
-                    (pt/-rejected? p) "rejected"
-                    :else "resolved")]
-       (.write writer ^String (format "#object[java.util.concurrent.CompletableFuture 0x%h \"%s\"]" (hash p) status)))))
+                    (pt/-pending? p)   "pending"
+                    (pt/-cancelled? p) "cancelled"
+                    (pt/-rejected? p)  "rejected"
+                    :else              "resolved")]
+       (.write writer ^String (format "#<CompletableFuture[%s:%d]>" status (hash p))))))
 
 #?(:cljs
    (extend-type js/Promise
      IPrintWithWriter
      (-pr-writer [p writer opts]
-       (-write writer (promise->str p)))))
+       (-write writer "#<js/Promise[~]>"))))
+
+#?(:cljs
+   (extend-type impl/PromiseImpl
+     IPrintWithWriter
+     (-pr-writer [p writer opts]
+       (-write writer (str "#<Promise["
+                           (cond
+                             (pt/-pending? p)   "pending"
+                             (pt/-cancelled? p) "cancelled"
+                             (pt/-rejected? p)  "rejected"
+                             :else              "resolved")
+                           ":" (hash p)
+                           "]>")))))
