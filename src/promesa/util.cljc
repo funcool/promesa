@@ -69,6 +69,13 @@
      (accept [_ r e]
        (f r (unwrap-completion-exception e)))))
 
+(defn handler
+  "Create a handler, mainly for combine two separate functions
+  into a single callbale."
+  [fa fb]
+  (fn [v c]
+    (if c (fb c) (fa v))))
+
 (defn has-method?
   [klass name]
   (let [methods (into #{}
