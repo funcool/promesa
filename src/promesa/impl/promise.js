@@ -16,40 +16,37 @@
 
 goog.provide("promesa.impl.promise");
 goog.provide("promesa.impl.promise.PromiseImpl");
+goog.provide("promesa.impl.promise.CancellationError");
 
 goog.scope(function() {
   const self = promesa.impl.promise;
   const root = goog.global;
 
   const PENDING = Symbol("state/pending");
-  const FULFILLED = Symbol("state/fulfilled");
+  const RESOLVED = Symbol("state/resolved");
   const REJECTED = Symbol("state/rejected");
 
   const QUEUE = Symbol("queue");
   const STATE = Symbol("state");
   const VALUE = Symbol("value");
 
-  // const HANDLERS = Symbol("handlers");
   const RESOLVE_TYPE_FLATTEN = Symbol("resolve-type/flatten");
   const RESOLVE_TYPE_BIND = Symbol("resolve-type/bind");
   const RESOLVE_TYPE_MAP = Symbol("resolve-type/map");
 
-  const defaultFulfillHandler = (v) => v;
+  const defaultFulfillFmapHandler = (v) => v;
+  const defaultFulfillFbindHandler = (v) => self.resolved(v);
   const defaultRejectHandler = (c) => {throw c;};
+
+  class CancellationError extends Error {}
 
   class PromiseImpl {
     constructor (val) {
       this[QUEUE] = [];
       this[STATE] = PENDING;
       this[VALUE] = undefined;
-      // this[HANDLERS] = {
-      //   type: null,
-      //   fulfill: defaultFulfillHandler,
-      //   reject: defaultRejectHandler
-      // }
-
       if ((val ?? null) !== null) {
-        transition(this, FULFILLED, val);
+        transition(this, RESOLVED, val);
       }
     }
 
@@ -65,9 +62,8 @@ goog.scope(function() {
       const deferred = new PromiseImpl();
 
       this[QUEUE].push({
-        deferred: deferred,
         type: RESOLVE_TYPE_FLATTEN,
-        fulfill: fulfill ?? defaultFulfillHandler,
+        fulfill: fulfill ?? defaultFulfillFmapHandler,
         reject: reject ?? defaultRejectHandler,
         complete: completeDeferredFn(deferred)
       });
@@ -90,9 +86,8 @@ goog.scope(function() {
       const deferred = new PromiseImpl();
 
       this[QUEUE].push({
-        deferred: deferred,
         type: RESOLVE_TYPE_MAP,
-        fulfill: fulfill ?? defaultFulfillHandler,
+        fulfill: fulfill ?? defaultFulfillFmapHandler,
         reject: reject ?? defaultRejectHandler,
         complete: completeDeferredFn(deferred)
       });
@@ -111,9 +106,8 @@ goog.scope(function() {
       const deferred = new PromiseImpl();
 
       this[QUEUE].push({
-        deferred: deferred,
         type: RESOLVE_TYPE_BIND,
-        fulfill: fulfill ?? defaultFulfillHandler,
+        fulfill: fulfill ?? defaultFulfillFbindHandler,
         reject: reject ?? defaultRejectHandler,
         complete: (v, c) => {
           if (c) {
@@ -139,7 +133,7 @@ goog.scope(function() {
 
       this[QUEUE].push({
         type: resolveType,
-        fulfill: defaultFulfillHandler,
+        fulfill: defaultFulfillFmapHandler,
         reject: defaultRejectHandler,
         complete: fn
       });
@@ -155,7 +149,7 @@ goog.scope(function() {
         //             "uid:", goog.getUid(this),
         //             "value:", fmtValue(value));
 
-        transition(this, FULFILLED, value);
+        transition(this, RESOLVED, value);
       }
       return null;
     }
@@ -168,6 +162,32 @@ goog.scope(function() {
         transition(this, REJECTED, cause);
       }
       return null;
+    }
+
+    isPending() {
+      const state = this[STATE];
+      return state === PENDING;
+    }
+
+    isResolved() {
+      const state = this[STATE];
+      return state === RESOLVED;
+    }
+
+
+    isRejected() {
+      const state = this[STATE];
+      return state === REJECTED;
+    }
+
+    isCancelled() {
+      const state = this[STATE];
+      const value = this[VALUE];
+      return (state === REJECTED && isCancellationError(value));
+    }
+
+    cancel() {
+      this.reject(new CancellationError("promise cancelled"));
     }
 
   }
@@ -199,6 +219,10 @@ goog.scope(function() {
   // const NULL = new PromiseImpl(null);
   // const ZERO = new PromiseImpl(0);
   // const EMPTYSTRING = new PromiseImpl("");
+
+  function isCancellationError(v) {
+    return v instanceof CancellationError;
+  }
 
   function fmtValue (o) {
     if (isThenable(o)) {
@@ -276,7 +300,7 @@ goog.scope(function() {
       //             "type:", task.type);
 
       try {
-        if (p[STATE] === FULFILLED) {
+        if (p[STATE] === RESOLVED) {
           value = task.fulfill(p[VALUE])
         } else if (p[STATE] === REJECTED) {
           value = task.reject(p[VALUE])
@@ -348,10 +372,13 @@ goog.scope(function() {
   }
 
   self.PromiseImpl = PromiseImpl;
+  self.CancellationError = CancellationError;
+  self.isCancellationError = isCancellationError;
 
   self.deferred = () => {
     return new PromiseImpl();
   };
+
 
   self.resolved = function resolved (value, flatten) {
     if (isThenable(value) && flatten) return value;
@@ -370,7 +397,7 @@ goog.scope(function() {
     // }
 
     const p = new PromiseImpl();
-    p[STATE] = FULFILLED;
+    p[STATE] = RESOLVED;
     p[VALUE] = value;
 
     // console.log("++ [resolved]", "uid:", goog.getUid(p), "value:", value);
@@ -430,6 +457,6 @@ goog.scope(function() {
   };
 
   self.PENDING = PENDING;
-  self.FULFILLED = FULFILLED;
+  self.RESOLVED = RESOLVED;
   self.REJECTED = REJECTED;
 });

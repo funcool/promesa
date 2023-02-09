@@ -22,6 +22,7 @@
       java.util.concurrent.CountDownLatch
       java.util.concurrent.ExecutionException
       java.util.concurrent.Executor
+      java.util.concurrent.Future
       java.util.concurrent.TimeUnit
       java.util.concurrent.TimeoutException
       java.util.function.Function
@@ -126,11 +127,16 @@
      (-reject! [it v]
        (.reject ^js it v))
 
+     pt/ICancellable
+     (-cancel! [it]
+       (.cancel it))
+     (-cancelled? [it]
+       (.isCancelled it))
+
      cljs.core/IDeref
      (-deref [it]
-       (let [state (unchecked-get it "state")
-             value (unchecked-get it "value")]
-         (if (identical? state impl/REJECTED)
+       (let [value (unchecked-get it "value")]
+         (if (.isRejected it)
            (throw value)
            value)))
 
@@ -139,16 +145,13 @@
        (unchecked-get it "value"))
 
      (-resolved? [it]
-       (let [state (unchecked-get it "state")]
-         (identical? state impl/FULFILLED)))
+       (.isResolved it))
 
      (-rejected? [it]
-       (let [state (unchecked-get it "state")]
-         (identical? state impl/REJECTED)))
+       (.isRejected it))
 
      (-pending? [it]
-       (let [state (unchecked-get it "state")]
-         (identical? state impl/PENDING)))))
+       (.isPending it))))
 
 (defn- unwrap
   ([v]
@@ -223,6 +226,14 @@
                             ^Executor (exec/resolve-executor executor))))
 
      ))
+
+#?(:clj
+   (extend-type Future
+     pt/ICancellable
+     (-cancel! [it]
+       (.cancel it true))
+     (-cancelled? [it]
+       (.isCancelled it))))
 
 #?(:clj
    (extend-type CompletableFuture
