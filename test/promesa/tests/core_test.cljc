@@ -6,7 +6,9 @@
    [promesa.protocols :as pt]
    [promesa.exec :as px])
   #?(:clj
-     (:import java.util.concurrent.TimeoutException)))
+     (:import
+      java.util.concurrent.CancellationException
+      java.util.concurrent.TimeoutException)))
 
 ;; --- Core Interface Tests
 
@@ -476,32 +478,6 @@
                         (done)))))))
 
 
-;; (t/deftest cancel-scheduled-task
-;;   (let [value (volatile! nil)
-;;         c1 (px/schedule! 100 #(vreset! value 1))
-;;         c2 (px/schedule! 100 #(vreset! value 2))]
-;;     (p/cancel! c1)
-
-;;     #?(:clj
-;;        (let [v1 (p/await c1)
-;;              v2 (p/await c2)]
-;;          (t/is (realized? c2))
-;;          (t/is (not (realized? c1)))
-;;          (t/is (p/cancelled? c1))
-;;          (t/is (= @v2 2)))
-
-;;        :cljs
-;;        (t/async done
-;;          (->> (p/wait-all [c1 c2])
-;;               (p/fnly (fn [v c]
-;;                         (t/is (nil? v))
-;;                         (t/is (nil? c))
-;;                         (t/is (realized? c2))
-;;                         (t/is (not (realized? c1)))
-;;                         (t/is (p/cancelled? c1))
-;;                         (t/is (= @c2 2))
-;;                         (done))))))))
-
 (t/deftest simple-delay
   (let [p (p/delay 100 5)]
     #?(:clj (t/is (= @p 5))
@@ -812,3 +788,34 @@
                     (eval `(p/let [uneven#]))))
      (t/is (thrown? clojure.lang.Compiler$CompilerException
                     (eval `(p/plet [uneven#]))))))
+
+
+(t/deftest cancel-scheduled-task
+  (let [value (volatile! nil)
+        c1 (px/schedule! 200 #(vreset! value 1))
+        c2 (px/schedule! 200 #(vreset! value 2))]
+    (p/cancel! c1)
+
+    #?(:clj
+       (let [v1 (p/await c1)
+             v2 (p/await c2)]
+
+         (t/is (p/cancelled? c1))
+         (t/is (p/resolved? c2))
+         (t/is (p/rejected? c1))
+         (t/is (= @c2 2))
+         (t/is (= v2 2))
+         (t/is (instance? CancellationException v1)))
+
+       :cljs
+       (t/async done
+         (->> (p/wait-all c1 c2)
+              (p/fnly (fn [v c]
+                        (t/is (nil? v))
+                        (t/is (nil? c))
+                        (t/is (p/cancelled? c1))
+                        (t/is (p/resolved? c2))
+                        (t/is (p/rejected? c1))
+                        (t/is (= @c2 2))
+                        (done))))))))
+

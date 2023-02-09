@@ -7,15 +7,18 @@
 (ns promesa.exec
   "Executors & Schedulers facilities."
   (:refer-clojure :exclude [run! pmap await])
-  (:require [promesa.protocols :as pt]
-            [promesa.util :as pu]
-            #?(:cljs [goog.object :as gobj]))
+  (:require
+   [promesa.protocols :as pt]
+   [promesa.util :as pu]
+   #?(:cljs [goog.object :as gobj])
+   #?(:cljs [promesa.impl.promise :as impl]))
   #?(:clj
      (:import
       clojure.lang.Var
       java.lang.AutoCloseable
       java.time.Duration
       java.util.concurrent.Callable
+      java.util.concurrent.CancellationException
       java.util.concurrent.CompletableFuture
       java.util.concurrent.CompletionStage
       java.util.concurrent.CountDownLatch
@@ -440,20 +443,26 @@
          (-> (pt/-promise nil)
              (pt/-fmap (fn [_] (f))))))))
 
+
 #?(:cljs
    (deftype Scheduler []
      pt/IScheduler
      (-schedule! [_ ms f]
-       (let [done (volatile! false)
-             task #(try
-                     (f)
-                     (finally
-                       (vreset! done true)))
-             tid (js/setTimeout task ms)
-             cancel #(js/clearTimeout tid)]
-         (->ScheduledTask #js {:done done
-                               :cancelled false
-                               :cancel-fn cancel})))))
+       (let [df  (impl/deferred)
+             tid (js/setTimeout
+                  (fn []
+                    ;; (js/console.log "111")
+                    (try
+                      (pt/-resolve! df (f))
+                      (catch :default cause
+                        (pt/-reject! df cause))))
+                  ms)]
+         (pt/-fnly df
+                   (fn [_ c]
+                     ;; (js/console.log "FNLY")
+                     (when (impl/isCancellationError c)
+                       (js/clearTimeout tid))))
+         df))))
 
 (defn scheduled-executor
   "A scheduled thread pool constructor. A ScheduledExecutor (IScheduler
@@ -527,58 +536,25 @@
 ;; --- Scheduler & ScheduledTask
 
 #?(:clj
-   (deftype ScheduledTask [^Future fut]
-     clojure.lang.IDeref
-     (deref [_] (.get fut))
-
-     clojure.lang.IBlockingDeref
-     (deref [_ ms default]
-       (try
-         (.get fut ms TimeUnit/MILLISECONDS)
-         (catch TimeoutException e
-           default)))
-
-     clojure.lang.IPending
-     (isRealized [_] (and (.isDone fut)
-                          (not (.isCancelled fut))))
-
-     pt/ICancellable
-     (-cancelled? [_]
-       (.isCancelled fut))
-     (-cancel! [_]
-       (when-not (.isCancelled fut)
-         (.cancel fut true)))
-
-     Future
-     (get [_] (.get fut))
-     (get [_ timeout unit] (.get fut timeout unit))
-     (isCancelled [_] (.isCancelled fut))
-     (isDone [_] (.isDone fut))
-     (cancel [_ interrupt?] (.cancel fut interrupt?)))
-
-   :cljs
-   (deftype ScheduledTask [state]
-     cljs.core/IPending
-     (-realized? [_]
-       (let [done-iref (gobj/get state "done")]
-         (deref done-iref)))
-
-     pt/ICancellable
-     (-cancelled? [_]
-       (gobj/get state "cancelled"))
-     (-cancel! [self]
-       (when-not (pt/-cancelled? self)
-         (let [cancel-fn (gobj/get state "cancel-fn")]
-           (gobj/set state "cancelled" true)
-           (cancel-fn))))))
-
-#?(:clj
    (extend-type ScheduledExecutorService
      pt/IScheduler
      (-schedule! [this ms f]
        (let [ms  (if (instance? Duration ms) (inst-ms ms) ms)
-             fut (.schedule this ^Callable f (long ms) TimeUnit/MILLISECONDS)]
-         (ScheduledTask. fut)))))
+             df  (CompletableFuture.)
+             fut (.schedule this
+                            ^Runnable (fn []
+                                        (try
+                                          (pt/-resolve! df (f))
+                                          (catch Throwable cause
+                                            (pt/-reject! df cause))))
+                            (long ms)
+                            TimeUnit/MILLISECONDS)]
+
+         (pt/-fnly df
+                   (fn [_ c]
+                     (when (instance? CancellationException c)
+                       (pt/-cancel! fut))))
+         df))))
 
 (defmacro with-dispatch
   "Helper macro for dispatch execution of the body to an executor
