@@ -639,6 +639,7 @@
         tprio (:priority opts Thread/NORM_PRIORITY)
         tdaem (:daemon opts true)
         tvirt (:virtual opts false)
+        start (:start opts true)
         thr-s (-> (gensym "thread-")
                   (vary-meta assoc :type `Thread))
         run-s (-> (gensym "runnable-")
@@ -658,7 +659,9 @@
                         (.setName ~tname)
                         (.setPriority (int ~tprio))
                         (.setDaemon (boolean ~tdaem))))]
-       (.start ~thr-s)
+       (when ~start
+         (.start ~thr-s))
+
        ~thr-s))))
 
 #?(:clj
