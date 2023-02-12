@@ -15,6 +15,7 @@
   #?(:clj
      (:import
       clojure.lang.Var
+      java.lang.Thread$UncaughtExceptionHandler
       java.lang.AutoCloseable
       java.time.Duration
       java.util.concurrent.Callable
@@ -715,3 +716,14 @@
   (if (instance? Duration ms)
     (Thread/sleep (int (.toMillis ^Duration ms)))
     (Thread/sleep (int ms)))))
+
+#?(:clj
+(defn throw-uncaught!
+  "Throw an exception to the current uncaught exception handler."
+  [cause]
+  (let [thr (current-thread)
+        hdl (.getUncaughtExceptionHandler ^Thread thr)]
+    (.uncaughtException ^Thread$UncaughtExceptionHandler hdl
+                        ^Thread thr
+                        ^Throwable cause))))
+
