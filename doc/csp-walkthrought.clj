@@ -14,13 +14,13 @@
 (sp/chan)
 
 ;; Pass a number to create a channel with a fixed buffer:
-(sp/chan 10)
+(sp/chan :buf 10)
 
 ;; You also can use a specialized buffer:
-(sp/chan (sp/sliding-buffer 10))
+(sp/chan :buf (sp/sliding-buffer 10))
 
 ;; Or using a transducer
-(sp/chan 10 (map inc))
+(sp/chan :buf 10 :xf (map inc))
 
 ;; `close!` a channel to stop accepting puts. Remaining values are
 ;; still available to take and pending puts are cancelled. Drained
@@ -34,7 +34,7 @@
 ;; The put and take operations; we use `put!` (blocking put) and
 ;; `take!` (blocking take) to communicate via channels
 
-(let [c (sp/chan 1)]
+(let [c (sp/chan :buf 1)]
   (sp/put! c "hello")
   (assert (= "hello" (sp/take! c)))
   (sp/close! c))

@@ -85,7 +85,7 @@
 
 (defprotocol ICloseable
   (-closed? [_])
-  (-close! [_]))
+  (-close! [_] [_ _]))
 
 (defprotocol IBuffer
   (-full? [_])

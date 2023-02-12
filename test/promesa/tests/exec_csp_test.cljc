@@ -9,11 +9,11 @@
 
 (t/deftest chan-factory
   (let [c1 (sp/chan)
-        c2 (sp/chan 2)
-        c3 (sp/chan 2 (map inc))
-        c4 (sp/chan (sp/fixed-buffer 2))
-        c5 (sp/chan (sp/sliding-buffer 2))
-        c6 (sp/chan (sp/dropping-buffer 2))]
+        c2 (sp/chan :buf 2)
+        c3 (sp/chan :buf 2 :xf (map inc))
+        c4 (sp/chan :buf (sp/fixed-buffer 2))
+        c5 (sp/chan :buf (sp/sliding-buffer 2))
+        c6 (sp/chan :buf (sp/dropping-buffer 2))]
 
     (t/is (sp/chan? c1))
     (t/is (sp/chan? c2))
@@ -23,7 +23,7 @@
     (t/is (sp/chan? c6))))
 
 (t/deftest chan-with-mapcat-transducer-1
-  (let [ch (sp/chan 2 (mapcat identity))]
+  (let [ch (sp/chan :buf 2 :xf (mapcat identity))]
     (t/is (true? (sp/offer! ch [1 2 3])))
     (t/is (= 1 (sp/poll! ch)))
     (t/is (= 2 (sp/poll! ch)))
@@ -31,14 +31,15 @@
     (t/is (= nil (sp/poll! ch)))))
 
 (t/deftest chan-with-mapcat-transducer-2
-  (let [ch (sp/chan (sp/fixed-buffer 2) (mapcat identity))]
+  (let [ch (sp/chan :buf (sp/fixed-buffer 2)
+                    :xf (mapcat identity))]
     (t/is (true? (sp/offer! ch [1 2 3])))
     (t/is (= 1 (sp/poll! ch)))
     (t/is (= 2 (sp/poll! ch)))
     (t/is (= nil (sp/poll! ch)))))
 
 (t/deftest chan-with-terminating-transducer
-  (let [ch (sp/chan 5 (take 2))]
+  (let [ch (sp/chan :buf 5 :xf (take 2))]
     (t/is (true? (sp/offer! ch 1)))
     (t/is (true? (sp/offer! ch 2)))
     (t/is (false? (sp/offer! ch 3)))
@@ -48,7 +49,7 @@
     (t/is (= nil (sp/poll! ch)))))
 
 (t/deftest chan-with-stateful-transducer
-  (let [ch (sp/chan 1 (partition-by identity))]
+  (let [ch (sp/chan :buf 1 :xf (partition-by identity))]
     (sp/put ch 1) ; starts as transducer state, fills buffer when 2 arrives
     (sp/put ch 2) ; closes 1 partition, added to transducer state, flushed by close!
     (sp/put ch 2) ; buffer is full - queued, then dropped by close!
@@ -70,7 +71,7 @@
                         (done))))))))
 
 (t/deftest non-blocking-ops-buffered-chan
-  (let [ch (sp/chan 3)]
+  (let [ch (sp/chan :buf 3)]
     (t/is (true? (sp/offer! ch :a)))
     (t/is (true? (sp/offer! ch :b)))
     (t/is (true? (sp/offer! ch :c)))
@@ -83,7 +84,7 @@
     ))
 
 (t/deftest non-blocking-ops-buffered-and-closed-chan
-  (let [ch (sp/chan 3)]
+  (let [ch (sp/chan :buf 3)]
     (t/is (true? (sp/offer! ch :a)))
     (t/is (true? (sp/offer! ch :b)))
 
@@ -98,7 +99,7 @@
     ))
 
 (t/deftest channel-with-sliding-buffer-and-transducer
-  (let [ch (sp/chan (sp/sliding-buffer 2) (map name))]
+  (let [ch (sp/chan :buf (sp/sliding-buffer 2) :xf (map name))]
     (t/is (true? (sp/offer! ch :a)))
     (t/is (true? (sp/offer! ch :b)))
     (t/is (true? (sp/offer! ch :c)))
@@ -107,7 +108,7 @@
     (t/is (= nil (sp/poll! ch)))))
 
 (t/deftest channel-with-dropping-buffer-and-transducer
-  (let [ch (sp/chan (sp/dropping-buffer 2) (map name))]
+  (let [ch (sp/chan :buf (sp/dropping-buffer 2) :xf (map name))]
     (t/is (true? (sp/offer! ch :a)))
     (t/is (true? (sp/offer! ch :b)))
     (t/is (true? (sp/offer! ch :c)))
@@ -128,7 +129,7 @@
 
 (t/deftest pipe-operation
   (let [ch1 (sp/chan)
-        ch2 (sp/chan 2)]
+        ch2 (sp/chan :buf 2)]
     (sp/pipe ch1 ch2)
 
     #?(:clj
@@ -155,11 +156,13 @@
                          (t/is (= v2 :b))
                          (t/is (nil? v3))
                          (t/is (sp/closed? ch2))
-                         (t/is (sp/closed? ch1))
-                         (done)))))))))
+                         (t/is (sp/closed? ch1)))))
+             (p/finally (fn [v c]
+                          (t/is (nil? c))
+                          (done))))))))
 
 (t/deftest onto-chan-operation
-  (let [ch (sp/chan 3)
+  (let [ch (sp/chan :buf 3)
         rs (sp/onto-chan! ch [:a :b :c])]
 
     (t/is (p/promise? rs))
@@ -173,22 +176,22 @@
          (t/is (sp/closed? ch)))
        :cljs
        (t/async done
-         (->> (p/wait-all rs)
-              (p/fnly (fn []
+         (->> rs
+              (p/fnly (fn [v c]
+                        (t/is (nil? c))
                         (t/is (= :a (sp/poll! ch)))
                         (t/is (= :b (sp/poll! ch)))
                         (t/is (= :c (sp/poll! ch)))
                         (t/is (nil? (sp/poll! ch)))
-                        (t/is (sp/closed? ch))))
-
-              (p/fnly done))))))
+                        (t/is (sp/closed? ch))
+                        (done))))))))
 
 (t/deftest operations-with-mult
   (let [mch (sp/mult)]
     #?(:clj
        (try
-         (let [ch2 (sp/chan 1)
-               ch3 (sp/chan 1)]
+         (let [ch2 (sp/chan :buf 1)
+               ch3 (sp/chan :buf 1)]
            (sp/offer! mch :a)
            (px/sleep 200)
            (sp/tap! mch ch2)
@@ -201,8 +204,8 @@
            (sp/close! mch)))
        :cljs
        (t/async done
-         (let [ch2 (sp/chan 1)
-               ch3 (sp/chan 1)]
+         (let [ch2 (sp/chan :buf 1)
+               ch3 (sp/chan :buf 1)]
            (sp/offer! mch :a)
            (sp/tap! mch ch2)
            (sp/tap! mch ch3)

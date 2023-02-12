@@ -46,7 +46,7 @@
   (when (:ns &env)
     (throw (UnsupportedOperationException. "cljs not supported")))
   `(->> (px/wrap-bindings (fn [] ~@body))
-        (p/thread-call channel/*executor*)))
+        (p/thread-call :vthread)))
 
 (defmacro go-loop
   "A convencience helper macro that combines go + loop."
@@ -61,31 +61,55 @@
   "A convencience go macro version that returns a channel instead
   of a promise instance."
   [& body]
-  `(let [c# (chan 1)]
-     (->> (go ~@body)
+  `(let [c# (chan :buf 1)
+         f# (px/wrap-bindings (fn [] ~@body))]
+     (->> (p/thread-call :vthread f#)
           (p/fnly (fn [v# e#]
-                    (offer! c# (or v# e#))
-                    (close! c#))))
+                    (if e#
+                      (close! c# e#)
+                      (offer! c# v#)))))
+     c#))
+
+(defmacro thread-chan
+  "A convencience thread macro version that returns a channel instead of
+  a promise instance."
+  [& body]
+  `(let [c# (chan :buf 1)
+         f# (px/wrap-bindings (fn [] ~@body))]
+     (->> (p/thread-call :thread f#)
+          (p/fnly (fn [v# e#]
+                    (if e#
+                      (close! c# e#)
+                      (offer! c# v#)))))
      c#))
 
 (defn chan
   "Creates a new channel instance, it optionally accepts buffer,
   transducer and error handler. If buffer is an integer, it will be
   used as initial capacity for the expanding buffer."
-  ([] (chan nil nil nil))
-  ([buf] (chan buf nil nil))
-  ([buf xf] (chan buf xf nil))
-  ([buf xf exh]
-   (assert (or (nil? buf)
-               (and (int? buf) (pos? buf))
-               (satisfies? pt/IBuffer buf))
-           "`buf` can be nil, positive int or IBuffer instance")
-   (assert (or (nil? xf) (and (fn? xf) (some? buf)))
-           "xf can be nil or fn (if fn, buf should be present")
-   (let [buf (if (number? buf)
-               (buffers/expanding buf)
-               buf)]
-     (channel/chan buf xf exh))))
+  [& {:keys [buf xf exh exc] :or {exh channel/close-with-exception}}]
+  (assert (or (nil? buf)
+              (and (int? buf) (pos? buf))
+              (satisfies? pt/IBuffer buf))
+          "`buf` can be nil, positive int or IBuffer instance")
+  (assert (or (nil? xf) (and (fn? xf) (some? buf)))
+          "xf can be nil or fn (if fn, buf should be present")
+
+  (let [buf (if (number? buf)
+              (buffers/expanding buf)
+              buf)
+        exc (px/resolve-executor exc)]
+    (channel/chan buf xf exh exc)))
+
+(defn close-with-exception
+  "A channel exception handler that closes the channel with the cause
+  if an exception is raised in the transducer."
+  [ch cause] (channel/close-with-exception ch cause))
+
+(defn throw-uncaught
+  "A channel exception handler that throws the exception to the default
+  uncaught exception handler."
+  [ch cause] (channel/throw-uncaught ch cause))
 
 (defn put
   "Schedules a put operation on the channel. Returns a promise
@@ -210,9 +234,12 @@
 
 (defn close!
   "Close the channel."
-  [port]
-  (pt/-close! port)
-  nil)
+  ([port]
+   (pt/-close! port)
+   nil)
+  ([port cause]
+   (pt/-close! port cause)
+   nil))
 
 (defn closed?
   "Returns true if channel is closed."
@@ -278,16 +305,19 @@
   [port val]
   (let [o (volatile! nil)]
     (pt/-put! port val (channel/volatile->handler o))
-    @o))
+    (first @o)))
 
 (defn poll!
   "Takes a val from port if it's possible to do so
   immediatelly. Returns a resolved promise with the value if
-  succeeded, `nil` otherwise."
+  succeeded,  `nil` otherwise."
   [port]
   (let [o (volatile! nil)]
     (pt/-take! port (channel/volatile->handler o))
-    @o))
+    (let [[v c] (deref o)]
+      (if c
+        (throw c)
+        v))))
 
 (defn pipe
   "Takes elements from the from channel and supplies them to the to
@@ -322,15 +352,16 @@
   Do not creates vthreads (or threads)."
   ([ch coll] (onto-chan! ch coll true))
   ([ch coll close?]
-   (p/loop [items (seq coll)]
-     (if items
-       (->> (put ch (first items))
-            (p/map (fn [res]
-                     (if res
-                       (p/recur (next items))
-                       (p/recur nil)))))
-       (when close?
-         (pt/-close! ch))))))
+   (->> (p/loop [items (seq coll)]
+          (when items
+            (->> (put ch (first items))
+                 (p/fmap (fn [res]
+                           (if res
+                             (p/recur (next items))
+                             (p/recur nil)))))))
+        (p/fnly (fn [_ _]
+                  (when close?
+                    (pt/-close! ch)))))))
 
 (defn mult*
   "Create a multiplexer with an externally provided channel. From now,
@@ -394,12 +425,9 @@
   channels will be automatically removed from multiplexer.
 
   Do not creates vthreads (or threads)."
-  ([] (mult nil nil nil))
-  ([buf] (mult buf nil nil))
-  ([buf xform] (mult buf xform nil))
-  ([buf xform exh]
-   (let [ch (chan buf xform exh)]
-     (mult* ch true))))
+  [& {:as opts}]
+  (let [ch (chan opts)]
+    (mult* ch true)))
 
 (defn tap!
   "Copies the multiplexer source onto the provided channel."
@@ -456,13 +484,13 @@
   EXPERIMENTAL: API subject to be changed or removed in future
   releases."
   [& {:keys [typ in out f close? n exh]
-      :or {typ :thread close? true exh channel/ex-handler}}]
+      :or {typ :thread close? true}}]
   (assert (pos? n) "the worker number should be positive number")
   (assert (chan? in) "`in` parameter is required")
   (assert (chan? out) "`outpu` parameter is required")
   (assert (fn? f) "`f` parameter is required")
-  (let [jch (chan n)
-        rch (chan n)
+  (let [jch (chan :buf n)
+        rch (chan :buf n)
         xfm (comp
              (map (fn [i]
                     #(try
@@ -471,11 +499,10 @@
                            (f val rch)
                            (recur)))
                        (catch Throwable cause
-                         (exh cause)
                          (close! jch)
                          (close! rch)
-                         (when close?
-                           (close! out))))))
+                         (when (fn? exh) (exh cause))
+                         (when close? (close! out cause))))))
              (map (fn [f]
                     (if (= typ :vthread)
                       (p/vthread (f))

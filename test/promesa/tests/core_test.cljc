@@ -780,6 +780,16 @@
                          (t/is (p/resolved? p2))
                          (done)))))))
 
+#?(:cljs
+   (t/deftest async-let-with-undefined
+     (let [f (constantly (js* "void 0"))
+           p (p/let [a (p/resolved 1)
+                     b (p/resolved 2)
+                     c (f 3)]
+               (+ a b))]
+       (p/finally p (fn [v c]
+                      (t/is (nil? c)))))))
+
 #?(:clj
    (t/deftest let-syntax-test
      (t/is (thrown? clojure.lang.Compiler$CompilerException
