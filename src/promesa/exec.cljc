@@ -137,13 +137,18 @@
   {:no-doc true}
   ([] (resolve-executor nil))
   ([executor]
-   (if (or (nil? executor) (= :default executor))
-     @default-executor
+   (cond
+     (nil? executor)      @default-executor
+     (executor? executor) executor
+     (delay? executor)    (resolve-executor @executor)
+     :else
      (case executor
-       :thread         (pu/maybe-deref default-thread-executor)
-       :vthread        (pu/maybe-deref default-vthread-executor)
-       :current-thread (pu/maybe-deref default-current-thread-executor)
-       (pu/maybe-deref executor)))))
+       :default        @default-executor
+       :thread         @default-thread-executor
+       :vthread        @default-vthread-executor
+       :current-thread @default-current-thread-executor
+       (throw #?(:clj (IllegalArgumentException. "invalid executor")
+                 :cljs (js/TypeError. "invalid executor")))))))
 
 (defn resolve-scheduler
   {:no-doc true}
