@@ -2,17 +2,9 @@
 
 ## Introduction
 
-A **promise** is an abstraction that represents the result of an
-asynchronous operation that has the notion of error. Backed with
-[CompletebleFuture][0] on the JVM and [Promise][1] on JS.
-
-This is a list of all possible states for a promise:
-
-- `resolved`: means that the promise contains a value.
-- `rejected`: means that the promise contains an error.
-- `pending`: means that the promise does not have value.
-
-The promise can be considered *done* when it is resolved or rejected.
+A **promise** is an abstraction that represents the result of an asynchronous operation
+that has the notion of error. Backed with [CompletebleFuture][0] on the JVM and
+[Promise][1] on JS.
 
 **NOTE:** keep in mind that the vast majority of things work identically regardless of the
 runtime, but there are cases where the limitations of the platform implementation imply
@@ -78,6 +70,58 @@ execute it asynchronously, you can provide an executor:
 @(p/create (fn [resolve reject] (resolve 1)) exec/default-executor)
 ;; => 1
 ```
+
+## Inspecting promise
+
+This is a list of all possible states for a promise:
+
+- `resolved`: means that the promise contains a value.
+- `rejected`: means that the promise contains an error.
+- `pending`: means that the promise does not have value.
+
+When a promise is created with no value (using `p/deferred` function), the initial promise
+state is `pending`, once has a value it will be considered resolved or rejected if the value
+is an exception.
+
+```clojure
+(def p1 (p/deferred))
+(def p2 (p/resolved 1))
+(def p3 (p/rejected (ex-info "test" {})))
+
+(p/pending? p1)
+;; => true
+
+(p/resolved? p2)
+;; => true
+
+(p/rejected? p3)
+;; => true
+
+(p/done? p1)
+;; => false
+
+(p/done? p2)
+;; => true
+```
+
+You also can access the current value of the promise independently of the state with `p/extract`:
+
+```clojure
+(p/extract p1 :no-val)
+;; => :no-val
+
+(p/extract p2 :no-val)
+;; => 1
+
+(p/extract p3 :no-val)
+;; => #error {...}
+```
+
+You also can use `deref` or the `@` reader macro for blocking access to the promise value.
+The blocking operation only works on JVM, on CLJS, deref has the same semantics as
+`extract` (it does not blocks and acces the current value independently of the state of
+the promise).
+
 
 ## Chaining computations
 
@@ -443,10 +487,9 @@ of execution.
 
 ### `plet` macro
 
-The `plet` macro combines syntax of `let` with `all`; and enables a
-simple declaration of parallel operations followed by a body
-expression that will be executed when all parallel operations have
-successfully resolved.
+The `plet` macro combines syntax of `let` with `all`; and enables a simple declaration of
+parallel operations followed by a body expression that will be executed when all parallel
+operations have successfully resolved.
 
 ```clojure
 @(p/plet [a (p/delay 100 1)
@@ -456,8 +499,8 @@ successfully resolved.
 ;; => 6
 ```
 
-The `plet` macro is just a syntactic sugar on top of `all`. The
-previous example can be written using `all` in this manner:
+The `plet` macro is just a syntactic sugar on top of `all`. The previous example can be
+written using `all` in this manner:
 
 ```clojure
 (p/all [(p/delay 100 1)
@@ -466,17 +509,15 @@ previous example can be written using `all` in this manner:
   (fn [[a b c]] (+ a b c)))
 ```
 
-The real parallelism strictly depends on the underlying implementation
-of the executed functions. If they does syncronous work, all the code
-will be executed serially, almost identical to the standard let. Is
-the user responsability of the final execution model.
+The real parallelism strictly depends on the underlying implementation of the executed
+functions. If they does syncronous work, all the code will be executed serially, almost
+identical to the standard let. Is the user responsability of the final execution model.
 
 
 ### `any`
 
-There are also circumstances where you only want the first
-successfully resolved promise. For this case, you can use the `any`
-combinator:
+There are also circumstances where you only want the first successfully resolved
+promise. For this case, you can use the `any` combinator:
 
 ```clojure
 (def result
@@ -490,9 +531,9 @@ combinator:
 
 ### `race`
 
-The `race` function method returns a promise that fulfills or rejects
-as soon as one of the promises in an iterable fulfills or rejects,
-with the value or reason from that promise:
+The `race` function method returns a promise that fulfills or rejects as soon as one of
+the promises in an iterable fulfills or rejects, with the value or reason from that
+promise:
 
 ```clojure
 @(p/race [(p/delay 100 1)
@@ -502,9 +543,8 @@ with the value or reason from that promise:
 
 ## Delays and Timeouts.
 
-JavaScript, due to its single-threaded nature, does not allow you to
-block or sleep. But, with promises you can emulate that functionality
-using `delay` like so:
+JavaScript, due to its single-threaded nature, does not allow you to block or sleep. But,
+with promises you can emulate that functionality using `delay` like so:
 
 ```clojure
 (-> (p/delay 1000 "foobar")
@@ -515,8 +555,8 @@ using `delay` like so:
 ;; to the console: "Received: foobar"
 ```
 
-The promise library also offers the ability to add a timeout to async
-operations thanks to the `timeout` function:
+The promise library also offers the ability to add a timeout to async operations thanks to
+the `timeout` function:
 
 ```clojure
 (-> (some-async-task)
@@ -525,16 +565,14 @@ operations thanks to the `timeout` function:
     (p/catch #(println "Timeout" %)))
 ```
 
-In this example, if the async task takes more that 200ms then the
-promise will be rejected with a timeout error and then successfully
-captured with the `catch` handler.
+In this example, if the async task takes more that 200ms then the promise will be rejected
+with a timeout error and then successfully captured with the `catch` handler.
 
 
 ## Promise chaining & execution model
 
-Let's try to understand how promise chained functions are executed and
-how they interact with platform threads. **This section is mainly
-affects the **JVM**.
+Let's try to understand how promise chained functions are executed and how they interact
+with platform threads. **This section is mainly affects the **JVM**.
 
 Lets consider this example:
 
@@ -545,59 +583,52 @@ Lets consider this example:
 ;; => 3
 ```
 
-This will create a promise that will resolve to `1` in 100ms (in a
-separate thread); then the first `inc` will be executed (in the same
-thread), and then another `inc` is executed (in the same thread). In
-total only one thread is involved.
+This will create a promise that will resolve to `1` in 100ms (in a separate thread); then
+the first `inc` will be executed (in the same thread), and then another `inc` is executed
+(in the same thread). In total only one thread is involved.
 
-This default execution model is usually preferrable because it don't
-abuse the task scheduling and leverages function inlining on the JVM.
+This default execution model is usually preferrable because it don't abuse the task
+scheduling and leverages function inlining on the JVM.
 
-But it does have drawbacks: this approach will block the thread until
-all of the chained callbacks are executed. For small chains this is
-not a problem. However, if your chain has a lot of functions and
-requires a lot of computation time, this might cause unexpected
-latency. It may block other threads in the thread pool from doing
-other, maybe more important, tasks.
+But it does have drawbacks: this approach will block the thread until all of the chained
+callbacks are executed. For small chains this is not a problem. However, if your chain has
+a lot of functions and requires a lot of computation time, this might cause unexpected
+latency. It may block other threads in the thread pool from doing other, maybe more
+important, tasks.
 
-For such cases, _promesa_ exposes an additional arity for provide a
-user-defined executor to control where the chained callbacks are
-executed:
+For such cases, _promesa_ exposes an additional arity for provide a user-defined executor
+to control where the chained callbacks are executed:
 
 ```clojure
 (require '[promesa.exec :as px])
 
 @(->> (p/delay 100 1)
-      (p/map :default inc)
-      (p/map :default inc))
+      (p/fmap :default inc)
+      (p/fmap :default inc))
 ;; => 3
 ```
 
-This will schedule a separate task for each chained callback, making
-the whole system more responsive because you are no longer executing
-big blocking functions; instead you are executing many small tasks.
+This will schedule a separate task for each chained callback, making the whole system more
+responsive because you are no longer executing big blocking functions; instead you are
+executing many small tasks.
 
-The `:default` keyword will resolve to `px/*default-executor*`, that
-is a `ForkJoinPool` instance that is highly optimized for lots of
-small tasks.
+The `:default` keyword will resolve to `px/*default-executor*`, that is a `ForkJoinPool`
+instance that is highly optimized for lots of small tasks.
 
-On JDK19 with Preview enabled you will also have the
-`px/*vthread-executor*` (`:vthread` keyword can be used) that is an
-instance of *Virtual Thread per task* executor.
+On JDK19 with Preview enabled you will also have the `px/*vthread-executor*` (`:vthread`
+keyword can be used) that is an instance of *Virtual Thread per task* executor.
 
 
 ## Performance overhead
 
-_promesa_ is a lightweight abstraction built on top of native
-facilities (`CompletableFuture` in the JVM and `js/Promise` in
-JavaScript). Internally we make heavy use of protocols in order to
-expose a polymorphic and user friendly API, and this has little
-overhead on top of raw usage of `CompletableFuture` or `Promise`.
+_promesa_ is a lightweight abstraction built on top of native facilities
+(`CompletableFuture` in the JVM and `js/Promise` in JavaScript). Internally we make heavy
+use of protocols in order to expose a polymorphic and user friendly API, and this has
+little overhead on top of raw usage of `CompletableFuture` or `Promise`.
 
-For performance sensitive code, prefer using functions designed to be
-used for `->>`; they are more optimized because they don't perform
-automatic unwrapping handling (unlike the `then` or `handle`
-functions). This applies only to CLJ, on CLJS all they work the same
+For performance sensitive code, prefer using functions designed to be used for `->>`; they
+are more optimized because they don't perform automatic unwrapping handling (unlike the
+`then` or `handle` functions). This applies only to CLJ, on CLJS all they work the same
 way because of how the underlying implementation works.
 
 
