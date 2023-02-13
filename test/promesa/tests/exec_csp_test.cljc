@@ -22,6 +22,17 @@
     (t/is (sp/chan? c5))
     (t/is (sp/chan? c6))))
 
+(t/deftest chan-metadata
+  (let [c1 (sp/chan :buf 2)
+        c2 (with-meta c1 {:foo 1})]
+    (t/is (nil? (meta c1)))
+    (t/is (= {:foo 1} (meta c2)))
+    (t/is (not (identical? c1 c2)))
+    (sp/offer! c1 :a)
+    (sp/offer! c1 :b)
+    (t/is (= :a (sp/poll! c2)))
+    (t/is (= :b (sp/poll! c2)))))
+
 (t/deftest chan-with-mapcat-transducer-1
   (let [ch (sp/chan :buf 2 :xf (mapcat identity))]
     (t/is (true? (sp/offer! ch [1 2 3])))
