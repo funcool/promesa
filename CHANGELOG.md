@@ -26,21 +26,23 @@ Promise library exposes two styles of APIs:
   macro and is intended to emulate the behavior of js/Promise and that api hasn't changed,
   keep going working as it worked;
 - and the second style of api designed to be used with the `->>` macro (the `fmap`,
-  `mcat`, `hmap`, `hcat`, `fnly` functions, where already the contract was more strict,
-  and that it was performance oriented); This is where this fix may have really affected
-  the most since it makes it even stricter regarding the return values of the
-  callbacks. As I have already commented before, the docstrings already had all this
-  specified for a few versions.
+  `mcat`, `hmap`, `hcat`, `fnly` functions, where already the contract was more strict);
+  This is where this fix may have really affected the most since it makes it even stricter
+  regarding the return values of the callbacks. As I have already commented before, the
+  docstrings already had all this specified for a few versions.
+  
 
 **Relevant changes:**
 
 - Add internal Promise implementation that allows promise inspection. That enables the
-  `pending?` `done?` `resolved?` and `rejected?`  predicates to be used from CLJS.
+  `pending?` `done?` `resolved?` and `rejected?`  predicates to be used from CLJS
 - Add `IDeref` implementation to promises (`@promise` or `(deref promise)` now can be used
-  on CLJS in a nonblocking way, if promise is not fulfilled, `nil` will be returned).
+  on CLJS in a nonblocking way, if promise is not fulfilled, `nil` will be returned)
 - Expose almost all CSP API to CLJS (with the exception of go macros, because the JS
-  runtime has no vthreads).
-- Fix many bugs on current CSP impl.
+  runtime has no vthreads)
+- Fix many bugs on current CSP impl
+- Add first class support for errors on channels
+- Add metadata support for channels
 
 
 ## Version 10.0.594
