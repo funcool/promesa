@@ -481,14 +481,17 @@
 
     (p/await! (sp/onto-chan! inp [\"1\" \"2\" \"3\" \"4\"] true))
 
+  Internally, uses 2 vthreads for pipeline internals processing.
+
   EXPERIMENTAL: API subject to be changed or removed in future
   releases."
-  [& {:keys [typ in out f close? n exh]
-      :or {typ :thread close? true}}]
+  [& {:keys [typ in out f close? n exh] :or {typ :thread close? true}}]
   (assert (pos? n) "the worker number should be positive number")
   (assert (chan? in) "`in` parameter is required")
   (assert (chan? out) "`outpu` parameter is required")
   (assert (fn? f) "`f` parameter is required")
+  (assert (#{:thread :vthread} typ) "invalid value on `typ` parameter")
+
   (let [jch (chan :buf n)
         rch (chan :buf n)
         xfm (comp
@@ -501,12 +504,13 @@
                        (catch Throwable cause
                          (close! jch)
                          (close! rch)
-                         (when (fn? exh) (exh cause))
-                         (when close? (close! out cause))))))
+                         (let [exh (or exh close-with-exception)]
+                           (exh out cause)
+                           (when (and close? (not (closed? out)))
+                             (close! out)))))))
+
              (map (fn [f]
-                    (if (= typ :vthread)
-                      (p/vthread (f))
-                      (p/thread (f))))))]
+                    (p/thread-call typ f))))]
 
      (go-loop []
        (if-let [val (<! in)]
