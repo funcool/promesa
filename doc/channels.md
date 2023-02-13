@@ -32,6 +32,7 @@ The main highlights and differences with [core.async][3] are:
   operations.
 - **Analogous performance**; in my own stress tests it has the same performance as
   core.async.
+- **First class errors** support on channels.
 
 There are also some internal differences that you should know:
 
@@ -42,9 +43,10 @@ There are also some internal differences that you should know:
 - Operators or channel helpers do not use vthreads internally so they can be used safelly
   on CLJS or JVM without virtual threads.
 
+
 ## Getting Started
 
-This documentation supposes you have some knowledge of core.async API.
+This documentation supposes you have a bit of knowledge of core.async API.
 
 
 #### Working with channels API
@@ -54,7 +56,7 @@ Lets create a channel and put value in-to:
 ```clojure
 (require '[promesa.exec.csp :as sp])
 
-(def ch (sp/chan 2))
+(def ch (sp/chan :buf 2))
 
 ;; perform a blocking put operation using a blocking operation
 (sp/put! ch :a)
@@ -146,9 +148,9 @@ For completeness, there are also `alts` function, that returns a
 
 #### Channel multiplexing
 
-There are some situations when you want multiple readers on the same
-data or implement some kind of pub/sub. For this reason we have the
-multiplexed channel constructors: `mult` and `mult*`.
+There are some situations when you want multiple readers on the same data or implement
+some kind of pub/sub. For this reason we have the multiplexed channel constructors: `mult`
+and `mult*`.
 
 ```clojure
 (def mx (sp/mult))
@@ -172,15 +174,44 @@ multiplexed channel constructors: `mult` and `mult*`.
 ;;   go 2: :a
 ```
 
-The `mult` constructor returns a muliplexer, and as it implements the
-channel API, you can put values in directly. For the cases when you
-already have a channel that you want multiplext, just use the `mult*`.
+The `mult` constructor returns a muliplexer, and as it implements the channel API, you can
+put values in directly. For the cases when you already have a channel that you want
+multiplext, just use the `mult*`.
 
-The `mult*` works in the same way as `clojure.core.async/mult`.  There
-are also `untap!` function for removing the channel from the
-multiplexer.
+The `mult*` works in the same way as `clojure.core.async/mult`.  There are also `untap!`
+function for removing the channel from the multiplexer.
 
 Closed channels are automatically removed from the multiplexer.
+
+
+#### Errors
+
+On difference with `core.async`, promesa channels supports the notion of error. The errors
+can happen externaly (a producer process that fails) or internally (happens on the
+provided transducer).
+
+For notify of a possible external exception cause, you should proceed to call close!
+function with the cause as second argument:
+
+```clojure
+(sp/close! ch (ex-info "error" {}))
+```
+
+If the exception is happened on the transducer, the channel will be closed with that
+exception. This behavior can be overriden spcifying custom exception handler on the
+channel constructor:
+
+```clojure
+(def ch (sp/chan :buf 1 :xf (map inc) :exh sp/throw-uncaught))
+```
+
+The `sp/throw-uncaught` function is a builtin exception handler that just uses the
+platform mechanism to throw the exception to the uncaugh handler (the default behavior of
+core.async). If no `:exh` parameter is provided the `sp/close-with-exception` will be
+used. Only relevent if you provide transducer.
+
+An exception handler is just a function that accepts two arguments: he channel and the
+exception instance.
 
 
 [0]: https://github.com/funcool/promesa/blob/master/doc/csp-walkthrought.clj
