@@ -214,6 +214,21 @@ An exception handler is just a function that accepts two arguments: he channel a
 exception instance.
 
 
+#### Custom Executor
+
+The channels by default will use virtual threads (if available, or the common-pool in
+other case) for internal dispatching. But you can overwrite that providing a custom
+executor on the channel constructor:
+
+```clojure
+(require '[promesa.exec :as px])
+
+(def executor (px/cached-executor))
+
+(def ch (sp/chan :exc executor))
+```
+
+
 [0]: https://github.com/funcool/promesa/blob/master/doc/csp-walkthrought.clj
 [1]: https://clojure.org/news/2013/06/28/clojure-clore-async-channels
 [3]: https://github.com/clojure/core.async
