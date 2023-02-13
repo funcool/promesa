@@ -26,10 +26,10 @@ Promise library exposes two styles of APIs:
   macro and is intended to emulate the behavior of js/Promise and that api hasn't changed,
   keep going working as it worked;
 - and the second style of api designed to be used with the `->>` macro (the `fmap`,
-  `mcat`, `hmap`, `hcat`, `fnly` functions, where already the contract was more strict);
-  This is where this fix may have really affected the most since it makes it even stricter
-  regarding the return values of the callbacks. As I have already commented before, the
-  docstrings already had all this specified for a few versions.
+  `mcat`, `hmap`, `hcat`, `merr` and `fnly` functions, where already the contract was more
+  strict); This is where this fix may have really affected the most since it makes it even
+  stricter regarding the return values of the callbacks. As I have already commented
+  before, the docstrings already had all this specified for a few versions.
 
 
 **Relevant changes:**
