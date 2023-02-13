@@ -14,16 +14,14 @@ This is a list of all possible states for a promise:
 
 The promise can be considered *done* when it is resolved or rejected.
 
-**NOTE:** keep in mind that the vast majority of things work
-identically regardless of the runtime, but there are cases where the
-limitations of the platform implementation imply differences or even
-the omission of some functions.
+**NOTE:** keep in mind that the vast majority of things work identically regardless of the
+runtime, but there are cases where the limitations of the platform implementation imply
+differences or even the omission of some functions.
 
 ## Creating a promise
 
-There are several different ways to create a promise instance. If you
-just want to create a promise with a plain value, you can use the
-polymorphic `promise` function:
+There are several different ways to create a promise instance. If you just want to create
+a promise with a plain value, you can use the polymorphic `promise` function:
 
 ```clojure
 (require '[promesa.core :as p])
@@ -35,49 +33,43 @@ polymorphic `promise` function:
 (p/promise (ex-info "error" {}))
 ```
 
-It automatically coerces the provided value to the appropriate promise
-instance: `rejected` when the provided value is an exception and
-`resolved` in all other cases.
+It automatically coerces the provided value to the appropriate promise instance:
+`rejected` when the provided value is an exception and `resolved` in all other cases.
 
-If you already know that the value is either `resolved` or `rejected`,
-you can skip the coercion and use the `resolved` and `rejected`
-functions:
+If you already know that the value is either `resolved` or `rejected`, you can skip the
+coercion and use the `resolved` and `rejected` functions:
 
 ```clojure
 ;; Create a resolved promise
 (p/resolved 1)
-;; => #object[java.util.concurrent.CompletableFuture 0x3e133219 "resolved"]
+;; => #<CompletableFuture[resolved:1964677152]>
 
 ;; Create a rejected promise
 (p/rejected (ex-info "error" {}))
-;; => #object[java.util.concurrent.CompletableFuture 0x3e563293 "rejected"]
+;; => #<CompletableFuture[rejected:1153075015]>
 ```
 
-Another option is to create an empty promise using the `deferred`
-function and provide the value asynchronously using `p/resolve!` and
-`p/reject!`:
+Another option is to create an empty promise using the `deferred` function and provide the
+value asynchronously using `p/resolve!` and `p/reject!`:
 
 ```clojure
-(defn sleep
+(defn some-fn
   [ms]
   (let [p (p/deferred)]
-    (future (p/resolve! p))
+    (p/resolve! p nil)
     p))
 ```
 
-Another option is using a factory function. If you are familiar with
-JavaScript, this is a similar approach:
+Another option is using a factory function. If you are familiar with JavaScript, this is a
+similar approach:
 
 ```clojure
 @(p/create (fn [resolve reject] (resolve 1)))
 ;; => 1
 ```
 
-**NOTE:** the `@` reader macro only works on JVM.
-
-The factory will be executed synchronously (in the current thread) but
-if you want to execute it asynchronously, you can provide an executor
-(JVM only):
+The factory will be executed synchronously (in the current thread) but if you want to
+execute it asynchronously, you can provide an executor:
 
 
 ```clojure
@@ -87,7 +79,314 @@ if you want to execute it asynchronously, you can provide an executor
 ;; => 1
 ```
 
-Another way to create a promise is using the `do` macro:
+## Chaining computations
+
+This section explains the helpers and macros that **promesa** provides for chain different
+(high-probably asynchonous) operations in a sequence of operations.
+
+It provides mainly two style of API:
+
+1. one designed for use with `->` threading macro and make it easy and familiar to someone
+   that already know how JS promises works. The functions that are part of this style are:
+   `then`, `chain`, `catch`, `handle` and `finally`.
+2. one designed for use with `->>` threading macro and focused on correctness and
+   performance. The functions that are part of this style are: `fmap`, `mcat`, `hmap`,
+   `hcat`, `merr` and `fnly`.
+
+Lets look on detail on all of them.
+
+
+### `then`
+
+The most common way to chain a transformation to a promise is using
+the general purpose `then` function. Consists on applying the function
+
+```clojure
+@(-> (p/resolved 1)
+     (p/then inc))
+;; => 2
+
+;; flatten result
+@(-> (p/resolved 1)
+     (p/then (fn [x] (p/resolved (inc x)))))
+;; => 2
+```
+
+As you can observe in the example, `then` handles functions that return plain values as
+well as promise instances (which will automatically be flattened, in the same way as JS
+promises).
+
+For performance sensitive code, consider using a more specific functions like `fmap` or
+`mcat`.
+
+
+### `chain`
+
+If you have multiple transformations and you want to apply them in one step, there are the
+`chain` and `chain'` functions:
+
+```clojure
+(def result
+  (-> (p/resolved 1)
+      (p/chain inc inc inc)))
+
+@result
+;; => 4
+```
+
+**NOTE**: `chain` is analogous to `then` and `then'` but accept multiple transformation
+functions. The `chain'` variant does not auto-flattens the return value.
+
+
+### `->`, `->>` and `as->` (macros)
+
+**NOTE**: `->` and `->>` introduced in 6.1.431, `as->` introduced in 6.1.434.
+
+This threading macros simplifices chaining operation, removing the
+need of using `then` all the time.
+
+Lets look an example using `then` and later see how it can be improved
+using the `->` threading macro:
+
+```clojure
+(-> (p/resolved {:a 1 :c 3})
+    (p/then #(assoc % :b 2))
+    (p/then #(dissoc % :c)))
+```
+
+Then, the same code can be simplified with:
+
+```clojure
+(p/-> (p/resolved {:a 1 :c 3})
+      (assoc :b 2))
+      (dissoc :c))
+```
+
+The threading macros hides all the accidental complexity of using promise chaining.
+
+The `->>` and `as->` are equivalent to the clojure.core macros, but they work with
+promises in the same way as `->` example shows.
+
+
+### `handle`
+
+If you want to handle rejected and resolved callbacks in one unique callback, then you can
+use the `handle` chain function:
+
+
+```clojure
+(def result
+  (-> (p/promise 1)
+      (p/handle (fn [result error]
+                  (if error :rejected :resolved)))))
+
+@result
+;; => :resolved
+```
+
+It works in the same way as `then`, if the function returns a promise instance it will be
+automatically unwrapped.
+
+
+### `finally`
+
+And finally if you want to attach a (potentially side-effectful)
+callback to be always executed notwithstanding if the promise is
+rejected or resolved:
+
+```clojure
+(def result
+  (-> (p/promise 1)
+      (p/finally (fn [_ _]
+                  (println "finally")))))
+
+@result
+;; => 1
+;; => stdout: "finally"
+```
+
+The return value of the function will be ignored and new promise
+instance will be returned mirroning the original one.
+
+
+### `fmap`
+
+Returns a new promise instance which will be completed with the return value of applying a
+function to the eventually successfully resolved promise.
+
+```clojure
+(def result
+  (->> (p/resolved 1)
+       (p/fmap inc)))
+
+@result
+;; => 2
+```
+
+In contrast to `then`, there are no automatic unwrapping of neested promises. Use `mcat`
+(or `mapcat`) for for handle one level unwrapping.
+
+Aliases: `map`.
+
+
+### `mcat`
+
+Returns a new promise instance which will be completed with the same value as the
+returning promise instance of applying a function to eventually successfully resolved
+promise. The function **must** return a promise instance.
+
+```clojure
+(def result
+  (->> (p/resolved 1)
+       (p/mapcat (fn [v] (p/resolved (inc v))))))
+
+@result
+;; => 2
+```
+
+Aliases: `mapcat`.
+
+
+### `hmap`
+
+Applies a function in the same way as `fmap` to both possible results: `value` and
+`exception`. It returns a promise that will be completed with the return value of the
+function.
+
+```clojure
+(def result
+  (->> (p/resolved 1)
+       (p/hmap (fn [v _] (inc v)))))
+
+@result
+;; => 2
+```
+
+
+### `hcat`
+
+Applies a function in the same way as `mcat` to both possible results: `value` and
+`exception`. Funciton **must** return a promise. It returns a mirrored promise returned by
+the applied function.
+
+```clojure
+(def result
+  (->> (p/resolved 1)
+       (p/hmap (fn [v _] (p/resolved (inc v))))))
+
+@result
+;; => 2
+```
+
+## Error handling
+
+One of the advantages of using the promise abstraction is that it
+natively has a notion of errors, so you don't need to reinvent it. If
+some computation inside the composed promise chain/pipeline raises an
+exception, the pipeline short-circuits and propagates the exception to
+the last promise in the chain.
+
+### `catch`
+
+The `catch` function adds a new handler to the promise chain that will
+be called when any of the previous promises in the chain are rejected
+or an exception is raised. The `catch` function also returns a promise
+that will be resolved or rejected depending on what happens inside the
+catch handler.
+
+Let see an example:
+
+```clojure
+(-> (p/rejected (ex-info "error" nil))
+    (p/catch (fn [error]
+               (prn "erorr:" erorr))))
+```
+
+You also can filter by predicate or by class the possible exception to
+handle:
+
+```clojure
+(-> (p/rejected (ex-info "error" nil))
+    (p/catch clojure.lang.ExceptionInfo
+             (fn [error]
+               (prn "erorr:" erorr))))
+```
+
+Or
+
+```clojure
+(defn ex-info?
+  [o]
+  (instance? clojure.lang.ExceptionInfo o))
+
+(-> (p/rejected (ex-info "error" nil))
+    (p/catch ex-info? (fn [error]
+                        (prn "erorr:" erorr))))
+```
+
+### `merr`
+
+In the same way as `catch` allow apply a function to the promise rejection. This function
+has the parameters in inverse order, intended to be used with `->>` in the same way as
+`fmap` and `mcat`.
+
+The function **must** return a promise instance,
+
+```clojure
+(def result
+  (->> (p/rejected (ex-info "hello" nil))
+       (p/merr (fn [error]
+                 (p/resolved (ex-message error))))))
+
+@result
+;; => "hello"
+```
+
+
+## Composition
+
+Promse exposes a set of helpers and syntactic abstractions (macros) for facilitate working
+with compositions of asynchronous computations.
+
+
+### `let`
+
+The _promesa_ library comes with convenient syntactic-sugar that allows you to create a
+composition that looks like synchronous code while using the Clojure's familiar `let`
+syntax:
+
+```clojure
+(def result
+  (p/let [x (p/delay 1000 42)
+          y (p/delay 1200 41)
+          z 2]
+    (+ x y z)))
+
+@result
+;; => 85
+```
+
+The `let` macro behaves almost identically to Clojure's `let` with the exception that it
+always returns a promise. If an error occurs at any step, the entire composition will be
+short-circuited, returning exceptionally resolved promise.
+
+Under the hood, the `let` macro evalutes to something like this:
+
+```clojure
+(p/then
+  (sleep 42)
+  (fn [x]
+    (p/then
+      (sleep 41)
+      (fn [y]
+        (p/then
+          2
+          (fn [z]
+            (p/promise (do (+ x y z)))))))))
+```
+
+
+### `do`
 
 ```clojure
 (p/do
@@ -123,266 +422,23 @@ Is roughtly equivalent to `let` macro (explained below):
   (expr3))
 ```
 
-Finally, _promesa_ exposes a `future` macro very similar to the
-`clojure.core/future`:
+In fact, the `let` macro uses `do` internally.
 
-```clojure
-@(p/future (some-complex-task))
-;; => "result-of-complex-task"
-```
-
-## Chaining computations
-
-This section explains the helpers and macros that **promesa** provides
-for chain different (high-probably asynchonous) operations in a
-sequence of operations.
-
-
-### `then`
-
-The most common way to chain a transformation to a promise is using
-the general purpose `then` function. Consists on applying the function
-
-```clojure
-@(-> (p/resolved 1)
-     (p/then inc))
-;; => 2
-
-;; flatten result
-@(-> (p/resolved 1)
-     (p/then (fn [x] (p/resolved (inc x)))))
-;; => 2
-```
-
-As you can observe in the example, `then` handles functions that
-return plain values as well as promise instances (which will
-automatically be flattened).
-
-
-For performance sensitive code, consider using a more specific
-functions like `map` or `mapcat`.
-
-### `chain`
-
-If you have multiple transformations and you want to apply them in one
-step, there are the `chain` and `chain'` functions:
-
-```clojure
-(def result
-  (-> (p/resolved 1)
-      (p/chain inc inc inc)))
-
-@result
-;; => 4
-```
-
-**NOTE**: `chain` is analogous to `then` and `then'` but accept
-multiple transformation functions.
-
-
-### `->`, `->>` and `as->` (macros)
-
-**NOTE**: `->` and `->>` introduced in 6.1.431, `as->` introduced in 6.1.434.
-
-This threading macros simplifices chaining operation, removing the
-need of using `then` all the time.
-
-Lets look an example using `then` and later see how it can be improved
-using the `->` threading macro:
-
-```clojure
-(-> (p/resolved {:a 1 :c 3})
-    (p/then #(assoc % :b 2))
-    (p/then #(dissoc % :c)))
-```
-
-Then, the same code can be simplified with:
-
-```clojure
-(p/-> (p/resolved {:a 1 :c 3})
-      (assoc :b 2))
-      (dissoc :c))
-```
-
-The threading macros hides all the accidental complexity of using
-promise chaining.
-
-The `->>` and `as->` are equivalent to the clojure.core macros, but
-they work with promises in the same way as `->` example shows.
-
-
-### `handle`
-
-If you want to handle rejected and resolved callbacks in one unique
-callback, then you can use the `handle` chain function:
-
-
-```clojure
-(def result
-  (-> (p/promise 1)
-      (p/handle (fn [result error]
-                  (if error :rejected :resolved)))))
-
-@result
-;; => :resolved
-```
-
-It works in the same way as `then`, if the function returns a promise
-instance it will be automatically unwrapped.
-
-See also: `hmap`, `hcat`.
-
-
-### `finally`
-
-And finally if you want to attach a (potentially side-effectful)
-callback to be always executed notwithstanding if the promise is
-rejected or resolved:
-
-```clojure
-(def result
-  (-> (p/promise 1)
-      (p/finally (fn [_ _]
-                  (println "finally")))))
-
-@result
-;; => 1
-;; => stdout: "finally"
-```
-
-The return value of the function will be ignored and new promise
-instance will be returned mirroning the original one.
-
-
-### `map`
-
-Returns a new promise instance which will be completed with the return
-value of applying a function to the eventually successfully resolved
-promise.
-
-```clojure
-(def result
-  (->> (p/resolved 1)
-       (p/map inc)))
-
-@result
-;; => 2
-```
-
-In contrast to `then`, there are no automatic unwrapping of neested
-promises. Use `mapcat` for for handle unwrapping.
-
-Aliases: `fmap`.
-
-
-### `mapcat`
-
-Returns a new promise instance which will be completed with the same
-value as the returning promise instance of applying a function to
-eventually successfully resolved promise. The function **must** return
-a promise instance.
-
-```clojure
-(def result
-  (->> (p/resolved 1)
-       (p/mapcat (fn [v] (p/resolved (inc v))))))
-
-@result
-;; => 2
-```
-
-Aliases: `mcat`.
-
-
-### `hmap`
-
-Applies a function in the same way as `map` to both possible results:
-`value` and `exception`. It returns a promise that will be completed
-with the return value of the function.
-
-```clojure
-(def result
-  (->> (p/resolved 1)
-       (p/hmap (fn [v _] (inc v)))))
-
-@result
-;; => 2
-```
-
-See also: `handle`
-
-
-### `hcat`
-
-Applies a function in the same way as `mapcat` to both possible
-results: `value` and `exception`. Funciton **must** return a
-promise. It returns a mirrored promise returned by the applied
-function.
-
-```clojure
-(def result
-  (->> (p/resolved 1)
-       (p/hmap (fn [v _] (p/resolved (inc v))))))
-
-@result
-;; => 2
-```
-
-
-## Composition
-
-### `let`
-
-The _promesa_ library comes with convenient syntactic-sugar that
-allows you to create a composition that looks like synchronous code
-while using the Clojure's familiar `let` syntax:
-
-```clojure
-(def result
-  (p/let [x (p/delay 1000 42)
-          y (p/delay 1200 41)
-          z 2]
-    (+ x y z)))
-
-@result
-;; => 85
-```
-
-The `let` macro behaves identically to Clojure's `let` with the
-exception that it always returns a promise. If an error occurs at any
-step, the entire composition will be short-circuited, returning
-exceptionally resolved promise.
-
-Under the hood, the `let` macro evalutes to something like this:
-
-```clojure
-(p/then
-  (sleep 42)
-  (fn [x]
-    (p/then
-      (sleep 41)
-      (fn [y]
-        (p/then
-          2
-          (fn [z]
-            (p/promise (do (+ x y z)))))))))
-```
 
 ### `all`
 
-In some circumstances you will want wait for completion of several
-promises at the same time. To help with that, _promesa_ also provides
-the `all` helper.
+In some circumstances you will want wait for completion of several promises at the same
+time. To help with that, _promesa_ also provides the `all` helper.
 
 ```clojure
-(let [p (p/all [(do-some-io)
-                (do-some-other-io)])]
-  (p/then p (fn [[result1 result2]]
+(-> (p/all [(do-some-io)
+            (do-some-other-io)])
+    (p/then (fn [[result1 result2]]
               (do-something-with-results result1 result2))))
 ```
 
-Is up to the user properly handle concurrency, `p/all` does not
-lauches additional threads of execution.
+Is up to the user properly handle concurrency, `p/all` does not lauches additional threads
+of execution.
 
 
 ### `plet` macro
@@ -442,71 +498,6 @@ with the value or reason from that promise:
 @(p/race [(p/delay 100 1)
           (p/delay 110 2)])
 ;; => 1
-```
-
-
-## Error handling
-
-One of the advantages of using the promise abstraction is that it
-natively has a notion of errors, so you don't need to reinvent it. If
-some computation inside the composed promise chain/pipeline raises an
-exception, the pipeline short-circuits and propagates the exception to
-the last promise in the chain.
-
-### `catch`
-
-The `catch` function adds a new handler to the promise chain that will
-be called when any of the previous promises in the chain are rejected
-or an exception is raised. The `catch` function also returns a promise
-that will be resolved or rejected depending on what happens inside the
-catch handler.
-
-Let see an example:
-
-```clojure
-(-> (p/rejected (ex-info "error" nil))
-    (p/catch (fn [error]
-               (prn "erorr:" erorr))))
-```
-
-You also can filter by predicate or by class the possible exception to
-handle:
-
-```clojure
-(-> (p/rejected (ex-info "error" nil))
-    (p/catch clojure.lang.ExceptionInfo
-             (fn [error]
-               (prn "erorr:" erorr))))
-```
-
-Or
-
-```clojure
-(defn ex-info?
-  [o]
-  (instance? clojure.lang.ExceptionInfo o))
-
-(-> (p/rejected (ex-info "error" nil))
-    (p/catch ex-info? (fn [error]
-                        (prn "erorr:" erorr))))
-```
-
-### `merr`
-
-In the same way as `catch` allow apply a function to the promise
-rejection. This function has the parameters in inverse order, intended
-to be used with `->>` in the same way as `map` and `mapcat`.
-
-The function **must** return a promise instance,
-
-```clojure
-(def result
-  (->> (p/rejected (ex-info "hello" nil))
-       (p/merr (fn [error]
-                 (p/resolved (ex-message error))))))
-
-@result
-;; => "hello"
 ```
 
 ## Delays and Timeouts.
