@@ -119,8 +119,10 @@
 
 (defn extract
   "Returns the current promise value."
-  [p]
-  (pt/-extract p))
+  ([p]
+   (pt/-extract p))
+  ([p default]
+   (pt/-extract p default)))
 
 (defn done?
   "Returns true if promise `p` is already done."

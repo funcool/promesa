@@ -36,6 +36,7 @@
                    :cljs (deref d)))))
 
   (let [d (p/deferred)]
+    (t/is (= :no-val (p/extract d :no-val)))
     (p/resolve! d :foo)
     (t/is (not (p/pending? d)))
     (t/is (p/done? d))

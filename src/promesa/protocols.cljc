@@ -8,96 +8,94 @@
   "A generic promise abstraction and related protocols.")
 
 (defprotocol IPromise
-  (-fmap [_ f] [_ f executor]
+  (-fmap [it f] [it f executor]
     "Apply function to a computation")
 
-  (-merr [_ f] [_ f executor]
+  (-merr [it f] [it f executor]
     "Apply function to a failed computation and flatten 1 level")
 
-  (-mcat [_ f] [_ f executor]
+  (-mcat [it f] [it f executor]
     "Apply function to a computation and flatten 1 level")
 
-  (-hmap [_ f] [_ f executor]
+  (-hmap [it f] [it f executor]
     "Apply function to a computation independently if is failed or
     successful.")
 
-  (-fnly [_ f] [_ f executor]
+  (-fnly [it f] [it f executor]
     "Apply function to a computation independently if is failed or
     successful; the return value is ignored.")
 
-  (-then [_ f] [_ f executor]
+  (-then [it f] [it f executor]
     "Apply function to a computation and flatten multiple levels")
-
   )
-
 
 (defprotocol IState
   "Additional state/introspection abstraction."
-  (-extract [_] "Extract the current value.")
-  (-resolved? [_] "Returns true if a promise is resolved.")
-  (-rejected? [_] "Returns true if a promise is rejected.")
-  (-pending? [_] "Retutns true if a promise is pending."))
+  (-extract [it] [it default] "Extract the current value.")
+  (-resolved? [it] "Returns true if a promise is resolved.")
+  (-rejected? [it] "Returns true if a promise is rejected.")
+  (-pending? [it] "Retutns true if a promise is pending."))
 
 (defprotocol IPromiseFactory
   "A promise constructor abstraction."
-  (-promise [_] "Create a promise instance from other types"))
+  (-promise [it] "Create a promise instance from other types"))
 
 (defprotocol ICancellable
   "A cancellation abstraction."
-  (-cancel! [_])
-  (-cancelled? [_]))
+  (-cancel! [it])
+  (-cancelled? [it]))
 
 (defprotocol ICompletable
-  (-resolve! [_ v] "Deliver a value to empty promise.")
-  (-reject! [_ e] "Deliver an error to empty promise."))
+  (-resolve! [it v] "Deliver a value to empty promise.")
+  (-reject! [it e] "Deliver an error to empty promise."))
 
 (defprotocol IExecutor
-  (-run! [_ task] "Submit a task and return a promise.")
-  (-submit! [_ task] "Submit a task and return a promise."))
+  (-run! [it task] "Submit a task and return a promise.")
+  (-submit! [it task] "Submit a task and return a promise."))
 
 (defprotocol IScheduler
   "A generic abstraction for scheduler facilities."
-  (-schedule! [_ ms func] "Schedule a function to be executed in future."))
+  (-schedule! [it ms func] "Schedule a function to be executed in future."))
 
 (defprotocol ISemaphore
   "An experimental semaphore protocol, used internally; no public api"
-  (-try-acquire! [_] [_ n] "Try acquire 1 or n permits; not blocking operation")
-  (-acquire! [_] [_ n] "Acquire 1 or N permits")
-  (-release! [_] [_ n] "Release 1 or N permits"))
+  (-try-acquire! [it] [it n] "Try acquire 1 or n permits; not blocking operation")
+  (-acquire! [it] [it n] "Acquire 1 or N permits")
+  (-release! [it] [it n] "Release 1 or N permits"))
 
 (defprotocol ILock
   "An experimental lock protocol, used internally; no public api"
-  (-lock! [_])
-  (-unlock! [_]))
+  (-lock! [it])
+  (-unlock! [it]))
 
 (defprotocol IReadChannel
-  (-take! [_ handler]))
+  (-take! [it handler]))
 
 (defprotocol IWriteChannel
-  (-put! [_ val handler]))
+  (-put! [it val handler]))
 
 (defprotocol IChannelInternal
-  (^:no-doc -cleanup! [_]))
+  (^:no-doc -cleanup! [it]))
 
 (defprotocol IChannelMultiplexer
-  (^:no-doc -tap! [_ ch close?])
-  (^:no-doc -untap! [_ ch]))
+  (^:no-doc -tap! [it ch close?])
+  (^:no-doc -untap! [it ch]))
 
 (defprotocol ICloseable
-  (-closed? [_])
-  (-close! [_] [_ _]))
+  (-closed? [it])
+  (-close! [it] [it reason]))
 
 (defprotocol IBuffer
-  (-full? [_])
-  (-poll! [_])
-  (-offer! [_ val])
-  (-size [_]))
+  (-full? [it])
+  (-poll! [it])
+  (-offer! [it val])
+  (-size [it]))
 
 (defprotocol IHandler
-  (-active? [_])
-  (-commit! [_])
-  (-blockable? [_]))
+  (-active? [it])
+  (-commit! [it])
+  (-blockable? [it]))
 
 #?(:clj
    (defprotocol IAwaitable
-     (-await! [_] [_ duration] "block current thread await termination")))
+     (-await! [it] [it duration] "block current thread await termination")))

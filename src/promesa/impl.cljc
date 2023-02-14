@@ -141,8 +141,13 @@
            value)))
 
      pt/IState
-     (-extract [it]
-       (unchecked-get it "value"))
+     (-extract
+       ([it]
+        (unchecked-get it "value"))
+       ([it default]
+        (if (.isPending it)
+          default
+          (unchecked-get it "value"))))
 
      (-resolved? [it]
        (.isResolved it))
@@ -248,13 +253,21 @@
      (-reject! [f v] (.completeExceptionally f v))
 
      pt/IState
-     (-extract [it]
-       (try
-         (.getNow it nil)
-         (catch ExecutionException e
-           (.getCause e))
-         (catch CompletionException e
-           (.getCause e))))
+     (-extract
+       ([it]
+        (try
+          (.getNow it nil)
+          (catch ExecutionException e
+            (.getCause e))
+          (catch CompletionException e
+            (.getCause e))))
+       ([it default]
+        (try
+          (.getNow it default)
+          (catch ExecutionException e
+            (.getCause e))
+          (catch CompletionException e
+            (.getCause e)))))
 
      (-resolved? [it]
        (and (.isDone it)
