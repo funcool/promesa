@@ -200,12 +200,6 @@ goog.scope(function() {
     }
   })();
 
-  // const TRUE = new PromiseImpl(true);
-  // const FALSE = new PromiseImpl(false);
-  // const NULL = new PromiseImpl(null);
-  // const ZERO = new PromiseImpl(0);
-  // const EMPTYSTRING = new PromiseImpl("");
-
   function isCancellationError(v) {
     return v instanceof CancellationError;
   }
@@ -368,19 +362,6 @@ goog.scope(function() {
 
   self.resolved = function resolved (value, flatten) {
     if (isThenable(value) && flatten) return value;
-
-    // switch (value) {
-    //   case null:
-    //     return NULL;
-    //   case true:
-    //     return TRUE;
-    //   case false:
-    //     return FALSE;
-    //   case 0:
-    //     return ZERO;
-    //   case "":
-    //     return EMPTYSTRING;
-    // }
 
     const p = new PromiseImpl();
     p[STATE] = RESOLVED;
