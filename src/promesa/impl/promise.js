@@ -1,17 +1,3 @@
-/**
- * promise
- *
- * Is a modified and google closure adapted promise implementation
- * from https://github.com/bucharest-gold/fidelity.
- *
- * It provides a simple inspectable and compliant Promise
- * implementation.
- *
- * @author Andrey Antukh <niwi@niwi.nz>, 2023
- * @author Lance Ball, 2015 (original author)
- * @license MIT License <https://opensource.org/licenses/MIT>
- */
-
 "use strict";
 
 goog.provide("promesa.impl.promise");
