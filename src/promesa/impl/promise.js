@@ -20,8 +20,8 @@ goog.scope(function() {
   const RESOLVE_TYPE_BIND = Symbol("resolve-type/bind");
   const RESOLVE_TYPE_MAP = Symbol("resolve-type/map");
 
-  const defaultFulfillFmapHandler = (v) => v;
-  const defaultFulfillFbindHandler = (v) => self.resolved(v);
+  const defaultResolveMapHandler = (v) => v;
+  const defaultResolveBindHandler = (v) => self.resolved(v);
   const defaultRejectHandler = (c) => {throw c;};
 
   class CancellationError extends Error {}
@@ -44,12 +44,12 @@ goog.scope(function() {
       return this[VALUE];
     }
 
-    then (fulfill, reject) {
+    then (resolve, reject) {
       const deferred = new PromiseImpl();
 
       this[QUEUE].push({
         type: RESOLVE_TYPE_FLATTEN,
-        fulfill: fulfill ?? defaultFulfillFmapHandler,
+        resolve: resolve ?? defaultResolveMapHandler,
         reject: reject ?? defaultRejectHandler,
         complete: completeDeferredFn(deferred)
       });
@@ -68,12 +68,12 @@ goog.scope(function() {
       return this.then(null, reject);
     }
 
-    fmap (fulfill, reject) {
+    fmap (resolve, reject) {
       const deferred = new PromiseImpl();
 
       this[QUEUE].push({
         type: RESOLVE_TYPE_MAP,
-        fulfill: fulfill ?? defaultFulfillFmapHandler,
+        resolve: resolve ?? defaultResolveMapHandler,
         reject: reject ?? defaultRejectHandler,
         complete: completeDeferredFn(deferred)
       });
@@ -88,20 +88,14 @@ goog.scope(function() {
       return deferred;
     }
 
-    fbind (fulfill, reject) {
+    fbind (resolve, reject) {
       const deferred = new PromiseImpl();
 
       this[QUEUE].push({
         type: RESOLVE_TYPE_BIND,
-        fulfill: fulfill ?? defaultFulfillFbindHandler,
+        resolve: resolve ?? defaultResolveBindHandler,
         reject: reject ?? defaultRejectHandler,
-        complete: (v, c) => {
-          if (c) {
-            deferred.reject(c);
-          } else {
-            deferred.resolve(v);
-          }
-        }
+        complete: completeDeferredFn(deferred)
       });
 
       // console.log("fbind",
@@ -119,7 +113,7 @@ goog.scope(function() {
 
       this[QUEUE].push({
         type: resolveType,
-        fulfill: defaultFulfillFmapHandler,
+        resolve: defaultResolveMapHandler,
         reject: defaultRejectHandler,
         complete: fn
       });
@@ -262,8 +256,9 @@ goog.scope(function() {
   function processNextTick(p) {
     if (p[QUEUE].length === 0) return;
 
-    let handlers, task;
-    let value, cause;
+    const state = p[STATE];
+    const value = p[VALUE];
+    let task, rvalue, rcause;
 
     // console.log(":: process:",
     //             "uid:", goog.getUid(p),
@@ -279,18 +274,18 @@ goog.scope(function() {
       //             "type:", task.type);
 
       try {
-        if (p[STATE] === RESOLVED) {
-          value = task.fulfill(p[VALUE])
-        } else if (p[STATE] === REJECTED) {
-          value = task.reject(p[VALUE])
+        if (state === RESOLVED) {
+          rvalue = task.resolve(value)
+        } else if (state === REJECTED) {
+          rvalue = task.reject(value)
         } else {
-          cause = new TypeError("invalid state");
+          rcause = new TypeError("invalid state");
         }
       } catch (e) {
-        cause = e;
+        rcause = e;
       }
 
-      resolveTask(task, value, cause);
+      resolveTask(task, rvalue, rcause);
     }
   }
 
@@ -329,6 +324,8 @@ goog.scope(function() {
         } else {
           task.complete(null, new TypeError("expected thenable"));
         }
+      } else {
+        task.complete(null, new TypeError("internal: invalid resolve type"));
       }
     }
   }
@@ -400,7 +397,7 @@ goog.scope(function() {
       promise.then((v) => {
         deferred.resolve(v);
       }, (c) => {
-        deferred.reject(v);
+        deferred.reject(c);
       });
       return deferred;
     }
