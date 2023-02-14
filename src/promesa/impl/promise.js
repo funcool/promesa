@@ -255,8 +255,7 @@ goog.scope(function() {
 
   function process (p) {
     if (p[STATE] === PENDING) return;
-    processNextTick(p);
-    // nextTick(processNextTick, p);
+    nextTick(processNextTick, p);
     return p;
   }
 
