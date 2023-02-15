@@ -199,8 +199,13 @@
                     (-blockable? [_] (pt/-blockable? lock))
                     (-commit! [_]
                       (when-let [f (pt/-commit! lock)]
-                        (fn [val]
-                          (f [val port]))))))]
+                        (fn
+                          ([val]
+                           (f [val port]))
+                          ([val cause]
+                           (if cause
+                             (f nil cause)
+                             (f [val port] nil))))))))]
     (loop [ports (seq ports)]
       (when-let [port (first ports)]
         (if (vector? port)
