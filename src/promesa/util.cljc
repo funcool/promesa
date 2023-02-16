@@ -72,9 +72,9 @@
 (defn handler
   "Create a handler, mainly for combine two separate functions
   into a single callbale."
-  [fa fb]
+  [fv fc]
   (fn [v c]
-    (if c (fb c) (fa v))))
+    (if c (fc c) (fv v))))
 
 (defn has-method?
   [klass name]

@@ -35,6 +35,10 @@
 
 #?(:clj (set! *warn-on-reflection* true))
 
+(def ^{:dynamic true
+       :doc "A defalt executor for channel callback dispatching"}
+  *executor* :vthread)
+
 (defmacro go
   "Schedules the body to be executed asychronously, potentially using
   virtual thread if available (a normal thread will be used in other
@@ -98,7 +102,7 @@
   (let [buf (if (number? buf)
               (buffers/expanding buf)
               buf)
-        exc (px/resolve-executor exc)]
+        exc (px/resolve-executor (or exc *executor*))]
     (channel/chan buf xf exh exc)))
 
 (defn close-with-exception
