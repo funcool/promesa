@@ -156,7 +156,7 @@
   ([] (resolve-scheduler nil))
   ([scheduler]
    (if (or (nil? scheduler) (= :default scheduler))
-     (pu/maybe-deref default-scheduler)
+     @default-scheduler
      (pu/maybe-deref scheduler))))
 
 (defn wrap-bindings
