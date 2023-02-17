@@ -41,6 +41,7 @@
 
 ;; --- Globals & Defaults (with CLJS Impl)
 
+(declare thread-factory)
 (declare scheduled-executor)
 (declare current-thread-executor)
 (declare ->ScheduledTask)
@@ -70,7 +71,7 @@
 (def ^{:no-doc true} noop (constantly nil))
 
 #?(:clj
-   (defn- get-available-processors
+   (defn get-available-processors
      []
      (.availableProcessors (Runtime/getRuntime))))
 
@@ -94,10 +95,20 @@
   (delay (current-thread-executor)))
 
 (defonce
+  ^{:doc "A global, cached thread executor service."
+    :no-doc true}
+  default-cached-executor
+  #?(:clj  (delay (cached-executor))
+     :cljs default-executor))
+
+(defonce
   ^{:doc "A global, thread per task executor service."
     :no-doc true}
   default-thread-executor
-  #?(:clj  (delay (cached-executor))
+  #?(:clj  (if virtual-threads-available?
+             (delay (eval '(java.util.concurrent.Executors/newThreadPerTaskExecutor
+                            ^ThreadFactory (promesa.exec/thread-factory))))
+             default-cached-executor)
      :cljs default-executor))
 
 (defonce
@@ -106,7 +117,7 @@
   default-vthread-executor
   #?(:clj  (if virtual-threads-available?
              (delay (eval '(java.util.concurrent.Executors/newVirtualThreadPerTaskExecutor)))
-             default-thread-executor)
+             default-cached-executor)
      :cljs default-executor))
 
 (defn executor?
@@ -145,6 +156,7 @@
      :else
      (case executor
        :default        @default-executor
+       :cached         @default-cached-executor
        :thread         @default-thread-executor
        :vthread        @default-vthread-executor
        :current-thread @default-current-thread-executor
@@ -504,13 +516,13 @@
 
 #?(:clj
    (defn forkjoin-executor
-     [& {:keys [factory async? parallelism] :or {async? true}}]
+     [& {:keys [factory async parallelism] :or {async true}}]
      (let [parallelism (or parallelism (get-available-processors))
            factory     (cond
                          (instance? ForkJoinPool$ForkJoinWorkerThreadFactory factory) factory
                          (nil? factory) (forkjoin-thread-factory)
                          :else (throw (ex-info "Unexpected thread factory" {:factory factory})))]
-       (ForkJoinPool. (int parallelism) factory nil async?))))
+       (ForkJoinPool. (int parallelism) factory nil async))))
 
 #?(:clj
    (defn work-stealing-executor
@@ -623,6 +635,22 @@
      (pmap #(apply f %) (step-fn (cons coll colls)))))))
 
 #?(:clj
+   (defn fn->thread
+     [f & {:keys [daemon virtual start priority name f]
+           :or {daemon true virtual false start true priority Thread/NORM_PRIORITY}}]
+     (let [thread (if (and virtual virtual-threads-available?)
+                    (.. (Thread/ofVirtual)
+                        (name ^String name)
+                        (unstarted ^Runnable f))
+                    (doto (Thread. ^Runnable f)
+                      (.setName ^String name)
+                      (.setPriority (int priority))
+                      (.setDaemon (boolean daemon))))]
+       (if start
+         (.start ^Thread thread))
+       thread)))
+
+#?(:clj
 (defmacro thread
   "A low-level, not-pooled thread constructor, it accepts an optional
   map as first argument and the body. The options map is interepreted
@@ -631,44 +659,45 @@
   option is ignored if you are using a JVM that has no support for
   Virtual Threads."
   [opts & body]
-  (let [[opts body] (if (map? opts)
-                      [opts body]
-                      [nil (cons opts body)])
-        tname (or (:name opts)
-                  (format "promesa/unpooled-thread/%s" (get-next)))
-        tprio (:priority opts Thread/NORM_PRIORITY)
-        tdaem (:daemon opts true)
-        tvirt (:virtual opts false)
-        start (:start opts true)
-        thr-s (-> (gensym "thread-")
-                  (vary-meta assoc :type `Thread))
-        run-s (-> (gensym "runnable-")
-                  (vary-meta assoc :type `Runnable))]
-    `(let [~run-s (^:once fn* [] ~@body)
-           ~thr-s ~(if virtual-threads-available?
-                     `(if ~tvirt
-                        (.. (Thread/ofVirtual)
-                            (name ~tname)
-                            (unstarted ~run-s))
-                        (.. (Thread/ofPlatform)
-                            (name ~tname)
-                            (priority (int ~tprio))
-                            (daemon (boolean ~tdaem))
-                            (unstarted ~run-s)))
-                     `(doto (Thread. ~run-s)
-                        (.setName ~tname)
-                        (.setPriority (int ~tprio))
-                        (.setDaemon (boolean ~tdaem))))]
-       (when ~start
-         (.start ~thr-s))
+  (let [[opts body] (if (map? opts) [opts body] [nil (cons opts body)])]
+    `(fn->thread (^:once fn* [] ~@body)
+                 {:daemon ~(:daemon opts true)
+                  :virtual ~(:virtual opts false)
+                  :start ~(:start opts true)
+                  :name ~(or (:name opts) (format "promesa/unpooled-thread/%s" (get-next)))}))))
 
-       ~thr-s))))
+#?(:clj
+(defn thread-call
+  "Advanced version of `p/thread-call` that creates and starts a thread
+  configured with `opts`. No executor service is used, this will start
+  a plain unpooled thread."
+  [f & {:as opts}]
+  (let [p (CompletableFuture.)]
+    (fn->thread #(try
+                   (pt/-resolve! p (f))
+                   (catch Throwable cause
+                     (pt/-reject! p cause)))
+                (assoc opts :start true))
+    p)))
 
 #?(:clj
 (defn current-thread
   "Return the current thread."
   []
   (Thread/currentThread)))
+
+#?(:clj
+(defn set-name!
+  "Rename thread."
+  ([name] (set-name! (current-thread) name))
+  ([thread name] (.setName ^Thread thread ^String name))))
+
+#?(:clj
+(defn get-name
+  "Retrieve thread name"
+  ([] (get-name (current-thread)))
+  ([thread]
+   (.getName ^Thread thread))))
 
 #?(:clj
 (defn interrupted?
@@ -690,8 +719,17 @@
      (.isInterrupted ^Thread thread)))))
 
 #?(:clj
+(defn get-thread-id
+  "Retrieves the thread ID."
+  ([]
+   (.getId ^Thread (Thread/currentThread)))
+  ([^Thread thread]
+   (.getId thread))))
+
+#?(:clj
 (defn thread-id
   "Retrieves the thread ID."
+  {:deprecated "11.0"}
   ([]
    (.getId ^Thread (Thread/currentThread)))
   ([^Thread thread]

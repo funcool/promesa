@@ -31,6 +31,10 @@ Promise library exposes two styles of APIs:
   stricter regarding the return values of the callbacks. As I have already commented
   before, the docstrings already had all this specified for a few versions.
 
+**Breaking changes:**
+
+- Rename `:async?` to `:async` prop on `fork-join-executor` for naming consistency
+
 
 **Relevant changes:**
 
@@ -43,6 +47,16 @@ Promise library exposes two styles of APIs:
 - Fix many bugs on current CSP impl
 - Add first class support for errors on channels
 - Add metadata support for channels
+- Add `promesa.exec/get-thread-id` as replacement for the deprecated `thread-id` function.
+- Add `promesa.exec/fn->thread` thread constructor
+- Add `promesa.exec/thread-call` thread constructor (advanced version of
+  `promesa.core/thread-call`) that creates unpooled threads
+- Add `promesa.exec/set-name!` helper for set/update thread name
+- Add `promesa.exec/get-name` helper for retrieve thread name
+- Add `promesa.util/try!` macro helper that wrap expression into a try/catch block and
+  return the result or exception as value.
+- Add `promesa.util/ignoring` macro helpet that wrap expression into a try/catch block and
+  return the result or `nil` if exception is raised.
 
 
 ## Version 10.0.594

@@ -4,7 +4,7 @@
 ;;
 ;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
-(ns ^:no-doc promesa.util
+(ns promesa.util
   (:require [promesa.protocols :as pt])
   #?(:clj
      (:import
@@ -77,6 +77,7 @@
     (if c (fc c) (fv v))))
 
 (defn has-method?
+  {:no-doc true}
   [klass name]
   (let [methods (into #{}
                       (map (fn [method] (.getName ^Method method)))
@@ -84,12 +85,14 @@
     (contains? methods name)))
 
 (defn maybe-deref
+  {:no-doc true}
   [o]
   (if (delay? o)
     (deref o)
     o))
 
 (defn mutex
+  {:no-doc true}
   []
   #?(:clj
      (let [m (ReentrantLock.)]
@@ -102,3 +105,22 @@
        pt/ILock
        (-lock! [_])
        (-unlock! [_]))))
+
+
+(defn try*
+  {:no-doc true}
+  [f on-error]
+  (try (f) (catch #?(:clj Throwable :cljs :default) e (on-error e))))
+
+;; http://clj-me.cgrand.net/2013/09/11/macros-closures-and-unexpected-object-retention/
+;; Explains the use of ^:once metadata
+
+(defmacro ignoring
+  [& exprs]
+  `(try* (^:once fn* [] ~@exprs) (constantly nil)))
+
+(defmacro try!
+  [& exprs]
+  `(try* (^:once fn* [] ~@exprs) identity))
+
+

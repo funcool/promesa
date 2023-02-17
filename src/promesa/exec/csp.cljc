@@ -42,15 +42,16 @@
 (defmacro go
   "Schedules the body to be executed asychronously, potentially using
   virtual thread if available (a normal thread will be used in other
-  case). Returns a promise instance that resolves with the return
-  value when the asynchronous block finishes.
+  case, determined by *executor* dynamic var). Returns a promise
+  instance that resolves with the return value when the asynchronous
+  block finishes.
 
   Forwards dynamic bindings."
   [& body]
   (when (:ns &env)
     (throw (UnsupportedOperationException. "cljs not supported")))
   `(->> (px/wrap-bindings (fn [] ~@body))
-        (p/thread-call :vthread)))
+        (p/thread-call *executor*)))
 
 (defmacro go-loop
   "A convencience helper macro that combines go + loop."
@@ -62,12 +63,12 @@
 (declare chan)
 
 (defmacro go-chan
-  "A convencience go macro version that returns a channel instead
-  of a promise instance."
+  "A convencience go macro version that returns a channel instead of a
+  promise instance, has the same semantics as `go` macro."
   [& body]
   `(let [c# (chan :buf 1)
          f# (px/wrap-bindings (fn [] ~@body))]
-     (->> (p/thread-call :vthread f#)
+     (->> (p/thread-call *executor* f#)
           (p/fnly (fn [v# e#]
                     (if e#
                       (close! c# e#)
