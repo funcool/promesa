@@ -638,24 +638,24 @@
    (if virtual-threads-available?
      (eval
       '(defn fn->thread
-         [f & {:keys [daemon virtual start priority name f]
+         [f & {:keys [daemon virtual start priority name]
                :or {daemon true virtual false start true priority Thread/NORM_PRIORITY}}]
-         (let [thread (if virtual
-                        (.. (Thread/ofVirtual)
-                            (name ^String name)
-                            (unstarted ^Runnable f))
-                        (.. (Thread/ofPlatform)
-                            (name ^String name)
-                            (priority (int priority))
-                            (daemon (boolean daemon))
-                            (unstarted ^Runnable f)))]
+         (let [name   (or name (format "promesa/unpooled-thread/%s" (get-next)))
+               thread (if virtual
+                        (let [thb (Thread/ofVirtual)
+                              thb (.name thb ^String name)]
+                          (.unstarted thb ^Runnable f))
+                        (let [thb (Thread/ofPlatform)
+                              thb (.name thb ^String name)
+                              thb (.priority thb (int priority))
+                              thb (.daemon thb (boolean daemon))]
+                          (.unstarted thb ^Runnable f)))]
            (if start
              (.start ^Thread thread))
            thread)))
      (defn fn->thread
-       [f & {:keys [daemon start priority name f]
+       [f & {:keys [daemon start priority name]
              :or {daemon true start true priority Thread/NORM_PRIORITY}}]
-
        (let [thread (doto (Thread. ^Runnable f)
                       (.setName ^String name)
                       (.setPriority (int priority))
