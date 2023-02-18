@@ -635,20 +635,34 @@
      (pmap #(apply f %) (step-fn (cons coll colls)))))))
 
 #?(:clj
-   (defn fn->thread
-     [f & {:keys [daemon virtual start priority name f]
-           :or {daemon true virtual false start true priority Thread/NORM_PRIORITY}}]
-     (let [thread (if (and virtual virtual-threads-available?)
-                    (.. (Thread/ofVirtual)
-                        (name ^String name)
-                        (unstarted ^Runnable f))
-                    (doto (Thread. ^Runnable f)
+   (if virtual-threads-available?
+     (eval
+      '(defn fn->thread
+         [f & {:keys [daemon virtual start priority name f]
+               :or {daemon true virtual false start true priority Thread/NORM_PRIORITY}}]
+         (let [thread (if virtual
+                        (.. (Thread/ofVirtual)
+                            (name ^String name)
+                            (unstarted ^Runnable f))
+                        (.. (Thread/ofPlatform)
+                            (name ^String name)
+                            (priority (int priority))
+                            (daemon (boolean daemon))
+                            (unstarted ^Runnable f)))]
+           (if start
+             (.start ^Thread thread))
+           thread)))
+     (defn fn->thread
+       [f & {:keys [daemon start priority name f]
+             :or {daemon true start true priority Thread/NORM_PRIORITY}}]
+
+       (let [thread (doto (Thread. ^Runnable f)
                       (.setName ^String name)
                       (.setPriority (int priority))
-                      (.setDaemon (boolean daemon))))]
+                      (.setDaemon (boolean daemon)))]
        (if start
          (.start ^Thread thread))
-       thread)))
+       thread))))
 
 #?(:clj
 (defmacro thread
