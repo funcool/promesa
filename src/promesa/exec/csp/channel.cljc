@@ -351,7 +351,9 @@
         (loop [items (seq @takes)]
           (when-let [taker (first items)]
             (when-let [take-fn (commit! taker)]
-              (px/run! executor (partial take-fn (some-> buf pt/-poll!))))
+              (if-let [val (some-> buf pt/-poll!)]
+                (px/run! executor (partial take-fn val nil))
+                (px/run! executor (partial take-fn nil @error))))
             (recur (rest items))))
 
         (loop [items (seq @puts)]
