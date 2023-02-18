@@ -35,9 +35,9 @@
   (let [instance (pbh/create {:concurrency 1 :queue-size 1})
         res1     (px/submit! instance (waiting-fn 1000))
         ;; _        (Thread/sleep 200)
-        res2     (px/submit! instance (waiting-fn 500))
+        res2     (px/submit! instance (waiting-fn 200))
         ;; _        (Thread/sleep 200)
-        res3     (px/submit! instance (waiting-fn 500))
+        res3     (px/submit! instance (waiting-fn 200))
         ]
     (t/is (p/promise? res1))
     (t/is (p/promise? res2))
