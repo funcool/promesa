@@ -30,7 +30,7 @@ jobs:
         with:
           cli: 1.11.1.1208
 
-      - run: clojure -X:dev:test
+      - run: clojure -J-Djdk.tracePinnedThreads=full -J--enable-preview -X:dev:test
 
   test-cljs:
     runs-on: ubuntu-latest
