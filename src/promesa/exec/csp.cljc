@@ -339,18 +339,27 @@
   "
   ([from to] (pipe from to true))
   ([from to close?]
-   (p/loop []
-     (->> (take from)
-          (p/mcat (fn [v]
-                    (if (nil? v)
-                      (do
-                        (when close? (pt/-close! to))
-                        (p/resolved nil))
-                      (->> (put to v)
-                           (p/map (fn [res]
-                                    (when res
-                                      (p/recur))))))))))
+   (go-loop []
+     (let [v (take! from)]
+       (if (nil? v)
+         (when close? (pt/-close! to))
+         (when (put! to v)
+           (recur)))))
    to))
+
+
+;; (p/loop []
+;;      (->> (take from)
+;;           (p/mcat (fn [v]
+;;                     (if (nil? v)
+;;                       (do
+;;                         (when close? (pt/-close! to))
+;;                         (p/resolved nil))
+;;                       (->> (put to v)
+;;                            (p/map (fn [res]
+;;                                     (when res
+;;                                       (p/recur))))))))))
+;;    to))
 
 (defn onto-chan!
   "Puts the contents of coll into the supplied channel.
@@ -403,21 +412,33 @@
                  (-put! [_ val handler]
                    (pt/-put! ch val handler)))]
 
-     (p/loop []
-       (->> (take ch)
-            (p/mcat (fn [v]
-                      (if (nil? v)
-                        (do
-                          (pt/-close! mx)
-                          (p/resolved nil))
-                        (->> (p/wait-all* (for [ch (-> @state keys vec)]
-                                            (->> (put ch v)
-                                                 (p/fnly (fn [v _]
-                                                           (when (nil? v)
-                                                             (pt/-untap! mx ch)))))))
-                             (p/fmap (fn [_] (p/recur)))))))))
-
+     (go-loop []
+       (let [v (take! ch)]
+         (if (nil? v)
+           (pt/-close! mx)
+           (do
+             (p/await!
+              (p/wait-all* (for [ch (keys @state)]
+                             (->> (put ch v)
+                                  (p/fnly (fn [v _]
+                                            (when (nil? v)
+                                              (pt/-untap! mx ch))))))))
+             (recur)))))
      mx)))
+
+     ;; (p/loop []
+     ;;   (->> (take ch)
+     ;;        (p/mcat (fn [v]
+     ;;                  (if (nil? v)
+     ;;                    (do
+     ;;                      (pt/-close! mx)
+     ;;                      (p/resolved nil))
+     ;;                    (->> (p/wait-all* (for [ch (-> @state keys vec)]
+     ;;                                        (->> (put ch v)
+     ;;                                             (p/fnly (fn [v _]
+     ;;                                                       (when (nil? v)
+     ;;                                                         (pt/-untap! mx ch)))))))
+     ;;                         (p/fmap (fn [_] (p/recur)))))))))
 
 (defn mult
   "Creates an instance of multiplexer.

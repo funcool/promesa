@@ -657,6 +657,7 @@
                                     (if (recur? ~res-s)
                                       (do
                                         (promesa.exec/run!
+                                         :vthread
                                          (promesa.exec/wrap-bindings
                                           ~(if (seq names)
                                              `(fn [] (apply ~tsym (:bindings ~res-s)))
@@ -664,6 +665,7 @@
                                       nil)
                                       (~rsv-s ~res-s)))))))]
           (promesa.exec/run!
+           :vthread
            (promesa.exec/wrap-bindings
             ~(if (seq names)
                `(fn [] (~tsym ~@fvals))
