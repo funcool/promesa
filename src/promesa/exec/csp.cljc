@@ -333,54 +333,57 @@
   "Takes elements from the from channel and supplies them to the to
   channel. By default, the to channel will be closed when the from
   channel closes, but can be determined by the close?  parameter. Will
-  stop consuming the from channel if the to channel closes.
-
-  Do not creates vthreads (or threads).
-  "
+  stop consuming the from channel if the to channel closes."
   ([from to] (pipe from to true))
   ([from to close?]
-   (go-loop []
-     (let [v (take! from)]
-       (if (nil? v)
-         (when close? (pt/-close! to))
-         (when (put! to v)
-           (recur)))))
+   #?(:clj
+      (go-loop []
+        (let [v (take! from)]
+          (if (nil? v)
+            (if close? (pt/-close! to))
+            (if (put! to v)
+              (recur)))))
+      :cljs
+      (p/loop []
+        (->> (take from)
+             (p/mcat (fn [v]
+                       (if (nil? v)
+                         (do
+                           (when close? (pt/-close! to))
+                           (p/resolved nil))
+                         (->> (put to v)
+                              (p/map (fn [res]
+                                       (when res
+                                         (p/recur)))))))))))
+
    to))
-
-
-;; (p/loop []
-;;      (->> (take from)
-;;           (p/mcat (fn [v]
-;;                     (if (nil? v)
-;;                       (do
-;;                         (when close? (pt/-close! to))
-;;                         (p/resolved nil))
-;;                       (->> (put to v)
-;;                            (p/map (fn [res]
-;;                                     (when res
-;;                                       (p/recur))))))))))
-;;    to))
 
 (defn onto-chan!
   "Puts the contents of coll into the supplied channel.
 
   By default the channel will be closed after the items are copied,
   but can be determined by the close? parameter. Returns a promise
-  that will be resolved with `nil` once the items are copied.
-
-  Do not creates vthreads (or threads)."
+  that will be resolved with `nil` once the items are copied."
   ([ch coll] (onto-chan! ch coll true))
   ([ch coll close?]
-   (->> (p/loop [items (seq coll)]
-          (when items
-            (->> (put ch (first items))
-                 (p/fmap (fn [res]
-                           (if res
-                             (p/recur (next items))
-                             (p/recur nil)))))))
-        (p/fnly (fn [_ _]
-                  (when close?
-                    (pt/-close! ch)))))))
+   #?(:clj
+      (go-loop [coll (seq coll)]
+        (if (and coll (put! ch (first coll)))
+          (recur (next coll))
+          (when close?
+            (close! ch))))
+
+      :cljs
+      (->> (p/loop [items (seq coll)]
+             (when items
+               (->> (put ch (first items))
+                    (p/fmap (fn [res]
+                              (if res
+                                (p/recur (next items))
+                                (p/recur nil)))))))
+           (p/fnly (fn [_ _]
+                     (when close?
+                       (pt/-close! ch))))))))
 
 (defn mult*
   "Create a multiplexer with an externally provided channel. From now,
@@ -388,9 +391,7 @@
   values in because multiplexer implements the IWriteChannel protocol.
 
   Optionally accepts `close?` argument, that determines if the channel will
-  be closed when `close!` is called on multiplexer o not.
-
-  Do not creates vthreads (or threads)."
+  be closed when `close!` is called on multiplexer o not."
   ([ch] (mult* ch false))
   ([ch close?]
    (let [state (atom {})
@@ -412,33 +413,37 @@
                  (-put! [_ val handler]
                    (pt/-put! ch val handler)))]
 
-     (go-loop []
-       (let [v (take! ch)]
-         (if (nil? v)
-           (pt/-close! mx)
-           (do
-             (p/await!
-              (p/wait-all* (for [ch (keys @state)]
-                             (->> (put ch v)
-                                  (p/fnly (fn [v _]
-                                            (when (nil? v)
-                                              (pt/-untap! mx ch))))))))
-             (recur)))))
-     mx)))
+     #?(:clj
+        (go-loop []
+          (let [v (take! ch)]
+            (if (nil? v)
+              (pt/-close! mx)
+              (do
+                (p/await!
+                 (p/wait-all* (for [ch (keys @state)]
+                                (->> (put ch v)
+                                     (p/fnly (fn [v _]
+                                               (when (nil? v)
+                                                 (pt/-untap! mx ch))))))))
+                (recur)))))
+        :cljs
+        (p/loop []
+          (->> (take ch)
+               (p/mcat (fn [v]
+                         (if (nil? v)
+                           (do
+                             (pt/-close! mx)
+                             (p/resolved nil))
+                           (->> (p/wait-all* (for [ch (-> @state keys vec)]
+                                               (->> (put ch v)
+                                                    (p/fnly (fn [v _]
+                                                              (when (nil? v)
+                                                                (pt/-untap! mx ch)))))))
+                                (p/fmap (fn [_] (p/recur))))))))))
 
-     ;; (p/loop []
-     ;;   (->> (take ch)
-     ;;        (p/mcat (fn [v]
-     ;;                  (if (nil? v)
-     ;;                    (do
-     ;;                      (pt/-close! mx)
-     ;;                      (p/resolved nil))
-     ;;                    (->> (p/wait-all* (for [ch (-> @state keys vec)]
-     ;;                                        (->> (put ch v)
-     ;;                                             (p/fnly (fn [v _]
-     ;;                                                       (when (nil? v)
-     ;;                                                         (pt/-untap! mx ch)))))))
-     ;;                         (p/fmap (fn [_] (p/recur)))))))))
+
+
+     mx)))
 
 (defn mult
   "Creates an instance of multiplexer.
