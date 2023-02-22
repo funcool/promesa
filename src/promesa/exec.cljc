@@ -573,6 +573,21 @@
   `(-> (submit! ~executor (wrap-bindings (^:once fn* [] ~@body)))
        (pt/-mcat pt/-promise)))
 
+(defmacro with-dispatch!
+  "Blocking version of `with-dispatch`. Useful when you want to
+  dispatch a blocking operation to a separated thread and join current
+  thread waiting for result; effective when current thread is virtual
+  thread."
+  [executor & body]
+  `(try
+     (-> (submit! ~executor (wrap-bindings (^:once fn* [] ~@body)))
+         (pt/-mcat pt/-promise)
+         (pt/-await!))
+     (catch ExecutionException e#
+       (throw (.getCause e#)))
+     (catch CompletionException e#
+       (throw (.getCause e#)))))
+
 (defmacro with-executor
   "Binds the *default-executor* var with the provided executor,
   executes the macro body. It also can optionally shutdown or shutdown
