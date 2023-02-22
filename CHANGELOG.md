@@ -34,6 +34,8 @@ Promise library exposes two styles of APIs:
 **Breaking changes:**
 
 - Rename `:async?` to `:async` prop on `fork-join-executor` for naming consistency
+- Internal refactor of Bulkhead impl, with relevant change is: raises exception instantly
+  on submitig task on a busy instance instead of returning a rejected completable future
 
 
 **Relevant changes:**
@@ -54,9 +56,12 @@ Promise library exposes two styles of APIs:
 - Add `promesa.exec/set-name!` helper for set/update thread name
 - Add `promesa.exec/get-name` helper for retrieve thread name
 - Add `promesa.util/try!` macro helper that wrap expression into a try/catch block and
-  return the result or exception as value.
+  return the result or exception as value
 - Add `promesa.util/ignoring` macro helpet that wrap expression into a try/catch block and
-  return the result or `nil` if exception is raised.
+  return the result or `nil` if exception is raised
+- Add `promesa.exec.semaphore` (only on JVM) namespace with helpers for working with
+  Semaphore instances
+- Add semaphore based bulkhead implementation
 
 
 ## Version 10.0.594

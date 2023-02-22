@@ -59,7 +59,7 @@
 
 (defprotocol ISemaphore
   "An experimental semaphore protocol, used internally; no public api"
-  (-try-acquire! [it] [it n] "Try acquire 1 or n permits; not blocking operation")
+  (-try-acquire! [it] [it n] [it n t] "Try acquire n or n permits, non-blocking or optional timeout")
   (-acquire! [it] [it n] "Acquire 1 or N permits")
   (-release! [it] [it n] "Release 1 or N permits"))
 

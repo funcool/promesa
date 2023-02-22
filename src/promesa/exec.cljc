@@ -419,16 +419,7 @@
   #?(:clj
      (reify
        Executor
-       (^void execute [_ ^Runnable f] (.run f))
-
-       pt/IExecutor
-       (-run! [this f]
-         (-> (pt/-promise nil)
-             (pt/-fnly (fn [_ _]
-                         (f)))))
-       (-submit! [this f]
-         (-> (pt/-promise nil)
-             (pt/-fmap (fn [_] (f))))))
+       (^void execute [_ ^Runnable f] (.run f)))
 
      :cljs
      (reify
