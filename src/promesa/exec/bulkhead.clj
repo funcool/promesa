@@ -170,9 +170,7 @@
 (ns-unmap *ns* '->SemaphoreBulkhead)
 (ns-unmap *ns* 'map->SemaphoreBulkhead)
 
-(defmulti create* :type)
-
-(defmethod create* :executor
+(defn- create-with-executor
   [{:keys [executor permits queue on-run on-queue]}]
   (let [executor    (px/resolve-executor executor)
         max-queue   (or queue Integer/MAX_VALUE)
@@ -181,7 +179,7 @@
         semaphore   (Semaphore. (int permits))]
     (ExecutorBulkhead. executor semaphore queue max-permits max-queue)))
 
-(defmethod create* :semaphore
+(defn- create-with-semaphore
   [{:keys [permits queue timeout]}]
   (let [max-queue   (or queue Integer/MAX_VALUE)
         max-permits (or permits 1)
@@ -193,15 +191,14 @@
                         max-queue
                         timeout)))
 
-(defmethod create* :default
-  [_]
-  (throw (UnsupportedOperationException. "invalid bulkhead type provided")))
-
 ;; --- PUBLIC API
 
 (defn create
-  [& {:as params}]
-  (create* params))
+  [& {:keys [type] :as params}]
+  (case type
+    :executor (create-with-executor params)
+    :semaphore (create-with-semaphore params)
+    (throw (UnsupportedOperationException. "invalid bulkhead type provided"))))
 
 (defn get-stats
   [instance]
