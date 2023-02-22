@@ -150,18 +150,23 @@
 
   (-invoke! [this f]
     (let [nqueued (.incrementAndGet counter)]
-      (try
-        (when (> (long nqueued) (long max-queue))
-          (let [hint  (str "queue max capacity reached: " max-queue)
-                props {:type :bulkhead-error
-                       :code :capacity-limit-reached
-                       :size max-queue}]
-            (throw (ex-info hint props))))
-        (psm/acquire! semaphore :permits 1 :timeout timeout)
-        (f)
-        (finally
+      (when (> (long nqueued) (long max-queue))
+        (let [hint  (str "bulkhead: queue max capacity reached (" max-queue ")")
+              props {:type :bulkhead-error
+                     :code :capacity-limit-reached
+                     :size max-queue}]
           (.decrementAndGet counter)
-          (psm/release! semaphore)))))
+          (throw (ex-info hint props))))
+
+      (try
+        (if (psm/acquire! semaphore :permits 1 :timeout timeout)
+          (try (f) (finally (psm/release! semaphore)))
+          (let [props {:type :bulkhead-error
+                       :code :timeout
+                       :timeout timeout}]
+            (throw (ex-info "bulkhead: timeout" props))))
+        (finally
+          (.decrementAndGet counter)))))
 
   Executor
   (execute [this f]

@@ -28,15 +28,15 @@
                     (long timeout)
                     TimeUnit/MILLISECONDS))))
   (-acquire!
-    ([this] (.acquire ^Semaphore this))
-    ([this permits] (.acquire ^Semaphore this (int permits))))
+    ([this] (.acquire ^Semaphore this) true)
+    ([this permits] (.acquire ^Semaphore this (int permits)) true))
   (-release!
     ([this] (.release ^Semaphore this))
     ([this permits] (.release ^Semaphore this (int permits)))))
 
 (defn acquire!
   ([sem] (pt/-acquire! sem))
-  ([sem & {:keys [permits timeout blocking] :or {blocking true}}]
+  ([sem & {:keys [permits timeout blocking] :or {blocking true permits 1}}]
    (if timeout
      (pt/-try-acquire! sem permits timeout)
      (if blocking
