@@ -21,8 +21,10 @@
       java.util.concurrent.Callable
       java.util.concurrent.CancellationException
       java.util.concurrent.CompletableFuture
+      java.util.concurrent.CompletionException
       java.util.concurrent.CompletionStage
       java.util.concurrent.CountDownLatch
+      java.util.concurrent.ExecutionException
       java.util.concurrent.Executor
       java.util.concurrent.ExecutorService
       java.util.concurrent.Executors
@@ -579,6 +581,8 @@
   thread waiting for result; effective when current thread is virtual
   thread."
   [executor & body]
+  (when (:ns &env)
+    (throw (UnsupportedOperationException. "cljs not supported on with-dispatch! macro")))
   `(try
      (-> (submit! ~executor (wrap-bindings (^:once fn* [] ~@body)))
          (pt/-mcat pt/-promise)
