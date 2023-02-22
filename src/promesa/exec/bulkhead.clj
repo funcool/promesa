@@ -89,7 +89,7 @@
   IBulkhead
   (-get-stats [_]
     (let [permits (.availablePermits semaphore)]
-      {:permits (- (long max-permits) permits)
+      {:permits (.availablePermits semaphore)
        :queue (.size queue)
        :max-permits max-permits
        :max-queue max-queue}))
@@ -143,12 +143,10 @@
                               timeout]
   IBulkhead
   (-get-stats [_]
-    (let [queue   (+ (long counter) (long max-permits))
-          permits (.availablePermits semaphore)]
-      {:permits (- (long max-permits) permits)
-       :queue queue
-       :max-permits max-permits
-       :max-queue max-queue}))
+    {:permits (.availablePermits semaphore)
+     :queue (+ (long counter) (long max-permits))
+     :max-permits max-permits
+     :max-queue max-queue})
 
   (-invoke! [this f]
     (let [nqueued (.incrementAndGet counter)]
