@@ -110,7 +110,7 @@
               hint  (str "queue max capacity reached: " size)
               props {:type :bulkhead-error
                      :code :capacity-limit-reached
-                     ::instance this}]
+                     :size size}]
           (throw (ex-info hint props))))
 
       (log! "cmd:" "Bulkhead/-offer!" "queue" (.size queue))
@@ -157,7 +157,7 @@
           (let [hint  (str "queue max capacity reached: " max-queue)
                 props {:type :bulkhead-error
                        :code :capacity-limit-reached
-                       ::instance this}]
+                       :size max-queue}]
             (throw (ex-info hint props))))
         (psm/acquire! semaphore :permits 1 :timeout timeout)
         (f)
