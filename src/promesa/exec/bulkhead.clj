@@ -160,7 +160,7 @@
                        ::instance this}]
             (throw (ex-info hint props))))
         (psm/acquire! semaphore :permits 1 :timeout timeout)
-        (.run ^Runnable f)
+        (f)
         (finally
           (.decrementAndGet counter)
           (psm/release! semaphore)))))
@@ -211,9 +211,7 @@
 
 (defn invoke!
   [instance f]
-  (if (instance? Runnable f)
-    (-invoke! instance f)
-    (-invoke! instance (reify Runnable (run [_] (f))))))
+  (-invoke! instance f))
 
 (defn bulkhead?
   "Check if the provided object is instance of Bulkhead type."
