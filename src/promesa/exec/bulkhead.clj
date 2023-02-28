@@ -130,7 +130,7 @@
       (log! "cmd:" "Bulkhead/run$loop1" "queue:" (.size queue) "permits:" (.availablePermits semaphore))
       (when-let [task (-poll! this)]
         (log! "cmd:" "Bulkhead/run$loop2" "task:" (hash task) "available-permits:" (.availablePermits semaphore))
-        (pt/-run! executor task)
+        (pt/-exec! executor task)
         (recur)))))
 
 (ns-unmap *ns* '->ExecutorBulkhead)
@@ -160,7 +160,9 @@
 
       (try
         (if (psm/acquire! semaphore :permits 1 :timeout timeout)
-          (try (f) (finally (psm/release! semaphore)))
+          (try
+            (.run ^Runnable f)
+            (finally (psm/release! semaphore)))
           (let [props {:type :bulkhead-error
                        :code :timeout
                        :timeout timeout}]

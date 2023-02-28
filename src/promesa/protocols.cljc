@@ -50,6 +50,7 @@
   (-reject! [it e] "Deliver an error to empty promise."))
 
 (defprotocol IExecutor
+  (-exec! [it task] "Submit a task and return nil")
   (-run! [it task] "Submit a task and return a promise.")
   (-submit! [it task] "Submit a task and return a promise."))
 

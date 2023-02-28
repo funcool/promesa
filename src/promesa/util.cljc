@@ -123,4 +123,3 @@
   [& exprs]
   `(try* (^:once fn* [] ~@exprs) identity))
 
-

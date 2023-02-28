@@ -279,13 +279,13 @@
               (let [done?     (reduced? (add-fn this buf val))
                     takes-fns (lookup-pending-takes @takes buf)]
                 (when done? (pt/-close! this))
-                (run! (partial px/run! executor) takes-fns)
+                (run! (partial px/exec! executor) takes-fns)
                 nil)))
 
           (if-let [[take-fn put-fn] (lookup-put-transfer @takes handler)]
             (do
               (put-fn true)
-              (px/run! executor (partial take-fn val))
+              (px/exec! executor (partial take-fn val))
               nil)
             (when (pt/-active? handler)
               (process-put-handler! puts handler val)))))
@@ -312,7 +312,7 @@
               ;; Proces pending puts
               (let [[done? fns] (lookup-pending-puts this @puts add-fn buf)]
                 (when done? (pt/-close! this))
-                (run! #(px/run! executor (fn [] (% true))) fns))
+                (run! #(px/exec! executor (fn [] (% true))) fns))
 
               nil)
 
@@ -322,7 +322,7 @@
           (if-let [[put-fn val take-fn] (lookup-take-transfer @puts handler)]
             (do
               (take-fn val)
-              (px/run! executor (partial put-fn true))
+              (px/exec! executor (partial put-fn true))
               nil)
             (process-take-handler! takes handler))))
 
@@ -352,14 +352,14 @@
           (when-let [taker (first items)]
             (when-let [take-fn (commit! taker)]
               (if-let [val (some-> buf pt/-poll!)]
-                (px/run! executor (partial take-fn val nil))
-                (px/run! executor (partial take-fn nil @error))))
+                (px/exec! executor (partial take-fn val nil))
+                (px/exec! executor (partial take-fn nil @error))))
             (recur (rest items))))
 
         (loop [items (seq @puts)]
           (when-let [[putter] (first items)]
             (when-let [put-fn (commit! putter)]
-              (px/run! executor (partial put-fn false)))
+              (px/exec! executor (partial put-fn false)))
             (recur (rest items))))
 
         (finally

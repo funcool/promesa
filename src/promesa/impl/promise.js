@@ -419,6 +419,8 @@ goog.scope(function() {
     return deferred;
   };
 
+  self.nextTick = nextTick;
+
   self.PENDING = PENDING;
   self.RESOLVED = RESOLVED;
   self.REJECTED = REJECTED;

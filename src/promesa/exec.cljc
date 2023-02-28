@@ -225,6 +225,14 @@
 
 ;; --- Public API
 
+(defn exec!
+  "Run the task in the provided executor, returns `nil`. Analogous to
+  the `(.execute executor f)`. Fire and forget."
+  ([f]
+   (pt/-exec! (resolve-executor *default-executor*) f))
+  ([executor f]
+   (pt/-exec! (resolve-executor executor) f)))
+
 (defn run!
   "Run the task in the provided executor."
   ([f]
@@ -426,6 +434,13 @@
      :cljs
      (reify
        pt/IExecutor
+       (-exec! [this f]
+         (try
+           (f)
+           nil
+           (catch :default _
+             nil)))
+
        (-run! [this f]
          (try
            (pt/-promise (comp noop f))
@@ -444,6 +459,9 @@
      []
      (reify
        pt/IExecutor
+       (-exec! [this f]
+         (impl/nextTick f))
+
        (-run! [this f]
          (-> (pt/-promise nil)
              (pt/-fmap (fn [_]
@@ -453,7 +471,6 @@
        (-submit! [this f]
          (-> (pt/-promise nil)
              (pt/-fmap (fn [_] (f))))))))
-
 
 #?(:cljs
    (deftype Scheduler []
@@ -537,6 +554,9 @@
 #?(:clj
    (extend-type Executor
      pt/IExecutor
+     (-exec! [this f]
+       (.execute ^Executor this ^Runnable f))
+
      (-run! [this f]
        (CompletableFuture/runAsync ^Runnable f ^Executor this))
 
