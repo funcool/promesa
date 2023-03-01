@@ -15,9 +15,10 @@
   #?(:clj
      (:import
       clojure.lang.Var
-      java.lang.Thread$UncaughtExceptionHandler
       java.lang.AutoCloseable
+      java.lang.Thread$UncaughtExceptionHandler
       java.time.Duration
+      java.util.concurrent.BlockingQueue
       java.util.concurrent.Callable
       java.util.concurrent.CancellationException
       java.util.concurrent.CompletableFuture
@@ -30,10 +31,13 @@
       java.util.concurrent.Executors
       java.util.concurrent.ForkJoinPool
       java.util.concurrent.ForkJoinPool$ForkJoinWorkerThreadFactory
+      java.util.concurrent.ForkJoinPool$ManagedBlocker
       java.util.concurrent.ForkJoinWorkerThread
       java.util.concurrent.Future
       java.util.concurrent.ScheduledExecutorService
+      java.util.concurrent.SynchronousQueue
       java.util.concurrent.ThreadFactory
+      java.util.concurrent.ThreadPoolExecutor
       java.util.concurrent.TimeUnit
       java.util.concurrent.TimeoutException
       java.util.concurrent.atomic.AtomicLong
@@ -402,10 +406,16 @@
 #?(:clj
    (defn cached-executor
      "A cached thread executor pool constructor."
-     [& {:keys [factory]}]
+     [& {:keys [max-size factory keepalive] :or {keepalive 60000 max-size Integer/MAX_VALUE}}]
      (let [factory (or (some-> factory resolve-thread-factory)
-                       (thread-factory :name "promesa/cached/%s"))]
-       (Executors/newCachedThreadPool factory))))
+                       (thread-factory :name "promesa/cached/%s"))
+           queue   (SynchronousQueue.)]
+       (ThreadPoolExecutor. 0
+                            (long max-size)
+                            (long keepalive)
+                            TimeUnit/MILLISECONDS
+                            ^BlockingQueue queue
+                            ^ThreadFactory factory))))
 
 #?(:clj
    (defn fixed-executor
@@ -526,13 +536,24 @@
 
 #?(:clj
    (defn forkjoin-executor
-     [& {:keys [factory async parallelism] :or {async true}}]
+     [& {:keys [factory async parallelism keepalive core-size max-size]
+         :or {max-size 0x7fff async true keepalive 60000}}]
      (let [parallelism (or parallelism (get-available-processors))
+           core-size   (or core-size parallelism)
            factory     (cond
                          (instance? ForkJoinPool$ForkJoinWorkerThreadFactory factory) factory
                          (nil? factory) (forkjoin-thread-factory)
-                         :else (throw (ex-info "Unexpected thread factory" {:factory factory})))]
-       (ForkJoinPool. (int parallelism) factory nil async))))
+                         :else (throw (UnsupportedOperationException. "Unexpected thread factory")))]
+       (ForkJoinPool. (int parallelism)
+                      ^ForkJoinPool$ForkJoinWorkerThreadFactory factory
+                      nil
+                      async
+                      (int core-size)
+                      (int max-size)
+                      1,
+                      nil
+                      (long keepalive)
+                      TimeUnit/MILLISECONDS))))
 
 #?(:clj
    (defn work-stealing-executor
@@ -812,3 +833,33 @@
                         ^Thread thr
                         ^Throwable cause))))
 
+;; #?(:clj
+;;    (defn managed-blocker
+;;      {:no-doc true}
+;;      [f]
+;;      (let [state (volatile! nil)]
+;;        (reify
+;;          ForkJoinPool$ManagedBlocker
+;;          (block [_]
+;;            (try
+;;              (vreset! state (.call ^Callable f))
+;;              (catch Throwable cause#
+;;                (vreset! state cause#)))
+;;            true)
+;;          (isReleasable [_]
+;;            false)
+
+;;          clojure.lang.IDeref
+;;          (deref [_]
+;;            (let [v @state]
+;;              (if (instance? Throwable v)
+;;                (throw v)
+;;                v)))))))
+
+;; (defmacro blocking
+;;   {:no-doc true}
+;;   [& body]
+;;   `(let [f# (^:once fn* [] ~@body)
+;;          m# (managed-blocker f#)]
+;;      (ForkJoinPool/managedBlock m#)
+;;      (deref m#)))
