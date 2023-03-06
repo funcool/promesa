@@ -32,7 +32,6 @@
   )
 
 (declare ^:private instant)
-(declare ^:privare run-hook!)
 
 (defprotocol IQueue
   (-poll! [_])
@@ -52,16 +51,6 @@
   []
   (System/currentTimeMillis))
 
-(defn- run-hook!
-  ([instance key-fn]
-   (when-let [hook-fn (-> instance meta key-fn)]
-     (let [executor (:executor instance)]
-       (pt/-run! executor (partial hook-fn instance)))))
-  ([instance key-fn param1]
-   (when-let [hook-fn (-> instance meta key-fn)]
-     (let [executor (:executor instance)]
-       (pt/-run! executor (partial hook-fn instance param1))))))
-
 (deftype ExecutorBulkheadTask [bulkhead f inst]
   clojure.core/Inst
   (inst-ms* [_] inst)
@@ -70,7 +59,6 @@
   (run [this]
     (let [^Semaphore semaphore (:semaphore bulkhead)
           ^Executor executor  (:executor bulkhead)]
-      (run-hook! bulkhead ::on-run this)
       (log! "cmd:" "Task/run" "f:" (hash f) "task:" (hash this) "START")
       (try
         (.run ^Runnable f)
@@ -114,7 +102,6 @@
           (throw (ex-info hint props))))
 
       (log! "cmd:" "Bulkhead/-offer!" "queue" (.size queue))
-      (run-hook! this ::on-queue)
       (.run ^Runnable this)))
 
   (-poll! [this]
@@ -148,7 +135,8 @@
      :max-permits max-permits
      :max-queue max-queue})
 
-  (-invoke! [this f]
+  Executor
+  (execute [this f]
     (let [nqueued (.incrementAndGet counter)]
       (when (> (long nqueued) (long max-queue))
         (let [hint  (str "bulkhead: queue max capacity reached (" max-queue ")")
@@ -170,9 +158,8 @@
         (finally
           (.decrementAndGet counter)))))
 
-  Executor
-  (execute [this f]
-    (-invoke! this f)))
+  (-invoke! [this f]
+    (p/await! (pt/-submit! this f))))
 
 (ns-unmap *ns* '->SemaphoreBulkhead)
 (ns-unmap *ns* 'map->SemaphoreBulkhead)
