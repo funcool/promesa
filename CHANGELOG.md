@@ -62,6 +62,7 @@ Promise library exposes two styles of APIs:
 - Add `promesa.exec.semaphore` (only on JVM) namespace with helpers for working with
   Semaphore instances
 - Add semaphore based bulkhead implementation
+- Fix GraalVM support thanks to @borkdude
 
 
 ## Version 10.0.594
