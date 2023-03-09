@@ -58,14 +58,17 @@
 (def ^:dynamic *default-scheduler* nil)
 (def ^:dynamic *default-executor* nil)
 
+#?(:clj
+   (do
+     (defmacro compile-if-virtual [then else]
+       (if (pu/has-method? Thread "ofVirtual")
+         then else))
+     (defmacro compile-when-virtual [body]
+       `(compile-if-virtual ~body nil))))
+
 (def virtual-threads-available?
   "Var that indicates the availability of virtual threads."
-  #?(:clj (and (pu/has-method? Thread "ofVirtual")
-               (try
-                 (eval '(Thread/ofVirtual))
-                 true
-                 (catch Throwable cause
-                   false)))
+  #?(:clj (compile-if-virtual true false)
      :cljs false))
 
 ;; DEPRECATED
@@ -111,19 +114,20 @@
   ^{:doc "A global, thread per task executor service."
     :no-doc true}
   default-thread-executor
-  #?(:clj  (if virtual-threads-available?
-             (delay (eval '(java.util.concurrent.Executors/newThreadPerTaskExecutor
-                            ^ThreadFactory (promesa.exec/thread-factory))))
-             default-cached-executor)
+  #?(:clj (or (compile-when-virtual
+               (delay (java.util.concurrent.Executors/newThreadPerTaskExecutor
+                       ^ThreadFactory (promesa.exec/thread-factory))))
+              default-cached-executor)
      :cljs default-executor))
 
 (defonce
   ^{:doc "A global, virtual thread per task executor service."
     :no-doc true}
   default-vthread-executor
-  #?(:clj  (if virtual-threads-available?
-             (delay (eval '(java.util.concurrent.Executors/newVirtualThreadPerTaskExecutor)))
-             default-cached-executor)
+  #?(:clj  (or (compile-when-virtual
+                (delay (java.util.concurrent.Executors/newThreadPerTaskExecutor
+                        ^ThreadFactory (promesa.exec/thread-factory))))
+               default-cached-executor)
      :cljs default-executor))
 
 (defn executor?
@@ -519,20 +523,18 @@
      (->Scheduler)))
 
 #?(:clj
-   (when virtual-threads-available?
-     (eval
-      '(defn thread-per-task-executor
-         [& {:keys [factory]}]
-         (let [factory (or (some-> factory resolve-thread-factory)
-                           (thread-factory :name "promesa/thread-per-task/%s"))]
-           (Executors/newThreadPerTaskExecutor ^ThreadFactory factory))))))
+   (compile-when-virtual
+    (defn thread-per-task-executor
+      [& {:keys [factory]}]
+      (let [factory (or (some-> factory resolve-thread-factory)
+                        (thread-factory :name "promesa/thread-per-task/%s"))]
+        (Executors/newThreadPerTaskExecutor ^ThreadFactory factory)))))
 
 #?(:clj
-   (when virtual-threads-available?
-     (eval
-      '(defn vthread-per-task-executor
-         []
-         (Executors/newVirtualThreadPerTaskExecutor)))))
+   (compile-when-virtual
+    (defn vthread-per-task-executor
+      []
+      (Executors/newVirtualThreadPerTaskExecutor))))
 
 #?(:clj
    (defn forkjoin-executor
@@ -686,34 +688,33 @@
      (pmap #(apply f %) (step-fn (cons coll colls)))))))
 
 #?(:clj
-   (if virtual-threads-available?
-     (eval
-      '(defn fn->thread
-         [f & {:keys [daemon virtual start priority name]
-               :or {daemon true virtual false start true priority Thread/NORM_PRIORITY}}]
-         (let [name   (or name (format "promesa/unpooled-thread/%s" (get-next)))
-               thread (if virtual
-                        (let [thb (Thread/ofVirtual)
-                              thb (.name thb ^String name)]
-                          (.unstarted thb ^Runnable f))
-                        (let [thb (Thread/ofPlatform)
-                              thb (.name thb ^String name)
-                              thb (.priority thb (int priority))
-                              thb (.daemon thb (boolean daemon))]
-                          (.unstarted thb ^Runnable f)))]
-           (if start
-             (.start ^Thread thread))
-           thread)))
-     (defn fn->thread
-       [f & {:keys [daemon start priority name]
-             :or {daemon true start true priority Thread/NORM_PRIORITY}}]
-       (let [thread (doto (Thread. ^Runnable f)
-                      (.setName ^String name)
-                      (.setPriority (int priority))
-                      (.setDaemon (boolean daemon)))]
-       (if start
-         (.start ^Thread thread))
-       thread))))
+   (compile-if-virtual
+    (defn fn->thread
+      [f & {:keys [daemon virtual start priority name]
+            :or {daemon true virtual false start true priority Thread/NORM_PRIORITY}}]
+      (let [name   (or name (format "promesa/unpooled-thread/%s" (get-next)))
+            thread (if virtual
+                     (let [thb (Thread/ofVirtual)
+                           thb (.name thb ^String name)]
+                       (.unstarted thb ^Runnable f))
+                     (let [thb (Thread/ofPlatform)
+                           thb (.name thb ^String name)
+                           thb (.priority thb (int priority))
+                           thb (.daemon thb (boolean daemon))]
+                       (.unstarted thb ^Runnable f)))]
+        (if start
+          (.start ^Thread thread))
+        thread))
+    (defn fn->thread
+      [f & {:keys [daemon start priority name]
+            :or {daemon true start true priority Thread/NORM_PRIORITY}}]
+      (let [thread (doto (Thread. ^Runnable f)
+                     (.setName ^String name)
+                     (.setPriority (int priority))
+                     (.setDaemon (boolean daemon)))]
+        (if start
+          (.start ^Thread thread))
+        thread))))
 
 #?(:clj
 (defmacro thread
