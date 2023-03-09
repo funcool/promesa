@@ -58,18 +58,24 @@
 (def ^:dynamic *default-scheduler* nil)
 (def ^:dynamic *default-executor* nil)
 
+(def virtual-threads-available?
+  "Var that indicates the availability of virtual threads."
+  #?(:clj (if (and (pu/has-method? Thread "ofVirtual")
+                   ;; the following should succeed with the `--enable-preview` java argument:
+                   ;; eval happens on top level = compile time, which is ok for GraalVM
+                   (try (eval '(Thread/ofVirtual))
+                        (catch Exception _ false)))
+            true
+            false)
+     :cljs false))
+
 #?(:clj
    (do
      (defmacro compile-if-virtual [then else]
-       (if (pu/has-method? Thread "ofVirtual")
+       (if virtual-threads-available?
          then else))
      (defmacro compile-when-virtual [body]
        `(compile-if-virtual ~body nil))))
-
-(def virtual-threads-available?
-  "Var that indicates the availability of virtual threads."
-  #?(:clj (compile-if-virtual true false)
-     :cljs false))
 
 ;; DEPRECATED
 (def ^{:deprecated true
