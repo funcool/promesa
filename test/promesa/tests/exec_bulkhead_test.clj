@@ -55,11 +55,11 @@
 
 (t/deftest operations-with-semaphore-bulkhead
   (let [instance (pbh/create {:permits 1 :queue 1 :type :semaphore})
-        res1     (px/with-dispatch :vthread
+        res1     (px/with-dispatch :thread
                    (px/submit! instance (waiting-fn 1000)))
-        res2     (px/with-dispatch :vthread
+        res2     (px/with-dispatch :thread
                    (px/submit! instance (waiting-fn 200)))
-        res3     (px/with-dispatch :vthread
+        res3     (px/with-dispatch :thread
                    (px/submit! instance (waiting-fn 200)))
         ]
     (t/is (p/promise? res1))
