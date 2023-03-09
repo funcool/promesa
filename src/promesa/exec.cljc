@@ -125,7 +125,7 @@
     :no-doc true}
   default-vthread-executor
   #?(:clj  (compile-if-virtual
-            (delay (java.util.concurrent.Executors/newThreadPerTaskExecutor
+            (delay (java.util.concurrent.Executors/newVirtualThreadPerTaskExecutor
                     ^ThreadFactory (promesa.exec/thread-factory)))
             default-cached-executor)
      :cljs default-executor))
