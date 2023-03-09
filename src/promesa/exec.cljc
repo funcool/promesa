@@ -114,20 +114,20 @@
   ^{:doc "A global, thread per task executor service."
     :no-doc true}
   default-thread-executor
-  #?(:clj (or (compile-when-virtual
-               (delay (java.util.concurrent.Executors/newThreadPerTaskExecutor
-                       ^ThreadFactory (promesa.exec/thread-factory))))
-              default-cached-executor)
+  #?(:clj (compile-if-virtual
+           (delay (java.util.concurrent.Executors/newThreadPerTaskExecutor
+                   ^ThreadFactory (promesa.exec/thread-factory)))
+           default-cached-executor)
      :cljs default-executor))
 
 (defonce
   ^{:doc "A global, virtual thread per task executor service."
     :no-doc true}
   default-vthread-executor
-  #?(:clj  (or (compile-when-virtual
-                (delay (java.util.concurrent.Executors/newThreadPerTaskExecutor
-                        ^ThreadFactory (promesa.exec/thread-factory))))
-               default-cached-executor)
+  #?(:clj  (compile-if-virtual
+            (delay (java.util.concurrent.Executors/newThreadPerTaskExecutor
+                    ^ThreadFactory (promesa.exec/thread-factory)))
+            default-cached-executor)
      :cljs default-executor))
 
 (defn executor?
