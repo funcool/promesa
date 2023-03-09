@@ -174,6 +174,7 @@
        :cached         @default-cached-executor
        :thread         @default-thread-executor
        :vthread        @default-vthread-executor
+       :same-thread    @default-current-thread-executor
        :current-thread @default-current-thread-executor
        (throw #?(:clj (IllegalArgumentException. "invalid executor")
                  :cljs (js/TypeError. "invalid executor")))))))
