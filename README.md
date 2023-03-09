@@ -38,6 +38,9 @@ Leiningen:
 ;; => 2
 ```
 
+NOTE: example only work on JVM because the evident lack of blocking
+primitives on JS runtime.
+
 ## Contributing
 
 If you miss something, feel free to open an issue for a discussion. If
