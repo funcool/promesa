@@ -45,7 +45,7 @@ primitives on JS runtime.
 
 If you miss something, feel free to open an issue for a discussion. If
 there is a clear use case for the proposed enhacement, the PR will be
-more thank welcome.
+more than welcome.
 
 ## Testing
 
