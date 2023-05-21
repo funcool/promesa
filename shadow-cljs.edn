@@ -19,4 +19,24 @@
     :source-map-include-sources-content true
     :source-map-detail-level :all
     :warnings {:fn-deprecated false}}}
+
+  :bench
+  {:target :node-script
+   :output-to "target/bench.js"
+   :output-dir "target/bench/"
+   :main bench/main
+
+   :compiler-options
+   {:output-feature-set :es2020
+    :output-wrapper false
+    :warnings {:fn-deprecated false}}
+
+   :release
+   {:compiler-options
+    {:fn-invoke-direct true
+     :elide-asserts true
+     :anon-fn-naming-policy :off}}}
+
+
+
   }}
