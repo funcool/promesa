@@ -31,7 +31,8 @@ goog.scope(function() {
       this[QUEUE] = [];
       this[STATE] = PENDING;
       this[VALUE] = undefined;
-      if ((val ?? null) !== null) {
+
+      if (val !== undefined) {
         transition(this, RESOLVED, val);
       }
     }
@@ -172,11 +173,7 @@ goog.scope(function() {
   }
 
   const nextTick = (() => {
-    if (root.process && typeof root.process.nextTick === "function") {
-      // console.log("!! [nextTick]")
-      return root.process.nextTick;
-    } else if (typeof root.Promise === "function") {
-      // console.log("!! [js/Promise]")
+    if (typeof root.Promise === "function") {
       const resolved = Promise.resolve(null);
       return function queueMicrotaskWithPromise(f, p) {
         resolved.then(() => f(p));
@@ -355,17 +352,19 @@ goog.scope(function() {
     return new PromiseImpl();
   };
 
+  const NULL_PROMISE = new PromiseImpl(null);
 
-  self.resolved = function resolved (value, flatten) {
-    if (isThenable(value) && flatten) return value;
+  self.resolved = function resolved (value) {
+    if (value === null) {
+      return NULL_PROMISE;
+    } else {
+      const p = new PromiseImpl();
+      p[STATE] = RESOLVED;
+      p[VALUE] = value;
+      // console.log("++ [resolved]", "uid:", goog.getUid(p), "value:", value);
 
-    const p = new PromiseImpl();
-    p[STATE] = RESOLVED;
-    p[VALUE] = value;
-
-    // console.log("++ [resolved]", "uid:", goog.getUid(p), "value:", value);
-
-    return p;
+      return p;
+    }
   };
 
   self.rejected = function rejected (reason) {
