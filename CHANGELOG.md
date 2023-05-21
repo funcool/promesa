@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 11.0.670
+
+- Add minor performance optimizations to internal PromiseImpl (cljs only)
+
+
 ## Version 11.0.664
 
 **Important Notice**
