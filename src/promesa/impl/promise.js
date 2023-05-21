@@ -169,23 +169,20 @@ goog.scope(function() {
     cancel() {
       this.reject(new CancellationError("promise cancelled"));
     }
-
   }
 
   const nextTick = (() => {
-    if (typeof root.queueMicrotask === "function") {
-      return function queueMicrotask (f, p) {
-        // console.log("!! [queueMicrotask]", goog.getUid(p))
-        root.queueMicrotask(() => f(p));
-      };
-    } else if (root.process && typeof root.process.nextTick === "function") {
+    if (root.process && typeof root.process.nextTick === "function") {
+      // console.log("!! [nextTick]")
       return root.process.nextTick;
+    } else if (typeof root.Promise === "function") {
+      // console.log("!! [js/Promise]")
+      const resolved = Promise.resolve(null);
+      return function queueMicrotaskWithPromise(f, p) {
+        resolved.then(() => f(p));
+      };
     } else if (typeof root.setImmediate === "function") {
       return root.setImmediate;
-    } else if (typeof root.Promise === "function") {
-      return function queueMicrotaskWithPromise(f, p) {
-        root.Promise.resolve(null).then(() => f(p));
-      };
     } else if (typeof root.setTimeout === "function") {
       return (f, p) => root.setTimeout(f, 0, p);
     } else {
@@ -247,7 +244,7 @@ goog.scope(function() {
     };
   }
 
-  function process (p) {
+  function process(p) {
     if (p[STATE] === PENDING) return;
     nextTick(processNextTick, p);
     return p;
@@ -288,6 +285,7 @@ goog.scope(function() {
       resolveTask(task, rvalue, rcause);
     }
   }
+
 
   function resolveTask(task, value, cause) {
     if (cause) {
@@ -330,13 +328,14 @@ goog.scope(function() {
     }
   }
 
-  function transition (p, state, value) {
+  function transition(p, state, value) {
     // console.log(">> transition",
     //             "uid:", goog.getUid(p),
     //             "from-state:", p[STATE],
     //             "to-state:", state,
     //             "value:", fmtValue(value),
     //             "queue:", p[QUEUE].length);
+
     if (p[STATE] === state ||
         p[STATE] !== PENDING) {
       return;
@@ -344,7 +343,8 @@ goog.scope(function() {
 
     p[STATE] = state;
     p[VALUE] = value;
-    return process(p);
+
+    return processNextTick(p);
   }
 
   self.PromiseImpl = PromiseImpl;
