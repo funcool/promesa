@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 11.0.671
+
+- Fix issue on channel close operation (cljs only)
+
+
 ## Version 11.0.670
 
 - Add minor performance optimizations to internal PromiseImpl (cljs only)

@@ -352,14 +352,15 @@
           (when-let [taker (first items)]
             (when-let [take-fn (commit! taker)]
               (if-let [val (some-> buf pt/-poll!)]
-                (px/exec! executor (partial take-fn val nil))
-                (px/exec! executor (partial take-fn nil @error))))
+                (px/exec! executor #(take-fn val nil))
+                (let [error @error]
+                  (px/exec! executor #(take-fn nil error)))))
             (recur (rest items))))
 
         (loop [items (seq @puts)]
           (when-let [[putter] (first items)]
             (when-let [put-fn (commit! putter)]
-              (px/exec! executor (partial put-fn false)))
+              (px/exec! executor #(put-fn false)))
             (recur (rest items))))
 
         (finally
