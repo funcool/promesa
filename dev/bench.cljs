@@ -83,17 +83,17 @@
 
 (defn bench-native-promise-then
   [done]
-  (-> (js/Promise.resolve 1)
+  (-> (js/Promise.resolve nil)
       (.then done)))
 
 (defn bench-builtin-promise-then
   [done]
-  (-> (prm/resolved 1)
+  (-> (prm/resolved nil)
       (.then done)))
 
 (defn bench-builtin-promise-fmap
   [done]
-  (-> (prm/resolved 1)
+  (-> (prm/resolved nil)
       (.fmap done)))
 
 (defn exit
