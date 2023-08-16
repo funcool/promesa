@@ -1,5 +1,10 @@
 # Changelog #
 
+## Version 11.0.674
+
+- Restore `error` helper for backward compatiblity
+
+
 ## Version 11.0.671
 
 - Fix issue on channel close operation (cljs only)
