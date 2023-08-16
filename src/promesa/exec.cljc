@@ -631,7 +631,7 @@
   thread."
   [executor & body]
   (when (:ns &env)
-    (throw (UnsupportedOperationException. "cljs not supported on with-dispatch! macro")))
+    (throw (ex-info "cljs not supported on with-dispatch! macro" {})))
   `(try
      (-> (submit! ~executor (wrap-bindings (^:once fn* [] ~@body)))
          (pt/-mcat pt/-promise)
