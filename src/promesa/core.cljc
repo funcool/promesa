@@ -347,6 +347,14 @@
   ([f p] (pt/-merr p f))
   ([executor f p] (pt/-merr p f executor)))
 
+(defn error
+  "Same as `catch` but with parameters inverted.
+
+  DEPRECATED"
+
+  ([f p] (catch p f))
+  ([f type p] (catch p type f)))
+
 (defn all
   "Given an array of promises, return a promise that is fulfilled when
   all the items in the array are fulfilled.
