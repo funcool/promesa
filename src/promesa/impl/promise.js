@@ -69,6 +69,17 @@ goog.scope(function() {
       return this.then(null, reject);
     }
 
+    finally (f) {
+      this[QUEUE].push({
+        type: RESOLVE_TYPE_FLATTEN,
+        resolve: (value) => f(),
+        reject: (cause) => f(),
+        complete: (value, cause) => null
+      });
+
+      return this;
+    }
+
     fmap (resolve, reject) {
       const deferred = new PromiseImpl();
 
@@ -283,8 +294,10 @@ goog.scope(function() {
     }
   }
 
-
   function resolveTask(task, value, cause) {
+
+    if (task.complete === undefined) return;
+
     if (cause) {
       task.complete(null, cause);
     } else {
