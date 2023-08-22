@@ -391,7 +391,7 @@ goog.scope(function() {
   };
 
   self.all = function all (promises) {
-    return promises.reduce(function (acc, p) {
+    return promises.reduce((acc, p) => {
       return acc.then((results) => {
         return self.coerce(p).fmap((v) => {
           results.push(v);
@@ -404,7 +404,7 @@ goog.scope(function() {
   self.coerce = function coerce (promise) {
     if (promise instanceof PromiseImpl) {
       return promise;
-    } else {
+    } else if (isThenable(promise)) {
       const deferred = self.deferred();
       promise.then((v) => {
         deferred.resolve(v);
@@ -412,6 +412,10 @@ goog.scope(function() {
         deferred.reject(c);
       });
       return deferred;
+    } else if (promise instanceof Error) {
+      return self.rejected(promise);
+    } else {
+      return self.resolved(promise);
     }
   };
 
