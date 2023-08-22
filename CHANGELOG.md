@@ -1,5 +1,12 @@
 # Changelog #
 
+## Version 11.0.678
+
+- Fix internal coercion function (cljs only) that causes unexpected
+  behavior on `all` method
+- Add native suppor for `.finally` method on internal promise
+
+
 ## Version 11.0.674
 
 - Restore `error` helper for backward compatiblity

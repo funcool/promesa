@@ -166,7 +166,6 @@ goog.scope(function() {
       return state === RESOLVED;
     }
 
-
     isRejected() {
       const state = this[STATE];
       return state === REJECTED;
