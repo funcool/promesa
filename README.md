@@ -4,8 +4,8 @@
 
 A promise library & concurrency toolkit for Clojure and ClojureScript.
 
-This library exposes a bunch of usefull syntactic abstractions that
-will considerably simplify to work with promises (in a very similar
+This library exposes a bunch of useful syntactic abstractions that
+considerably simplify working with promises (in a very similar
 way as you will do it in JS with async/await) and many helpers from
 executors to concurrency patterns (bulkhead & CSP). With 0 runtime
 external dependencies.
@@ -44,7 +44,7 @@ primitives on JS runtime.
 ## Contributing
 
 If you miss something, feel free to open an issue for a discussion. If
-there is a clear use case for the proposed enhacement, the PR will be
+there is a clear use case for the proposed enhancement, the PR will be
 more than welcome.
 
 ## Testing
