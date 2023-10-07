@@ -119,14 +119,14 @@ You also can access the current value of the promise independently of the state 
 
 You also can use `deref` or the `@` reader macro for blocking access to the promise value.
 The blocking operation only works on JVM, on CLJS, deref has the same semantics as
-`extract` (it does not blocks and acces the current value independently of the state of
+`extract` (it does not block and accesses the current value independently of the state of
 the promise).
 
 
 ## Chaining computations
 
 This section explains the helpers and macros that **promesa** provides for chain different
-(high-probably asynchonous) operations in a sequence of operations.
+(high-probably asynchronous) operations in a sequence of operations.
 
 It provides mainly two style of API:
 
@@ -186,10 +186,10 @@ functions. The `chain'` variant does not auto-flattens the return value.
 
 **NOTE**: `->` and `->>` introduced in 6.1.431, `as->` introduced in 6.1.434.
 
-This threading macros simplifices chaining operation, removing the
+This threading macros simplifies chaining operation, removing the
 need of using `then` all the time.
 
-Lets look an example using `then` and later see how it can be improved
+Let's look an example using `then` and later see how it can be improved
 using the `->` threading macro:
 
 ```clojure
@@ -198,7 +198,7 @@ using the `->` threading macro:
     (p/then #(dissoc % :c)))
 ```
 
-Then, the same code can be simplified with:
+Then the same code can be simplified with:
 
 ```clojure
 (p/-> (p/resolved {:a 1 :c 3})
@@ -214,8 +214,8 @@ promises in the same way as `->` example shows.
 
 ### `handle`
 
-If you want to handle rejected and resolved callbacks in one unique callback, then you can
-use the `handle` chain function:
+If you want to handle rejected and resolved callbacks in one unique callback,
+you can use the `handle` chain function:
 
 
 ```clojure
@@ -228,13 +228,13 @@ use the `handle` chain function:
 ;; => :resolved
 ```
 
-It works in the same way as `then`, if the function returns a promise instance it will be
+It works in the same way as `then`; if the function returns a promise instance it will be
 automatically unwrapped.
 
 
 ### `finally`
 
-And finally if you want to attach a (potentially side-effectful)
+And finally if you want to attach a (potentially side-effecting)
 callback to be always executed notwithstanding if the promise is
 rejected or resolved:
 
@@ -250,7 +250,7 @@ rejected or resolved:
 ```
 
 The return value of the function will be ignored and new promise
-instance will be returned mirroning the original one.
+instance will be returned mirroring the original one.
 
 
 ### `fmap`
@@ -267,8 +267,8 @@ function to the eventually successfully resolved promise.
 ;; => 2
 ```
 
-In contrast to `then`, there are no automatic unwrapping of neested promises. Use `mcat`
-(or `mapcat`) for for handle one level unwrapping.
+In contrast to `then`, there are no automatic unwrapping of nested promises. Use `mcat`
+(or `mapcat`) to handle one level unwrapping.
 
 Aliases: `map`.
 
@@ -389,7 +389,7 @@ The function **must** return a promise instance,
 
 ## Composition
 
-Promse exposes a set of helpers and syntactic abstractions (macros) for facilitate working
+Promesa exposes a set of helpers and syntactic abstractions (macros) for facilitate working
 with compositions of asynchronous computations.
 
 
@@ -414,7 +414,7 @@ The `let` macro behaves almost identically to Clojure's `let` with the exception
 always returns a promise. If an error occurs at any step, the entire composition will be
 short-circuited, returning exceptionally resolved promise.
 
-Under the hood, the `let` macro evalutes to something like this:
+Under the hood, the `let` macro evaluates to something like this:
 
 ```clojure
 (p/then
@@ -458,7 +458,7 @@ For example, this `do` macro:
       (expr3))
 ```
 
-Is roughtly equivalent to `let` macro (explained below):
+Is roughly equivalent to `let` macro (explained below):
 
 ```clojure
 (p/let [_ (expr1)
@@ -481,7 +481,7 @@ time. To help with that, _promesa_ also provides the `all` helper.
               (do-something-with-results result1 result2))))
 ```
 
-Is up to the user properly handle concurrency, `p/all` does not lauches additional threads
+Is up to the user properly handle concurrency, `p/all` does not launches additional threads
 of execution.
 
 
@@ -510,8 +510,8 @@ written using `all` in this manner:
 ```
 
 The real parallelism strictly depends on the underlying implementation of the executed
-functions. If they does syncronous work, all the code will be executed serially, almost
-identical to the standard let. Is the user responsability of the final execution model.
+functions. If they does synchronous work, all the code will be executed serially, almost
+identical to the standard let. Is the user responsibility of the final execution model.
 
 
 ### `any`
@@ -587,7 +587,7 @@ This will create a promise that will resolve to `1` in 100ms (in a separate thre
 the first `inc` will be executed (in the same thread), and then another `inc` is executed
 (in the same thread). In total only one thread is involved.
 
-This default execution model is usually preferrable because it don't abuse the task
+This default execution model is usually preferable because it don't abuse the task
 scheduling and leverages function inlining on the JVM.
 
 But it does have drawbacks: this approach will block the thread until all of the chained
@@ -615,7 +615,7 @@ executing many small tasks.
 The `:default` keyword will resolve to `px/*default-executor*`, that is a `ForkJoinPool`
 instance that is highly optimized for lots of small tasks.
 
-On JDK19 with Preview enabled you will also have the `px/*vthread-executor*` (`:vthread`
+On JDK21+ (or JDK19 with preview enabled) you will also have the `px/*vthread-executor*` (`:vthread`
 keyword can be used) that is an instance of *Virtual Thread per task* executor.
 
 

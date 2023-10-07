@@ -1,19 +1,20 @@
 # Channels (CSP pattern)
 
 An implementation of channel abstraction and CSP patterns for Clojure and ClojureScript.
-It's a [core.async][3] alternative implementation of channel abstraction that laverages
-platform facilities for concurrency (no go macro transformations, laverages JDK19 Virtual
-Threads on the JVM).
+It's a [core.async][3] alternative implementation of channel abstraction that leverages
+platform facilities for concurrency (no go macro transformations, leverages virtual threads on the JVM).
 
-There are [Code Walkthrought][0] where you can learn the main API usage patterns. Also,
+**NOTE**: Virtual threads are only available on JDK 21+ (or JDK 19 with experimental features enabled).
+
+See the [Code Walkthrough][0] to learn the main API usage patterns. Also,
 you can read the [core.async rationale][1] for better understanding the main ideas of the
 CSP pattern.
 
-**NOTE**: Although the main focus is the use in JVM, where is all the potential; the
+**NOTE**: Although the main focus is the use in JVM, where all of the potential is, the
 channel implementation is also available on CLJS. There are no go macros on CLJS, but all
-the operators (including `alts`) can be used with alredy available promesa API and
-syntactic abstractions (such that `promesa.core/loop` and `promesa.core/recur`). Read the
-docstring for know if the operator/helper internally uses vthreads or not.
+the operators (including `alts`) can be used with already available promesa API and
+syntactic abstractions (such as `promesa.core/loop` and `promesa.core/recur`). Read the
+docstring to know if the operator/helper internally uses vthreads or not.
 
 
 ## Differences with `core.async`
@@ -23,12 +24,11 @@ The main highlights and differences with [core.async][3] are:
 - **There are no macro transformations**, the `go` macro is a convenient alias for
   `p/vthread` (or `p/thread` when vthreads are not available); there are not limitation on
   using blocking calls inside `go` macro neither many other inconveniences of core.async
-  go macro, mainly thanks to the JDK19 with preview enabled Virtual Threads. _They are
-  only available on JVM_.
+  go macro, mainly thanks to virtual threads. _They are only available on JVM_.
 - **No callbacks**, functions returns promises or blocks; you can use the promise
-  composition API or thread blocking API, whatever you wants.
+  composition API or thread blocking API, whatever you want.
 - **No take/put limits**; you can attach more than 1024 pending tasks to a channel.
-- **Simplier mental model**, there are no differences between parking and blocking
+- **Simpler mental model**, there are no differences between parking and blocking
   operations.
 - **Analogous performance**; in my own stress tests it has the same performance as
   core.async.
@@ -36,22 +36,22 @@ The main highlights and differences with [core.async][3] are:
 
 There are also some internal differences that you should know:
 
-- The promesa implementation cancells immediatelly all pending puts when channel is closed
-  in contrast to core.async that leaves them operative until all puts are succeded.
-- The promesa implementation takes a bit less grandular locking than core.async, but on
-  the end it should not have any effect on the final performance orq usability.
-- Operators or channel helpers do not use vthreads internally so they can be used safelly
+- The promesa implementation immediately cancels all pending puts when channel is closed
+  in contrast to core.async that leaves them operative until all puts are succeeded.
+- The promesa implementation takes less of a granular locking approach than core.async, but
+  it should not have any effect on the final performance or usability.
+- Operators or channel helpers do not use vthreads internally so they can be used safely
   on CLJS or JVM without virtual threads.
 
 
 ## Getting Started
 
-This documentation supposes you have a bit of knowledge of core.async API.
+This documentation assumes you have a bit of knowledge of core.async API.
 
 
 #### Working with channels API
 
-Lets create a channel and put value in-to:
+Let's create a channel and put a value in it:
 
 ```clojure
 (require '[promesa.exec.csp :as sp])
@@ -68,7 +68,7 @@ Lets create a channel and put value in-to:
 ;; => true
 ```
 
-Now, lets try to retrieve data from channel:
+Now, let's try to retrieve data from channel:
 
 ```clojure
 ;; Using a blocking helper, analogous to clojure.core.async/<!!
@@ -117,7 +117,7 @@ But if you need a channel, there are `go-chan` macro. The `go` +
 
 #### Multiple Operations
 
-If you want perform multiple operations on the same or mutliple
+If you want to perform multiple operations on the same or multiple
 channels. In the same line as `clojure.core.async/alts!!`, this
 library exposes the `promesa.exec.csp/alts!` macro that has the same
 API:
@@ -174,9 +174,9 @@ and `mult*`.
 ;;   go 2: :a
 ```
 
-The `mult` constructor returns a muliplexer, and as it implements the channel API, you can
+The `mult` constructor returns a multiplexer, and as it implements the channel API, you can
 put values in directly. For the cases when you already have a channel that you want
-multiplext, just use the `mult*`.
+multiplex, just use the `mult*`.
 
 The `mult*` works in the same way as `clojure.core.async/mult`.  There are also `untap!`
 function for removing the channel from the multiplexer.
@@ -186,11 +186,11 @@ Closed channels are automatically removed from the multiplexer.
 
 #### Errors
 
-On difference with `core.async`, promesa channels supports the notion of error. The errors
-can happen externaly (a producer process that fails) or internally (happens on the
+One difference with `core.async`, promesa channels supports the notion of error. The errors
+can happen externally (a producer process that fails) or internally (happens on the
 provided transducer).
 
-For notify of a possible external exception cause, you should proceed to call close!
+For notification of a possible external exception cause, you should proceed to call close!
 function with the cause as second argument:
 
 ```clojure
@@ -198,7 +198,7 @@ function with the cause as second argument:
 ```
 
 If the exception is happened on the transducer, the channel will be closed with that
-exception. This behavior can be overriden spcifying custom exception handler on the
+exception. This behavior can be overridden specifying custom exception handler on the
 channel constructor:
 
 ```clojure
@@ -206,11 +206,11 @@ channel constructor:
 ```
 
 The `sp/throw-uncaught` function is a builtin exception handler that just uses the
-platform mechanism to throw the exception to the uncaugh handler (the default behavior of
+platform mechanism to throw the exception to the uncaught handler (the default behavior of
 core.async). If no `:exh` parameter is provided the `sp/close-with-exception` will be
-used. Only relevent if you provide transducer.
+used. This is only relevant if you provide transducer.
 
-An exception handler is just a function that accepts two arguments: he channel and the
+An exception handler is just a function that accepts two arguments: the channel and the
 exception instance.
 
 
@@ -229,6 +229,6 @@ executor on the channel constructor:
 ```
 
 
-[0]: https://github.com/funcool/promesa/blob/master/doc/csp-walkthrought.clj
+[0]: https://github.com/funcool/promesa/blob/master/doc/csp-walkthrough.clj
 [1]: https://clojure.org/news/2013/06/28/clojure-clore-async-channels
 [3]: https://github.com/clojure/core.async
