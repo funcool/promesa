@@ -1,13 +1,13 @@
 # Bulkhead (concurrency limiter)
 
-In general, the goal of the bulkhead pattern is to avoid faults in one part of a system to take the
+In general, the bulkhead pattern prevents faults in one part of the system from taking the
 entire system down. The bulkhead implementation in **promesa** limits the number of concurrent
 calls.
 
 This [SO answer][0] explains the concept very well.
 
 
-So lets stat with an example:
+So let's start with an example:
 
 ```clojure
 (require '[promesa.exec.bulkhead :as pxb]
@@ -25,17 +25,17 @@ So lets stat with an example:
 ```
 
 At first glance, this seems like an executor instance because it resembles the same API (aka
-`px/submit! call).
+`px/submit!` call).
 
-When you submits a task to it, it does the following:
+When you submit a task to it, it does the following:
 
-- Checkes if concurrency limit is not reached, if not, proceed to execute the function in the
+- Checks if concurrency limit is not reached, if not, proceed to execute the function in the
   underlying executor.
 - If concurrency limit is reached, it queues the execution until other tasks are finished.
 - If queue limit is reached, the returned promise will be automatically rejected with an exception
-  indicating that queue limit reached.
+  indicating that queue limit was reached.
 
-This allows control the concurrency and the queue size on access to some resource.
+This allows you to control the concurrency and the queue size on access to some resource.
 
 
 NOTES:

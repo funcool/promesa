@@ -2,26 +2,26 @@
 
 ## Introduction
 
-Additionally to the _promise_ abstraction, **promesa** library comes
-with many helpers and factories for execution and scheduling of tasks
+In addition to the _promise_ abstraction, **promesa** comes
+with many helpers and factories for execution and scheduling tasks
 for asynchronous execution.
 
-Although this API works in the JS runtime and some of the function has
+Although this API works in the JS runtime and some of the functionality has
 general utility, the main target is the JVM platform.
 
 ## Async Tasks
 
-Firstly, lets define **async task**: a function that is executed out
+An **async task** is a function that is executed out
 of current flow using a different thread. Here, **promesa** library
 exposes mainly two functions:
 
-- `promesa.exec/run!`: useful when you want run a function in a
-  different thread and you don't care abour the return value; it
-  returns a promise that will be fullfilled when the callback
+- `promesa.exec/run!`: useful when you want to run a function in a
+  different thread and you don't care about the return value.
+  It returns a promise that will be fulfilled when the callback
   terminates.
-- `promesa.exec/submit!` useful when you want run a function in a
-  different thread and you need the return value; it returns a promise
-  that will be fullfilled with the return value of the function.
+- `promesa.exec/submit!` useful when you want to run a function in a
+  different thread and you need the return value. It returns a promise
+  that will be fulfilled with the return value of the function.
 
 
 Let see some examples:
@@ -41,13 +41,13 @@ Let see some examples:
 ;; => 1
 ```
 
-The both functions optionally accepts as first argument an executor
-instance that allows specify the executor where you want execute the
-specified function. If no executor is provided, the default one is
-used (binded on the `promesa.exec/*default-executor*` dynamic var).
+Both functions optionally accept an executor instance as the first argument.
+This executor is used to run the specified function.
+If no executor is provided, the default one is
+used (bound on the `promesa.exec/*default-executor*` dynamic var).
 
 Also, in both cases, the returned promise is cancellable, so if for
-some reason the function is still not execued, the cancellation will
+some reason the function is still not executed, the cancellation will
 prevent the execution. You can cancel a cancellable promise with
 `p/cancel!` function.
 
@@ -112,12 +112,11 @@ Since v9.0.x there are new factories that uses the JDK>=19 preview API:
 ### `pmap` (experimental)
 
 This is a simplified `clojure.core/pmap` analogous function that allows
-execute a potentially computationally expensive or io bound functions
-in parallell.
+execution of a potentially computationally expensive or IO bound functions
+in parallel.
 
-It returns a lazy chunked seq (uses the clojure's default chunk size:
-32) and the maximum parallelism is determined by the provided
-executor.
+It returns a lazy chunked seq (uses Clojure's default chunk size of 32)
+and the maximum parallelism is determined by the provided executor.
 
 Example:
 
@@ -144,16 +143,16 @@ Example:
 
 ### `with-executor` macro (experimental)
 
-This allows run a scoped code with the `px/*default-executor*` binded
+This allows running scoped code with the `px/*default-executor*` bound
 to the provided executor. The provided executor can be a function for
 lazy executor instantiation.
 
-It optionally accepts metadata on the executor part for indicate:
+It optionally accepts metadata on the executor:
 
 - `^:shutdown`: shutdown the pool before return
 - `^:interrupt`: shutdown and interrupt before return
 
-There an example on how you can customize the executor for **pmap**:
+Here is an example of customizing the executor for **pmap**:
 
 ```clojure
 (time
