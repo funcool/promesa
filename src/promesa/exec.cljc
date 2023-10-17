@@ -35,6 +35,7 @@
       java.util.concurrent.ForkJoinWorkerThread
       java.util.concurrent.Future
       java.util.concurrent.ScheduledExecutorService
+      java.util.concurrent.ScheduledThreadPoolExecutor
       java.util.concurrent.SynchronousQueue
       java.util.concurrent.ThreadFactory
       java.util.concurrent.ThreadPoolExecutor
@@ -47,11 +48,13 @@
 
 ;; --- Globals & Defaults (with CLJS Impl)
 
-(declare thread-factory)
 (declare scheduled-executor)
 (declare current-thread-executor)
-(declare ->ScheduledTask)
 
+
+#?(:clj  (declare thread-factory))
+#?(:clj  (declare thread-per-task-executor))
+#?(:clj  (declare vthread-per-task-executor))
 #?(:clj  (declare cached-executor))
 #?(:cljs (declare microtask-executor))
 
@@ -60,28 +63,11 @@
 
 (def virtual-threads-available?
   "Var that indicates the availability of virtual threads."
-  #?(:clj (if (and (pu/has-method? Thread "ofVirtual")
-                   ;; the following should succeed with the `--enable-preview` java argument:
-                   ;; eval happens on top level = compile time, which is ok for GraalVM
-                   (try (eval '(Thread/ofVirtual))
-                        (catch Exception _ false)))
-            true
-            false)
+  #?(:clj (and (pu/has-method? Thread "ofVirtual")
+               ;; the following should succeed with the `--enable-preview` java argument:
+               ;; eval happens on top level = compile time, which is ok for GraalVM
+               (pu/can-eval? '(Thread/ofVirtual)))
      :cljs false))
-
-#?(:clj
-   (do
-     (defmacro compile-if-virtual [then else]
-       (if virtual-threads-available?
-         then else))
-     (defmacro compile-when-virtual [body]
-       `(compile-if-virtual ~body nil))))
-
-;; DEPRECATED
-(def ^{:deprecated true
-       :doc "backward compatibility alias for `virtual-threads-available?`"}
-  vthread-supported?
-  virtual-threads-available?)
 
 (def ^{:no-doc true} noop (constantly nil))
 
@@ -113,26 +99,26 @@
   ^{:doc "A global, cached thread executor service."
     :no-doc true}
   default-cached-executor
-  #?(:clj  (delay (cached-executor))
-     :cljs default-executor))
+  (delay
+    #?(:clj  (cached-executor)
+       :cljs default-executor)))
 
 (defonce
   ^{:doc "A global, thread per task executor service."
     :no-doc true}
   default-thread-executor
-  #?(:clj (compile-if-virtual
-           (delay (java.util.concurrent.Executors/newThreadPerTaskExecutor
-                   ^ThreadFactory (promesa.exec/thread-factory)))
-           default-cached-executor)
+  #?(:clj (pu/with-compile-cond virtual-threads-available?
+            (delay (thread-per-task-executor))
+            default-cached-executor)
      :cljs default-executor))
 
 (defonce
   ^{:doc "A global, virtual thread per task executor service."
     :no-doc true}
   default-vthread-executor
-  #?(:clj  (compile-if-virtual
-            (delay (java.util.concurrent.Executors/newVirtualThreadPerTaskExecutor))
-            default-cached-executor)
+  #?(:clj  (pu/with-compile-cond virtual-threads-available?
+             (delay (vthread-per-task-executor))
+             default-cached-executor)
      :cljs default-executor))
 
 (defn executor?
@@ -285,14 +271,6 @@
      (instance? ThreadFactory o)))
 
 #?(:clj
-   (defn- fn->thread-factory
-     "Adapt a simple clojure function into a ThreadFactory instance."
-     [func]
-     (reify ThreadFactory
-       (^Thread newThread [_ ^Runnable runnable]
-        (func runnable)))))
-
-#?(:clj
 (def ^{:no-doc true :dynamic true}
   *default-counter*
   (AtomicLong. 0)))
@@ -305,19 +283,44 @@
   ([counter] (.getAndIncrement ^AtomicLong counter))))
 
 #?(:clj
-(defn thread-factory
-  "Returns an instance of promesa default thread factory."
-  [& {:keys [name daemon priority]
-      :or {daemon true
-           priority Thread/NORM_PRIORITY
-           name "promesa/thread/%s"}}]
-  (let [counter (AtomicLong. 0)]
-    (reify ThreadFactory
-      (newThread [this runnable]
-        (doto (Thread. ^Runnable runnable)
-          (.setPriority (int priority))
-          (.setDaemon ^Boolean daemon)
-          (.setName (format name (get-next counter)))))))))
+   (defn thread-factory
+     "Create a new thread factory instance"
+     [& {:keys [name daemon priority prefix virtual]}]
+     (pu/with-compile-cond virtual-threads-available?
+       (if virtual
+         (let [thb (Thread/ofVirtual)
+               thb (cond
+                     (string? name)   (.name thb ^String name)
+                     (string? prefix) (.name thb ^String prefix 0)
+                     :else            thb)]
+           (.factory thb))
+
+         (let [thb (Thread/ofPlatform)
+               thb (if (some? priority)
+                     (.priority thb (int priority))
+                     thb)
+               thb (if (some? daemon)
+                     (.daemon thb ^Boolean daemon)
+                     (.daemon thb true))
+               thb (cond
+                     (string? name)   (.name thb ^String name)
+                     (string? prefix) (.name thb ^String prefix 0)
+                     :else            thb)]
+           (.factory thb)))
+
+       (let [counter (AtomicLong. 0)]
+         (reify ThreadFactory
+           (newThread [this runnable]
+             (let [thr (Thread. ^Runnable runnable)]
+               (when (some? priority)
+                 (.setPriority thr (int priority)))
+               (when (some? daemon)
+                 (.setDaemon thr ^Boolean daemon))
+               (when (string? name)
+                 (.setName thr ^String name))
+               (when (string? prefix)
+                 (.setName thr (str prefix (get-next counter))))
+               thr)))))))
 
 #?(:clj
 (defn forkjoin-thread-factory
@@ -333,93 +336,42 @@
           thread))))))
 
 #?(:clj
-(defn- resolve-thread-factory
-  {:no-doc true}
-  ^ThreadFactory
-  [opts]
-  (cond
-    (thread-factory? opts) opts
-    (= :default opts)      (thread-factory)
-    (nil? opts)            (thread-factory)
-    (map? opts)            (thread-factory opts)
-    (fn? opts)             (fn->thread-factory opts)
-    :else                  (throw (ex-info "Invalid thread factory" {})))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; --- DEPRECATED
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   (defonce default-thread-factory
+     (delay (thread-factory :prefix "promesa/default/"))))
 
 #?(:clj
-   (defn cached-pool
-     "A cached thread pool constructor."
-     {:deprecated "9.0" :no-doc true}
-     ([]
-      (Executors/newCachedThreadPool))
-     ([opts]
-      (let [factory (resolve-thread-factory opts)]
-        (Executors/newCachedThreadPool factory)))))
+   (defn- resolve-thread-factory
+     {:no-doc true}
+     ^ThreadFactory
+     [tf]
+     (cond
+       (nil? tf)            nil
+       (thread-factory? tf) tf
+       (= :default tf)      @default-thread-factory
+       (map? tf)            (thread-factory tf)
+       (fn? tf)             (reify ThreadFactory
+                              (^Thread newThread [_ ^Runnable runnable]
+                               (tf runnable)))
+       :else                (throw (ex-info "Invalid thread factory" {})))))
 
 #?(:clj
-   (defn fixed-pool
-     "A fixed thread pool constructor."
-     {:deprecated "9.0" :no-doc true}
-     ([n]
-      (Executors/newFixedThreadPool (int n)))
-     ([n opts]
-      (let [factory (resolve-thread-factory opts)]
-        (Executors/newFixedThreadPool (int n) factory)))))
-
-#?(:clj
-   (defn single-pool
-     "A single thread pool constructor."
-     {:deprecated "9.0" :no-doc true}
-     ([]
-      (Executors/newSingleThreadExecutor))
-     ([opts]
-      (let [factory (resolve-thread-factory opts)]
-        (Executors/newSingleThreadExecutor factory)))))
-
-#?(:clj
-   (defn scheduled-pool
-     "A scheduled thread pool constructor."
-     {:deprecated "9.0" :no-doc true}
-     ([] (Executors/newScheduledThreadPool (int 0)))
-     ([n] (Executors/newScheduledThreadPool (int n)))
-     ([n opts]
-      (let [factory (resolve-thread-factory opts)]
-        (Executors/newScheduledThreadPool (int n) factory)))))
-
-#?(:clj
-   (defn work-stealing-pool
-     "Creates a work-stealing thread pool."
-     {:deprecated "9.0" :no-doc true}
-     ([] (Executors/newWorkStealingPool))
-     ([n] (Executors/newWorkStealingPool (int n)))))
-
-#?(:clj
-   (defn forkjoin-pool
-     {:deprecated "9.0" :no-doc true}
-     [{:keys [factory async? parallelism]
-       :or {async? true}
-       :as opts}]
-     (let [parallelism (or parallelism (get-available-processors))
-           factory     (cond
-                         (instance? ForkJoinPool$ForkJoinWorkerThreadFactory factory) factory
-                         (nil? factory) ForkJoinPool/defaultForkJoinWorkerThreadFactory
-                         :else (throw (ex-info "Unexpected thread factory" {:factory factory})))]
-       (ForkJoinPool. parallelism factory nil async?))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; --- END DEPRECATED
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   (defn- options->thread-factory
+     {:no-doc true}
+     ^ThreadFactory
+     [options]
+     (resolve-thread-factory
+      (or (:thread-factory options)
+          (:factory options)))))
 
 #?(:clj
    (defn cached-executor
      "A cached thread executor pool constructor."
-     [& {:keys [max-size factory keepalive] :or {keepalive 60000 max-size Integer/MAX_VALUE}}]
-     (let [factory (or (some-> factory resolve-thread-factory)
-                       (thread-factory :name "promesa/cached/%s"))
-           queue   (SynchronousQueue.)]
+     [& {:keys [max-size keepalive]
+         :or {keepalive 60000 max-size Integer/MAX_VALUE}
+         :as options}]
+     (let [factory (or (options->thread-factory options)
+                       (deref default-thread-factory))
+           queue  (SynchronousQueue.)]
        (ThreadPoolExecutor. 0
                             (long max-size)
                             (long keepalive)
@@ -430,18 +382,53 @@
 #?(:clj
    (defn fixed-executor
      "A fixed thread executor pool constructor."
-     [& {:keys [parallelism factory]}]
-     (let [factory (or (some-> factory resolve-thread-factory)
-                       (thread-factory :name "promesa/fixed/%s"))]
-       (Executors/newFixedThreadPool (int parallelism) factory))))
+     [& {:keys [parallelism]
+         :as options}]
+     (if-let [factory (options->thread-factory options)]
+       (Executors/newFixedThreadPool (int parallelism) ^ThreadFactory factory)
+       (Executors/newFixedThreadPool (int parallelism)))))
 
 #?(:clj
    (defn single-executor
      "A single thread executor pool constructor."
-     [& {:keys [factory]}]
-     (let [factory (or (some-> factory resolve-thread-factory)
-                       (thread-factory :name "promesa/single/%s"))]
-       (Executors/newSingleThreadExecutor factory))))
+     [& {:as options}]
+     (if-let [factory (options->thread-factory options)]
+       (Executors/newSingleThreadExecutor factory)
+       (Executors/newSingleThreadExecutor))))
+
+#?(:cljs
+   (deftype Scheduler []
+     pt/IScheduler
+     (-schedule! [_ ms f]
+       (let [df  (impl/deferred)
+             tid (js/setTimeout
+                  (fn []
+                    (try
+                      (pt/-resolve! df (f))
+                      (catch :default cause
+                        (pt/-reject! df cause))))
+                  ms)]
+         (pt/-fnly df
+                   (fn [_ c]
+                     (when (impl/isCancellationError c)
+                       (js/clearTimeout tid))))
+         df))))
+
+(defn scheduled-executor
+  "A scheduled thread pool constructor. A ScheduledExecutor (IScheduler
+  in CLJS) instance allows execute asynchronous tasks some time later."
+  [& {:keys [parallelism] :or {parallelism 1} :as options}]
+  #?(:clj
+     (let [parallelism (or parallelism (get-available-processors))
+           factory     (options->thread-factory options)
+           executor    (if factory
+                         (ScheduledThreadPoolExecutor. (int parallelism) ^ThreadFactory factory)
+                         (ScheduledThreadPoolExecutor. (int parallelism)))]
+       (.setRemoveOnCancelPolicy executor true)
+       executor)
+
+     :cljs
+     (->Scheduler)))
 
 (defn current-thread-executor
   "Creates an executor instance that run tasks in the same thread."
@@ -492,55 +479,19 @@
          (-> (pt/-promise nil)
              (pt/-fmap (fn [_] (f))))))))
 
-#?(:cljs
-   (deftype Scheduler []
-     pt/IScheduler
-     (-schedule! [_ ms f]
-       (let [df  (impl/deferred)
-             tid (js/setTimeout
-                  (fn []
-                    ;; (js/console.log "111")
-                    (try
-                      (pt/-resolve! df (f))
-                      (catch :default cause
-                        (pt/-reject! df cause))))
-                  ms)]
-         (pt/-fnly df
-                   (fn [_ c]
-                     ;; (js/console.log "FNLY")
-                     (when (impl/isCancellationError c)
-                       (js/clearTimeout tid))))
-         df))))
-
-(defn scheduled-executor
-  "A scheduled thread pool constructor. A ScheduledExecutor (IScheduler
-  in CLJS) instance allows execute asynchronous tasks some time later."
-  [& {:keys [parallelism factory] :or {parallelism 1}}]
-  #?(:clj
-     (let [parallelism (or parallelism (get-available-processors))
-           factory     (or (some-> factory resolve-thread-factory)
-                           (thread-factory :name "promesa/scheduled/%s"))]
-
-
-       (doto (java.util.concurrent.ScheduledThreadPoolExecutor. (int parallelism) ^ThreadFactory factory)
-         (.setRemoveOnCancelPolicy true)))
-
-     :cljs
-     (->Scheduler)))
+#?(:clj
+   (pu/with-compile-cond virtual-threads-available?
+     (defn thread-per-task-executor
+       [& {:as options}]
+       (let [factory (or (options->thread-factory options)
+                         (deref default-thread-factory))]
+         (Executors/newThreadPerTaskExecutor ^ThreadFactory factory)))))
 
 #?(:clj
-   (compile-when-virtual
-    (defn thread-per-task-executor
-      [& {:keys [factory]}]
-      (let [factory (or (some-> factory resolve-thread-factory)
-                        (thread-factory :name "promesa/thread-per-task/%s"))]
-        (Executors/newThreadPerTaskExecutor ^ThreadFactory factory)))))
-
-#?(:clj
-   (compile-when-virtual
-    (defn vthread-per-task-executor
-      []
-      (Executors/newVirtualThreadPerTaskExecutor))))
+   (pu/with-compile-cond virtual-threads-available?
+     (defn vthread-per-task-executor
+       []
+       (Executors/newVirtualThreadPerTaskExecutor))))
 
 #?(:clj
    (defn forkjoin-executor
@@ -593,7 +544,7 @@
        (CompletableFuture/supplyAsync ^Supplier (pu/->Supplier f) ^Executor this))))
 
 
-;; --- Scheduler & ScheduledTask
+;; --- Scheduler
 
 #?(:clj
    (extend-type ScheduledExecutorService
@@ -689,33 +640,13 @@
      (pmap #(apply f %) (step-fn (cons coll colls)))))))
 
 #?(:clj
-   (compile-if-virtual
-    (defn fn->thread
-      [f & {:keys [daemon virtual start priority name]
-            :or {daemon true virtual false start true priority Thread/NORM_PRIORITY}}]
-      (let [name   (or name (format "promesa/unpooled-thread/%s" (get-next)))
-            thread (if virtual
-                     (let [thb (Thread/ofVirtual)
-                           thb (.name thb ^String name)]
-                       (.unstarted thb ^Runnable f))
-                     (let [thb (Thread/ofPlatform)
-                           thb (.name thb ^String name)
-                           thb (.priority thb (int priority))
-                           thb (.daemon thb (boolean daemon))]
-                       (.unstarted thb ^Runnable f)))]
-        (if start
-          (.start ^Thread thread))
-        thread))
-    (defn fn->thread
-      [f & {:keys [daemon start priority name]
-            :or {daemon true start true priority Thread/NORM_PRIORITY}}]
-      (let [thread (doto (Thread. ^Runnable f)
-                     (.setName ^String name)
-                     (.setPriority (int priority))
-                     (.setDaemon (boolean daemon)))]
-        (if start
-          (.start ^Thread thread))
-        thread))))
+   (defn fn->thread
+     [f & {:keys [start] :or {start true} :as options}]
+     (let [factory (thread-factory options)
+           thread  (.newThread ^ThreadFactory factory ^Runnable f)]
+       (if start
+         (.start ^Thread thread))
+       thread)))
 
 #?(:clj
 (defmacro thread
@@ -726,18 +657,14 @@
   option is ignored if you are using a JVM that has no support for
   Virtual Threads."
   [opts & body]
-  (let [[opts body] (if (map? opts) [opts body] [nil (cons opts body)])]
-    `(fn->thread (^:once fn* [] ~@body)
-                 {:daemon ~(:daemon opts true)
-                  :virtual ~(:virtual opts false)
-                  :start ~(:start opts true)
-                  :name ~(or (:name opts) (format "promesa/unpooled-thread/%s" (get-next)))}))))
+  (let [[opts body] (if (map? opts) [opts body] [{} (cons opts body)])]
+    `(fn->thread (^:once fn* [] ~@body) ~@(mapcat identity opts)))))
 
 #?(:clj
 (defn thread-call
   "Advanced version of `p/thread-call` that creates and starts a thread
   configured with `opts`. No executor service is used, this will start
-  a plain unpooled thread."
+  a plain unpooled thread; returns a non-cancellable promise instance"
   [f & {:as opts}]
   (let [p (CompletableFuture.)]
     (fn->thread #(try

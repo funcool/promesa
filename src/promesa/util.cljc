@@ -76,13 +76,38 @@
   (fn [v c]
     (if c (fc c) (fv v))))
 
-(defn has-method?
-  {:no-doc true}
-  [klass name]
-  (let [methods (into #{}
-                      (map (fn [method] (.getName ^Method method)))
-                      (.getDeclaredMethods ^Class klass))]
-    (contains? methods name)))
+#?(:clj
+   (defn has-method?
+     {:no-doc true}
+     [klass name]
+     (let [methods (into #{}
+                         (map (fn [method] (.getName ^Method method)))
+                         (.getDeclaredMethods ^Class klass))]
+       (contains? methods name))))
+
+#?(:clj
+   (defn class-exists?
+     {:no-doc true}
+     [name]
+     (try
+       (Class/forName ^String name)
+       true
+       (catch ClassNotFoundException _
+         false))))
+
+#?(:clj
+   (defn can-eval?
+     {:no-doc true}
+     [expr]
+     (try (eval expr) true
+          (catch Throwable _ false))))
+
+#?(:clj
+   (defmacro with-compile-cond
+     ([cond then]
+      (if (eval cond) then nil))
+     ([cond then else]
+      (if (eval cond) then else))))
 
 (defn maybe-deref
   {:no-doc true}
