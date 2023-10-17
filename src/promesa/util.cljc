@@ -5,6 +5,7 @@
 ;; Copyright (c) Andrey Antukh <niwi@niwi.nz>
 
 (ns promesa.util
+  (:refer-clojure :exclude [with-open])
   (:require [promesa.protocols :as pt])
   #?(:clj
      (:import
@@ -148,3 +149,19 @@
   [& exprs]
   `(try* (^:once fn* [] ~@exprs) identity))
 
+(defmacro with-open
+  [bindings & body]
+  {:pre [(vector? bindings)
+         (even? (count bindings))
+         (pos? (count bindings))]}
+  (reduce (fn [acc bindings]
+            `(let ~(vec bindings)
+               (try
+                 ~acc
+                 (finally
+                   (let [target# ~(first bindings)]
+                     (if (instance? java.lang.AutoCloseable target#)
+                       (.close ^java.lang.AutoCloseable target#)
+                       (pt/-close! target#)))))))
+          `(do ~@body)
+          (reverse (partition 2 bindings))))

@@ -18,6 +18,8 @@
       java.lang.AutoCloseable
       java.lang.Thread$UncaughtExceptionHandler
       java.time.Duration
+      java.time.Instant
+      java.time.temporal.TemporalAmount
       java.util.concurrent.BlockingQueue
       java.util.concurrent.Callable
       java.util.concurrent.CancellationException
@@ -67,6 +69,11 @@
                ;; the following should succeed with the `--enable-preview` java argument:
                ;; eval happens on top level = compile time, which is ok for GraalVM
                (pu/can-eval? '(Thread/ofVirtual)))
+     :cljs false))
+
+(def structured-task-scope-available?
+  #?(:clj (and (pu/class-exists? "java.util.concurrent.StructuredTaskScope")
+               (pu/can-eval? '(java.util.concurrent.StructuredTaskScope.)))
      :cljs false))
 
 (def ^{:no-doc true} noop (constantly nil))
@@ -340,6 +347,10 @@
      (delay (thread-factory :prefix "promesa/default/"))))
 
 #?(:clj
+   (defonce default-vthread-factory
+     (delay (thread-factory :prefix "promesa/default/" :virtual true))))
+
+#?(:clj
    (defn- resolve-thread-factory
      {:no-doc true}
      ^ThreadFactory
@@ -348,6 +359,7 @@
        (nil? tf)            nil
        (thread-factory? tf) tf
        (= :default tf)      @default-thread-factory
+       (= :virtual tf)      @default-vthread-factory
        (map? tf)            (thread-factory tf)
        (fn? tf)             (reify ThreadFactory
                               (^Thread newThread [_ ^Runnable runnable]
@@ -762,6 +774,64 @@
                         ^Thread thr
                         ^Throwable cause))))
 
+#?(:clj
+   (pu/with-compile-cond structured-task-scope-available?
+     (defn structured-task-scope
+       ([] (java.util.concurrent.StructuredTaskScope.))
+       ([& {:keys [name preset] :as options}]
+        (let [tf (or (options->thread-factory options)
+                     (deref default-thread-factory))]
+          (case preset
+            :shutdown-on-success
+            (java.util.concurrent.StructuredTaskScope$ShutdownOnSuccess.
+             ^String name ^ThreadFactory tf)
+
+            :shutdown-on-failure
+            (java.util.concurrent.StructuredTaskScope$ShutdownOnFailure.
+             ^String name ^ThreadFactory tf)
+
+            (java.util.concurrent.StructuredTaskScope.
+             ^String name ^ThreadFactory tf)))))))
+
+#?(:clj
+   (pu/with-compile-cond structured-task-scope-available?
+     (extend-type java.util.concurrent.StructuredTaskScope
+       pt/IAwaitable
+       (-await!
+         ([it] (.join ^java.util.concurrent.StructuredTaskScope it))
+         ([it duration]
+          (let [duration (if (instance? Duration duration)
+                           duration
+                           (Duration/ofMillis duration))
+                deadline (Instant/now)
+                deadline (.plus ^Instant deadline
+                                ^TemporalAmount duration)]
+            (.joinUntil ^java.util.concurrent.StructuredTaskScope it
+                        ^Instant deadline))))
+
+       pt/ICloseable
+       (-closed? [it]
+         (.isShutdown ^java.util.concurrent.StructuredTaskScope it))
+
+       (-close!
+         ([it]
+          (.close ^java.util.concurrent.StructuredTaskScope it))
+         ([it reason]
+          (.close ^java.util.concurrent.StructuredTaskScope it)))
+
+       pt/IExecutor
+       (-exec! [it task]
+         (.fork ^java.util.concurrent.StructuredTaskScope it
+                ^Callable task)
+         nil)
+       (-run! [it task]
+         (.fork ^java.util.concurrent.StructuredTaskScope it
+                ^Callable task))
+       (-submit! [it task]
+         (.fork ^java.util.concurrent.StructuredTaskScope it
+                ^Callable task)))))
+
+
 ;; #?(:clj
 ;;    (defn managed-blocker
 ;;      {:no-doc true}
@@ -792,3 +862,20 @@
 ;;          m# (managed-blocker f#)]
 ;;      (ForkJoinPool/managedBlock m#)
 ;;      (deref m#)))
+
+#?(:clj
+(defn await!
+  "Generic await operation. Block current thread until some operation
+  terminates.
+
+  The return value is implementation specific."
+  ([resource]
+   (pt/-await! resource))
+  ([resource duration]
+   (pt/-await! resource duration))))
+
+(defn close!
+  ([o]
+   (pt/-close! o))
+  ([o reason]
+   (pt/-close! o reason)))
