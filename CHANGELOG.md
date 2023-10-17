@@ -1,5 +1,20 @@
 # Changelog #
 
+
+## Version 12.0.xxx
+
+- Add integration with StructuredTaskScope (Structured Concurrency)
+- Remove deprecated executors constructors (deprecated in v9)
+
+BREAKING CHANGES:
+
+- Remove unwraping of `ExecutionException` and `CompletionException` exceptions on the JVM
+  only experimental helpers: `await!`, `await` and `with-dispatch!` macro (was a very bad
+  decision because unwrapping removes the ability to know the real cause of the exception)
+
+- The `:name` option on `thread-factory` constructor helper now is interpreted as-is,
+  without template interpolation; use the new `:prefix` for that purpose
+
 ## Version 11.0.678
 
 - Fix internal coercion function (cljs only) that causes unexpected
