@@ -632,14 +632,9 @@
   [executor & body]
   (when (:ns &env)
     (throw (ex-info "cljs not supported on with-dispatch! macro" {})))
-  `(try
-     (-> (submit! ~executor (wrap-bindings (^:once fn* [] ~@body)))
-         (pt/-mcat pt/-promise)
-         (pt/-await!))
-     (catch ExecutionException e#
-       (throw (.getCause e#)))
-     (catch CompletionException e#
-       (throw (.getCause e#)))))
+  `(-> (submit! ~executor (wrap-bindings (^:once fn* [] ~@body)))
+       (pt/-mcat pt/-promise)
+       (pt/-await!)))
 
 (defmacro with-executor
   "Binds the *default-executor* var with the provided executor,

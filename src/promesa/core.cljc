@@ -777,19 +777,10 @@
 
   The return value is implementation specific."
   ([resource]
-   (try
-     (pt/-await! resource)
-     (catch ExecutionException e
-       (throw (.getCause e)))
-     (catch CompletionException e
-       (throw (.getCause e)))))
+   (pt/-await! resource))
   ([resource duration]
    (try
      (pt/-await! resource duration)
-     (catch ExecutionException e
-       (throw (.getCause e)))
-     (catch CompletionException e
-       (throw (.getCause e)))
      (catch TimeoutException _
        nil)))))
 
@@ -802,10 +793,6 @@
   ([resource]
    (try
      (pt/-await! resource)
-     (catch ExecutionException e
-       (.getCause e))
-     (catch CompletionException e
-       (.getCause e))
      (catch InterruptedException cause
        (throw cause))
      (catch Throwable cause
@@ -815,10 +802,6 @@
      (pt/-await! resource duration)
      (catch TimeoutException _
        nil)
-     (catch ExecutionException e
-       (.getCause e))
-     (catch CompletionException e
-       (.getCause e))
      (catch InterruptedException cause
        (throw cause))
      (catch Throwable cause

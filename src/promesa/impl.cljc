@@ -302,21 +302,10 @@
      CompletableFuture
      (-await!
        ([it]
-        (try
-          (.get ^CompletableFuture it)
-          (catch ExecutionException e
-            (throw (.getCause e)))
-          (catch CompletionException e
-            (throw (.getCause e)))))
-
+        (.get ^CompletableFuture it))
        ([it duration]
         (let [ms (if (instance? Duration duration) (inst-ms duration) duration)]
-          (try
-            (.get ^CompletableFuture it (int ms) TimeUnit/MILLISECONDS)
-            (catch ExecutionException e
-              (throw (.getCause e)))
-            (catch CompletionException e
-              (throw (.getCause e)))))))
+          (.get ^CompletableFuture it (int ms) TimeUnit/MILLISECONDS))))
 
      CompletionStage
      (-await!
