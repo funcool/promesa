@@ -793,6 +793,31 @@
             (java.util.concurrent.StructuredTaskScope.
              ^String name ^ThreadFactory tf)))))))
 
+
+#?(:clj
+   (pu/with-compile-cond structured-task-scope-available?
+     (extend-type java.util.concurrent.StructuredTaskScope$Subtask
+       pt/IState
+       (-extract
+         ([it]
+          (let [state (.state ^java.util.concurrent.StructuredTaskScope$Subtask it)]
+            (case (str state)
+              "UNAVAILABLE" nil
+              "FAILED"      (.exception ^java.util.concurrent.StructuredTaskScope$Subtask it)
+              "SUCCESS"     (.get ^java.util.concurrent.StructuredTaskScope$Subtask it))))
+         ([it default]
+          (or (pt/-extract it) default)))
+
+       (-pending? [it]
+         (let [state (.state ^java.util.concurrent.StructuredTaskScope$Subtask it)]
+           (not= state java.util.concurrent.StructuredTaskScope$Subtask$State/UNAVAILABLE)))
+       (-rejected? [it]
+         (let [state (.state ^java.util.concurrent.StructuredTaskScope$Subtask it)]
+           (= state java.util.concurrent.StructuredTaskScope$Subtask$State/FAILED)))
+       (-resolved? [it]
+         (let [state (.state ^java.util.concurrent.StructuredTaskScope$Subtask it)]
+           (= state java.util.concurrent.StructuredTaskScope$Subtask$State/SUCCESS))))))
+
 #?(:clj
    (pu/with-compile-cond structured-task-scope-available?
      (extend-type java.util.concurrent.StructuredTaskScope
@@ -825,11 +850,9 @@
                 ^Callable task)
          nil)
        (-run! [it task]
-         (.fork ^java.util.concurrent.StructuredTaskScope it
-                ^Callable task))
+         (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task))
        (-submit! [it task]
-         (.fork ^java.util.concurrent.StructuredTaskScope it
-                ^Callable task)))))
+         (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task)))))
 
 
 ;; #?(:clj
