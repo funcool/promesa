@@ -53,7 +53,6 @@
 (declare scheduled-executor)
 (declare current-thread-executor)
 
-
 #?(:clj  (declare thread-factory))
 #?(:clj  (declare thread-per-task-executor))
 #?(:clj  (declare vthread-per-task-executor))
@@ -344,11 +343,11 @@
 
 #?(:clj
    (defonce default-thread-factory
-     (delay (thread-factory :prefix "promesa/default/"))))
+     (delay (thread-factory :prefix "promesa/platform/"))))
 
 #?(:clj
    (defonce default-vthread-factory
-     (delay (thread-factory :prefix "promesa/default/" :virtual true))))
+     (delay (thread-factory :prefix "promesa/virtual/" :virtual true))))
 
 #?(:clj
    (defn- resolve-thread-factory
@@ -359,6 +358,7 @@
        (nil? tf)            nil
        (thread-factory? tf) tf
        (= :default tf)      @default-thread-factory
+       (= :platform tf)     @default-thread-factory
        (= :virtual tf)      @default-vthread-factory
        (map? tf)            (thread-factory tf)
        (fn? tf)             (reify ThreadFactory
@@ -846,14 +846,12 @@
 
        pt/IExecutor
        (-exec! [it task]
-         (.fork ^java.util.concurrent.StructuredTaskScope it
-                ^Callable task)
+         (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task)
          nil)
        (-run! [it task]
          (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task))
        (-submit! [it task]
          (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task)))))
-
 
 ;; #?(:clj
 ;;    (defn managed-blocker
