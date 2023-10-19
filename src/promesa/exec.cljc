@@ -86,7 +86,8 @@
   ^{:doc "Default scheduled executor instance."}
   default-scheduler
   (delay
-    #?(:clj  (scheduled-executor :parallelism (get-available-processors))
+    #?(:clj  (scheduled-executor :parallelism (min (int (* (get-available-processors) 0.2)) 2)
+                                 :thread-factory {:prefix "promesa/default-scheduler/"})
        :cljs (scheduled-executor))))
 
 (defonce
