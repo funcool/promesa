@@ -778,10 +778,13 @@
                         ^Throwable cause))))
 
 #?(:clj
-   (pu/with-compile-cond structured-task-scope-available?
-     (defn structured-task-scope
-       ([] (java.util.concurrent.StructuredTaskScope.))
-       ([& {:keys [name preset] :as options}]
+   (defn structured-task-scope
+     ([]
+      (pu/with-compile-cond structured-task-scope-available?
+        (java.util.concurrent.StructuredTaskScope.)
+        (throw (IllegalArgumentException. "implementation not available"))))
+     ([& {:keys [name preset] :as options}]
+      (pu/with-compile-cond structured-task-scope-available?
         (let [tf (or (options->thread-factory options)
                      (deref default-thread-factory))]
           (case preset
@@ -794,7 +797,8 @@
              ^String name ^ThreadFactory tf)
 
             (java.util.concurrent.StructuredTaskScope.
-             ^String name ^ThreadFactory tf)))))))
+             ^String name ^ThreadFactory tf)))
+        (throw (IllegalArgumentException. "implementation not available"))))))
 
 
 #?(:clj
