@@ -4,11 +4,8 @@
    [promesa.tests.util :refer [promise-ok promise-ko normalize-to-value]]
    [promesa.core :as p :include-macros true]
    [promesa.protocols :as pt]
-   [promesa.exec :as px])
-  #?(:clj
-     (:import
-      java.util.concurrent.CancellationException
-      java.util.concurrent.TimeoutException)))
+   [promesa.util :as pu]
+   [promesa.exec :as px]))
 
 ;; --- Core Interface Tests
 
@@ -262,7 +259,9 @@
     #?(:clj
        (let [v1 (p/await p1)]
          (t/is (p/rejected? p1))
-         (t/is (= "foobar" (ex-message v1))))
+         (t/is (pu/execution-exception? v1))
+         (t/is (= "clojure.lang.ExceptionInfo: foobar {}" (ex-message v1)))
+         (t/is (= "foobar" (ex-message (ex-cause v1)))))
        :cljs
        (t/async done
          (p/finally p1 (fn [v c]
@@ -496,7 +495,8 @@
                (p/timeout 50))]
     #?(:clj
        (let [v1 (p/await p1)]
-         (t/is (instance? TimeoutException v1)))
+         (t/is (pu/execution-exception? v1))
+         (t/is (pu/timeout-exception? (ex-cause v1))))
 
        :cljs
        (t/async done
@@ -816,7 +816,7 @@
          (t/is (p/rejected? c1))
          (t/is (= @c2 2))
          (t/is (= v2 2))
-         (t/is (instance? CancellationException v1)))
+         (t/is (pu/cancellation-exception? v1)))
 
        :cljs
        (t/async done

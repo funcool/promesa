@@ -11,16 +11,13 @@
      (:import
       java.lang.reflect.Method
       java.time.Duration
+      java.util.concurrent.CancellationException
       java.util.concurrent.CompletionException
       java.util.concurrent.CompletionStage
       java.util.concurrent.CountDownLatch
-      java.util.concurrent.locks.ReentrantLock
-      ;; java.util.function.BiConsumer
-      ;; java.util.function.BiFunction
-      ;; java.util.function.Consumer
-      ;; java.util.function.Function
-      ;; java.util.function.Supplier
-      )))
+      java.util.concurrent.ExecutionException
+      java.util.concurrent.TimeoutException
+      java.util.concurrent.locks.ReentrantLock)))
 
 #?(:clj (set! *warn-on-reflection* true))
 
@@ -44,6 +41,30 @@
      [it]
      (.thenCompose ^CompletionStage it
                    ^java.util.function.Function f-identity)))
+
+#?(:clj
+   (defn completion-exception?
+     {:no-doc true}
+     [e]
+     (instance? CompletionException e)))
+
+#?(:clj
+   (defn execution-exception?
+     {:no-doc true}
+     [e]
+     (instance? ExecutionException e)))
+
+#?(:clj
+   (defn cancellation-exception?
+     {:no-doc true}
+     [e]
+     (instance? CancellationException e)))
+
+#?(:clj
+   (defn timeout-exception?
+     {:no-doc true}
+     [e]
+     (instance? TimeoutException e)))
 
 #?(:clj
    (defn unwrap-completion-exception
