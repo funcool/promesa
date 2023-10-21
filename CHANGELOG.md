@@ -8,12 +8,20 @@
 
 BREAKING CHANGES:
 
-- Remove unwraping of `ExecutionException` and `CompletionException` exceptions on the JVM
-  only experimental helpers: `await!`, `await` and `with-dispatch!` macro (was a very bad
-  decision because unwrapping removes the ability to know the real cause of the exception)
+- Remove unwraping of `ExecutionException` and `CompletionException`
+  exceptions on the JVM only experimental helpers: `await!`, `await`
+  and `with-dispatch!` macro (was a very bad decision because
+  unwrapping removes the ability to know the real cause of the
+  exception)
 
-- The `:name` option on `thread-factory` constructor helper now is interpreted as-is,
-  without template interpolation; use the new `:prefix` for that purpose
+- The `:name` option on `thread-factory` constructor helper now is
+  interpreted as-is, without template interpolation; use the new
+  `:prefix` for that purpose
+
+- Remove Inst impl on Duration class; it's bad practice to make global
+  and implicit type extensions at a library level, and that should
+  never have been there.
+
 
 ## Version 11.0.678
 

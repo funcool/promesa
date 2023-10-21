@@ -9,8 +9,9 @@
   (:require
    [promesa.protocols :as pt])
   (:import
-   java.util.concurrent.TimeUnit
-   java.util.concurrent.Semaphore))
+   java.time.Duration
+   java.util.concurrent.Semaphore
+   java.util.concurrent.TimeUnit))
 
 (set! *warn-on-reflection* true)
 
@@ -20,8 +21,8 @@
     ([this] (.tryAcquire ^Semaphore this))
     ([this permits] (.tryAcquire ^Semaphore this (int permits)))
     ([this permits timeout]
-     (let [timeout (if (instance? java.time.Duration timeout)
-                     (inst-ms timeout)
+     (let [timeout (if (instance? Duration timeout)
+                     (.toMillis ^Duration timeout)
                      timeout)]
        (.tryAcquire ^Semaphore this
                     (int permits)

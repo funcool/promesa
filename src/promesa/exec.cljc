@@ -563,7 +563,9 @@
    (extend-type ScheduledExecutorService
      pt/IScheduler
      (-schedule! [this ms f]
-       (let [ms  (if (instance? Duration ms) (inst-ms ms) ms)
+       (let [ms  (if (instance? Duration ms)
+                   (.toMillis ^Duration ms)
+                   ms)
              df  (CompletableFuture.)
              fut (.schedule this
                             ^Runnable (fn []

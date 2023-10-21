@@ -295,17 +295,20 @@
        ([it]
         (.await ^CountDownLatch it))
        ([it duration]
-        (if (instance? Duration duration)
-          (.await ^CountDownLatch it (long (inst-ms duration)) TimeUnit/MILLISECONDS)
-          (.await ^CountDownLatch it (long duration) TimeUnit/MILLISECONDS))))
+        (let [timeout (if (instance? Duration duration)
+                        (.toMillis ^Duration duration)
+                        (long duration))]
+          (.await ^CountDownLatch it ^long timeout TimeUnit/MILLISECONDS))))
 
      CompletableFuture
      (-await!
        ([it]
         (.get ^CompletableFuture it))
        ([it duration]
-        (let [ms (if (instance? Duration duration) (inst-ms duration) duration)]
-          (.get ^CompletableFuture it (int ms) TimeUnit/MILLISECONDS))))
+        (let [timeout (if (instance? Duration duration)
+                        (.toMillis ^Duration duration)
+                        (int duration))]
+          (.get ^CompletableFuture it ^long timeout TimeUnit/MILLISECONDS))))
 
      CompletionStage
      (-await!

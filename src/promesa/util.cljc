@@ -25,11 +25,6 @@
 #?(:clj (set! *warn-on-reflection* true))
 
 #?(:clj
-   (extend-protocol clojure.core/Inst
-     Duration
-     (inst-ms* [v] (.toMillis ^Duration v))))
-
-#?(:clj
    (deftype Supplier [f]
      java.util.function.Supplier
      (get [_] (f))))
