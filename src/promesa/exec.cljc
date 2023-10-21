@@ -853,12 +853,15 @@
 
        pt/IExecutor
        (-exec! [it task]
-         (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task)
-         nil)
+         (let [task (wrap-bindings task)]
+           (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task)
+           nil))
        (-run! [it task]
-         (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task))
+         (let [task (wrap-bindings task)]
+           (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task)))
        (-submit! [it task]
-         (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task)))))
+         (let [task (wrap-bindings task)]
+           (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task))))))
 
 ;; #?(:clj
 ;;    (defn managed-blocker
