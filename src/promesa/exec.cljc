@@ -863,6 +863,25 @@
          (let [task (wrap-bindings task)]
            (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task))))))
 
+#?(:clj
+   (pu/with-compile-cond structured-task-scope-available?
+     (extend-type java.util.concurrent.StructuredTaskScope$ShutdownOnFailure
+       pt/IAwaitable
+       (-await!
+         ([it]
+          (.join ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it)
+          (.throwIfFailed ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it))
+         ([it duration]
+          (let [duration (if (instance? Duration duration)
+                           duration
+                           (Duration/ofMillis duration))
+                deadline (Instant/now)
+                deadline (.plus ^Instant deadline
+                                ^TemporalAmount duration)]
+            (.joinUntil ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it ^Instant deadline)
+            (.throwIfFailed ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it)))))))
+
+
 ;; #?(:clj
 ;;    (defn managed-blocker
 ;;      {:no-doc true}
