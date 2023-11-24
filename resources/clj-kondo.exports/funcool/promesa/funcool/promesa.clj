@@ -1,4 +1,4 @@
-(ns hooks.promesa
+(ns funcool.promesa
   (:require [clj-kondo.hooks-api :as api]))
 
 (defn plet
