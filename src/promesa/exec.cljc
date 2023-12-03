@@ -666,7 +666,9 @@
 #?(:clj
    (defn fn->thread
      [f & {:keys [start] :or {start true} :as options}]
-     (let [factory (thread-factory options)
+     (let [factory (or (options->thread-factory options)
+                       (thread-factory options))
+           f       (wrap-bindings f)
            thread  (.newThread ^ThreadFactory factory ^Runnable f)]
        (if start
          (.start ^Thread thread))
