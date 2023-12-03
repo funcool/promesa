@@ -372,11 +372,16 @@
 #?(:clj
    (defn- options->thread-factory
      {:no-doc true}
-     ^ThreadFactory
-     [options]
-     (resolve-thread-factory
-      (or (:thread-factory options)
-          (:factory options)))))
+     (^ThreadFactory [options]
+      (resolve-thread-factory
+       (or (:thread-factory options)
+           (:factory options))))
+
+     (^ThreadFactory [options default]
+      (resolve-thread-factory
+       (or (:thread-factory options)
+           (:factory options)
+           default)))))
 
 #?(:clj
    (defn cached-executor
@@ -779,6 +784,7 @@
                         ^Thread thr
                         ^Throwable cause))))
 
+;; FIXME: set correct default virtual thread factory
 #?(:clj
    (defn structured-task-scope
      ([]
@@ -787,8 +793,7 @@
         (throw (IllegalArgumentException. "implementation not available"))))
      ([& {:keys [name preset] :as options}]
       (pu/with-compile-cond structured-task-scope-available?
-        (let [tf (or (options->thread-factory options)
-                     (deref default-thread-factory))]
+        (let [tf (options->thread-factory options :virtual)]
           (case preset
             :shutdown-on-success
             (java.util.concurrent.StructuredTaskScope$ShutdownOnSuccess.
@@ -800,8 +805,8 @@
 
             (java.util.concurrent.StructuredTaskScope.
              ^String name ^ThreadFactory tf)))
-        (throw (IllegalArgumentException. "implementation not available"))))))
 
+        (throw (IllegalArgumentException. "implementation not available"))))))
 
 #?(:clj
    (pu/with-compile-cond structured-task-scope-available?
