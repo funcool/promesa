@@ -555,14 +555,16 @@
    (extend-type Executor
      pt/IExecutor
      (-exec! [this f]
-       (.execute ^Executor this ^Runnable f))
+       (let [f (wrap-bindings f)]
+         (.execute ^Executor this ^Runnable f)))
 
      (-run! [this f]
-       (CompletableFuture/runAsync ^Runnable f ^Executor this))
+       (let [f (wrap-bindings f)]
+         (CompletableFuture/runAsync ^Runnable f ^Executor this)))
 
      (-submit! [this f]
-       (CompletableFuture/supplyAsync ^Supplier (pu/->Supplier f) ^Executor this))))
-
+       (let [f (wrap-bindings f)]
+         (CompletableFuture/supplyAsync ^Supplier (pu/->Supplier f) ^Executor this)))))
 
 ;; --- Scheduler
 
