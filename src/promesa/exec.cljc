@@ -788,7 +788,6 @@
                         ^Thread thr
                         ^Throwable cause))))
 
-;; FIXME: set correct default virtual thread factory
 #?(:clj
    (defn structured-task-scope
      ([]
@@ -925,15 +924,13 @@
 ;;      (deref m#)))
 
 #?(:clj
-(defn await!
-  "Generic await operation. Block current thread until some operation
-  terminates.
-
-  The return value is implementation specific."
-  ([resource]
-   (pt/-await! resource))
-  ([resource duration]
-   (pt/-await! resource duration))))
+   (defn await!
+     "Generic await operation. Block current thread until some operatiomn terminates.
+     The return value is implementation specific."
+     ([resource]
+      (pt/-await! resource))
+     ([resource duration]
+      (pt/-await! resource duration))))
 
 (defn close!
   ([o]
