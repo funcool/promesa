@@ -255,9 +255,11 @@
 
   A task is a plain clojure function."
   ([f]
-   (pt/-submit! (resolve-executor *default-executor*) f))
-  ([executor f]
-   (pt/-submit! (resolve-executor executor) f)))
+   (let [f (if (fn? f) (wrap-bindings f) f)]
+     (pt/-submit! (resolve-executor *default-executor*) f))
+   ([executor f]
+    (let [f (if (fn? f) (wrap-bindings f) f)]
+      (pt/-submit! (resolve-executor executor) f)))))
 
 (defn schedule!
   "Schedule a callable to be executed after the `ms` delay
@@ -554,16 +556,13 @@
    (extend-type Executor
      pt/IExecutor
      (-exec! [this f]
-       (let [f (wrap-bindings f)]
-         (.execute ^Executor this ^Runnable f)))
+       (.execute ^Executor this ^Runnable f))
 
      (-run! [this f]
-       (let [f (wrap-bindings f)]
-         (CompletableFuture/runAsync ^Runnable f ^Executor this)))
+       (CompletableFuture/runAsync ^Runnable f ^Executor this))
 
      (-submit! [this f]
-       (let [f (wrap-bindings f)]
-         (CompletableFuture/supplyAsync ^Supplier (pu/->Supplier f) ^Executor this)))))
+       (CompletableFuture/supplyAsync ^Supplier (pu/->Supplier f) ^Executor this))))
 
 ;; --- Scheduler
 
@@ -595,7 +594,7 @@
   service. The returned promise is not cancellable (the body will be
   executed independently of the cancellation)."
   [executor & body]
-  `(-> (submit! ~executor (wrap-bindings (^:once fn* [] ~@body)))
+  `(-> (submit! ~executor (^:once fn* [] ~@body))
        (pt/-mcat pt/-promise)))
 
 (defmacro with-dispatch!
@@ -606,7 +605,7 @@
   [executor & body]
   (when (:ns &env)
     (throw (ex-info "cljs not supported on with-dispatch! macro" {})))
-  `(-> (submit! ~executor (wrap-bindings (^:once fn* [] ~@body)))
+  `(-> (submit! ~executor (^:once fn* [] ~@body))
        (pt/-mcat pt/-promise)
        (pt/-await!)))
 
