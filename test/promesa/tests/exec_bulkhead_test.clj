@@ -30,7 +30,7 @@
 
 ;; (t/deftest basic-operations-submit
 ;;   (let [instance (pbh/create {:permits 1 :type :executor})]
-;;     (let [res (px/submit! instance (timing-fn))]
+;;     (let [res (px/submit instance (timing-fn))]
 ;;       (t/is (p/promise? res))
 ;;       (t/is (< @res 10000000)))))
 

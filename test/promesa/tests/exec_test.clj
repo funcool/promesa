@@ -3,6 +3,7 @@
    [promesa.core :as p]
    [promesa.exec.bulkhead :as pbh]
    [promesa.exec :as px]
+   [promesa.util :as pu]
    [clojure.test :as t]))
 
 (t/use-fixtures
@@ -47,9 +48,7 @@
 
 (t/deftest with-executor-closes-pool-2
   (let [executor (px/single-executor)]
-    (px/with-executor ^:interrupt executor
-      (px/with-dispatch executor
-        (Thread/sleep 1000)))
+    (pu/close! executor)
     (t/is (thrown? java.util.concurrent.RejectedExecutionException
                    (px/submit! executor (constantly nil))))))
 

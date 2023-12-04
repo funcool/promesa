@@ -11,7 +11,7 @@
    [promesa.protocols :as pt]
    [promesa.util :as pu]
    #?(:cljs [goog.object :as gobj])
-   #?(:cljs [promesa.impl.promise :as impl]))
+   #?(:cljs [promesa.impl.promise :as pimpl]))
   #?(:clj
      (:import
       clojure.lang.Var
@@ -235,42 +235,117 @@
 
 (defn exec!
   "Run the task in the provided executor, returns `nil`. Analogous to
-  the `(.execute executor f)`. Fire and forget."
+  the `(.execute executor f)`. Fire and forget.
+
+  Exception unsafe, can raise exceptions if the executor
+  rejects the task."
+
   ([f]
-   (pt/-exec! (resolve-executor *default-executor*) f))
+   (let [f (if (fn? f) (wrap-bindings f) f)]
+     (pt/-exec! (resolve-executor *default-executor*) f)))
   ([executor f]
-   (pt/-exec! (resolve-executor executor) f)))
+   (let [f (if (fn? f) (wrap-bindings f) f)]
+     (pt/-exec! (resolve-executor executor) f))))
 
 (defn run!
-  "Run the task in the provided executor."
+  "Run the task in the provided executor.
+
+  Exception unsafe, can raise exceptions if the executor
+  rejects the task."
   ([f]
-   (pt/-run! (resolve-executor *default-executor*) f))
+   (let [f (if (fn? f) (wrap-bindings f) f)]
+     (pt/-run! (resolve-executor *default-executor*) f)))
   ([executor f]
-   (pt/-run! (resolve-executor executor) f)))
+   (let [f (if (fn? f) (wrap-bindings f) f)]
+     (pt/-run! (resolve-executor executor) f))))
 
 (defn submit!
   "Submit a task to be executed in a provided executor
   and return a promise that will be completed with
   the return value of a task.
 
-  A task is a plain clojure function."
+  Exception unsafe, can raise exceptions if the executor
+  rejects the task."
   ([f]
    (let [f (if (fn? f) (wrap-bindings f) f)]
-     (pt/-submit! (resolve-executor *default-executor*) f))
-   ([executor f]
-    (let [f (if (fn? f) (wrap-bindings f) f)]
-      (pt/-submit! (resolve-executor executor) f)))))
+     (pt/-submit! (resolve-executor *default-executor*) f)))
+  ([executor f]
+   (let [f (if (fn? f) (wrap-bindings f) f)]
+     (pt/-submit! (resolve-executor executor) f))))
 
 (defn schedule!
   "Schedule a callable to be executed after the `ms` delay
   is reached.
 
   In JVM it uses a scheduled executor service and in JS
-  it uses the `setTimeout` function."
+  it uses the `setTimeout` function.
+
+  Exception unsafe, can raise exceptions if the executor
+  rejects the task."
   ([ms f]
    (pt/-schedule! (resolve-scheduler) ms f))
   ([scheduler ms f]
    (pt/-schedule! (resolve-scheduler scheduler) ms f)))
+
+
+(defn- rejected
+  [v]
+  #?(:cljs (pimpl/rejected v)
+     :clj (let [p (CompletableFuture.)]
+            (.completeExceptionally ^CompletableFuture p v)
+            p)))
+
+(defn exec
+  "Exception safe version of `exec!`. It always returns an promise instance."
+  ([f]
+   (try
+     (exec! f)
+     (catch #?(:clj Throwable :cljs :default) cause
+       (rejected cause))))
+  ([executor f]
+   (try
+     (exec! executor f)
+     (catch #?(:clj Throwable :cljs :default) cause
+       (rejected cause)))))
+
+(defn run
+  "Exception safe version of `run!`. It always returns an promise instance."
+  ([f]
+   (try
+     (run! f)
+     (catch #?(:clj Throwable :cljs :default) cause
+       (rejected cause))))
+  ([executor f]
+   (try
+     (run! executor f)
+     (catch #?(:clj Throwable :cljs :default) cause
+       (rejected cause)))))
+
+(defn submit
+  "Exception safe version of `submit!`. It always returns an promise instance."
+  ([f]
+   (try
+     (submit! f)
+     (catch #?(:clj Throwable :cljs :default) cause
+       (rejected cause))))
+  ([executor f]
+   (try
+     (submit! executor f)
+     (catch #?(:clj Throwable :cljs :default) cause
+       (rejected cause)))))
+
+(defn schedule
+  "Exception safe version of `schedule!`. It always returns an promise instance."
+  ([ms f]
+   (try
+     (schedule! ms f)
+     (catch #?(:clj Throwable :cljs :default) cause
+       (rejected cause))))
+  ([scheduler ms f]
+   (try
+     (schedule! scheduler ms f)
+     (catch #?(:clj Throwable :cljs :default) cause
+       (rejected cause)))))
 
 ;; --- Pool & Thread Factories
 
@@ -421,7 +496,7 @@
    (deftype Scheduler []
      pt/IScheduler
      (-schedule! [_ ms f]
-       (let [df  (impl/deferred)
+       (let [df  (pimpl/deferred)
              tid (js/setTimeout
                   (fn []
                     (try
@@ -431,7 +506,7 @@
                   ms)]
          (pt/-fnly df
                    (fn [_ c]
-                     (when (impl/isCancellationError c)
+                     (when (pimpl/isCancellationError c)
                        (js/clearTimeout tid))))
          df))))
 
@@ -488,7 +563,7 @@
      (reify
        pt/IExecutor
        (-exec! [this f]
-         (impl/nextTick f))
+         (pimpl/nextTick f))
 
        (-run! [this f]
          (-> (pt/-promise nil)
@@ -594,7 +669,7 @@
   service. The returned promise is not cancellable (the body will be
   executed independently of the cancellation)."
   [executor & body]
-  `(-> (submit! ~executor (^:once fn* [] ~@body))
+  `(-> (submit ~executor (^:once fn* [] ~@body))
        (pt/-mcat pt/-promise)))
 
 (defmacro with-dispatch!
@@ -605,7 +680,7 @@
   [executor & body]
   (when (:ns &env)
     (throw (ex-info "cljs not supported on with-dispatch! macro" {})))
-  `(-> (submit! ~executor (^:once fn* [] ~@body))
+  `(-> (submit ~executor (^:once fn* [] ~@body))
        (pt/-mcat pt/-promise)
        (pt/-await!)))
 
@@ -931,6 +1006,8 @@
       (pt/-await! resource duration))))
 
 (defn close!
+  {:no-doc true
+   :deprecated true}
   ([o]
    (pt/-close! o))
   ([o reason]

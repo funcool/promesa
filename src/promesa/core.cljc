@@ -76,7 +76,7 @@
      d))
   ([f executor]
    (c/let [d (impl/deferred)]
-     (exec/run! executor (fn []
+     (exec/run executor (fn []
                            (try
                              (f #(pt/-resolve! d %)
                                 #(pt/-reject! d %))
@@ -610,8 +610,10 @@
   "Analogous to `clojure.core.async/thread` that returns a promise
   instance instead of the `Future`. Useful for executing synchronous
   code in a separate thread (also works in cljs)."
-  ([f] (exec/submit! :thread f))
-  ([executor f] (exec/submit! executor f)))
+  ([f]
+   (exec/submit :thread f))
+  ([executor f]
+   (exec/submit executor f)))
 
 (defn vthread-call
   "A shortcut for `(p/thread-call :vthread f)`."
@@ -664,14 +666,14 @@
                                     (~rej-s ~err-s)
                                     (if (recur? ~res-s)
                                       (do
-                                        (promesa.exec/run!
+                                        (promesa.exec/run
                                          :vthread
                                          ~(if (seq names)
                                             `(fn [] (apply ~tsym (:bindings ~res-s)))
                                             tsym))
                                       nil)
                                       (~rsv-s ~res-s)))))))]
-          (promesa.exec/run!
+          (promesa.exec/run
            :vthread
            ~(if (seq names)
               `(fn [] (~tsym ~@fvals))

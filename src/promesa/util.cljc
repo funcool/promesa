@@ -165,6 +165,25 @@
   [& exprs]
   `(try* (^:once fn* [] ~@exprs) identity))
 
+(defn close!
+  ([o]
+   (pt/-close! o))
+  ([o reason]
+   (pt/-close! o reason)))
+
+(extend-protocol pt/ICloseable
+  java.util.concurrent.ExecutorService
+  (-closed? [it]
+    (.isShutdown it))
+  (-close! [it]
+    (.close it))
+
+  java.lang.AutoCloseable
+  (-closed? [_]
+    (throw (IllegalArgumentException. "not implemented")))
+  (-close! [it]
+    (.close ^java.lang.AutoCloseable it)))
+
 (defmacro with-open
   [bindings & body]
   {:pre [(vector? bindings)
