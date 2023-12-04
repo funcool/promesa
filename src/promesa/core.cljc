@@ -610,8 +610,8 @@
   "Analogous to `clojure.core.async/thread` that returns a promise
   instance instead of the `Future`. Useful for executing synchronous
   code in a separate thread (also works in cljs)."
-  ([f] (exec/submit! :thread (exec/wrap-bindings f)))
-  ([executor f] (exec/submit! executor (exec/wrap-bindings f))))
+  ([f] (exec/submit! :thread f))
+  ([executor f] (exec/submit! executor f)))
 
 (defn vthread-call
   "A shortcut for `(p/thread-call :vthread f)`."
@@ -666,18 +666,16 @@
                                       (do
                                         (promesa.exec/run!
                                          :vthread
-                                         (promesa.exec/wrap-bindings
-                                          ~(if (seq names)
-                                             `(fn [] (apply ~tsym (:bindings ~res-s)))
-                                           tsym)))
+                                         ~(if (seq names)
+                                            `(fn [] (apply ~tsym (:bindings ~res-s)))
+                                            tsym))
                                       nil)
                                       (~rsv-s ~res-s)))))))]
           (promesa.exec/run!
            :vthread
-           (promesa.exec/wrap-bindings
-            ~(if (seq names)
-               `(fn [] (~tsym ~@fvals))
-               tsym))))))))
+           ~(if (seq names)
+              `(fn [] (~tsym ~@fvals))
+              tsym)))))))
 
 (defmacro recur
   [& args]

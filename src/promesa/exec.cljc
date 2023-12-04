@@ -353,7 +353,7 @@
      (delay (thread-factory :prefix "promesa/virtual/" :virtual true))))
 
 #?(:clj
-   (defn- resolve-thread-factory
+   (defn resolve-thread-factory
      {:no-doc true}
      ^ThreadFactory
      [tf]
