@@ -56,12 +56,15 @@
 (t/deftest operations-with-semaphore-bulkhead
   (let [instance (pbh/create {:permits 1 :queue 1 :type :semaphore})
         res1     (px/with-dispatch :thread
-                   (px/submit! instance (waiting-fn 1000)))
+                   (pbh/invoke! instance (waiting-fn 2000)))
+        _        (px/sleep 200)
         res2     (px/with-dispatch :thread
-                   (px/submit! instance (waiting-fn 200)))
+                   (pbh/invoke! instance (waiting-fn 2000)))
+        _        (px/sleep 200)
         res3     (px/with-dispatch :thread
-                   (px/submit! instance (waiting-fn 200)))
+                   (pbh/invoke! instance (with-meta (waiting-fn 200) {:name "res3"})))
         ]
+
     (t/is (p/promise? res1))
     (t/is (p/promise? res2))
     (t/is (p/promise? res3))
@@ -70,10 +73,11 @@
     (t/is (p/pending? res2))
 
     (p/await res3)
-    (t/is (p/rejected? res3))
 
-    (t/is (pos? (deref res1 2000 -1)))
-    (t/is (pos? (deref res2 2000 -1)))
+    (t/is (p/rejected? res3))
+    (t/is (pos? (deref res1 2200 -1)))
+    (t/is (pos? (deref res2 2200 -1)))
+
     (t/is (thrown? java.util.concurrent.ExecutionException (deref res3)))
 
     (let [data (ex-data (p/extract res3))]

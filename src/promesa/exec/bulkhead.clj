@@ -135,6 +135,16 @@
      :max-permits max-permits
      :max-queue max-queue})
 
+  pt/IExecutor
+  (-exec! [this f]
+    (.execute ^Executor this ^Runnable f))
+
+  (-run! [this f]
+    (CompletableFuture/runAsync ^Runnable f ^Executor this))
+
+  (-submit! [this f]
+    (CompletableFuture/supplyAsync ^Supplier (pu/->Supplier f) ^Executor this))
+
   Executor
   (execute [this f]
     (let [nqueued (.incrementAndGet counter)]
