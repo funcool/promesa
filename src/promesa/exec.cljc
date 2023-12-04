@@ -158,16 +158,15 @@
   ([] (resolve-executor nil))
   ([executor]
    (case executor
-     :default        @default-executor
-     :cached         @default-cached-executor
-     :virtual        @default-vthread-executor
-     :platform       @default-cached-executor
-     :thread         @default-thread-executor
-     :vthread        @default-vthread-executor
-     :same-thread    @default-current-thread-executor
-     :current-thread @default-current-thread-executor
+     (nil :default)      @default-executor
+     :cached             @default-cached-executor
+     (:platform :thread) @default-thread-executor
+     (:virtual :vthread) @default-vthread-executor
+
+     (:same-thread
+      :current-thread)   @default-current-thread-executor
+
      (cond
-       (nil? executor)      @default-executor
        (executor? executor) executor
        (delay? executor)    (resolve-executor @executor)
        :else
