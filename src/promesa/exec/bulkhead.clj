@@ -83,7 +83,7 @@
        :max-queue max-queue}))
 
   (-invoke! [this f]
-    (p/await! (pt/-submit! this f)))
+    (p/await! (pt/-submit! this (px/wrap-bindings f))))
 
   Executor
   (execute [this f]
