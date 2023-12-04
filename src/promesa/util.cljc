@@ -171,24 +171,29 @@
   ([o reason]
    (pt/-close! o reason)))
 
-(extend-protocol pt/ICloseable
-  java.util.concurrent.ExecutorService
-  (-closed? [it]
-    (.isShutdown it))
-  (-close! [it]
-    (.close it))
+#?(:clj
+   (extend-protocol pt/ICloseable
+     java.util.concurrent.ExecutorService
+     (-closed? [it]
+       (.isShutdown it))
+     (-close! [it]
+       (.close it))
 
-  java.lang.AutoCloseable
-  (-closed? [_]
-    (throw (IllegalArgumentException. "not implemented")))
-  (-close! [it]
-    (.close ^java.lang.AutoCloseable it)))
+     java.lang.AutoCloseable
+     (-closed? [_]
+       (throw (IllegalArgumentException. "not implemented")))
+     (-close! [it]
+       (.close ^java.lang.AutoCloseable it))))
 
 (defmacro with-open
   [bindings & body]
   {:pre [(vector? bindings)
          (even? (count bindings))
          (pos? (count bindings))]}
+
+  (when (:ns &env)
+    (throw (ex-info "cljs not supported on with-dispatch! macro" {})))
+
   (reduce (fn [acc bindings]
             `(let ~(vec bindings)
                (try
