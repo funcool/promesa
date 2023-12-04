@@ -9,17 +9,18 @@ for asynchronous execution.
 Although this API works in the JS runtime and some of the function has
 general utility, the main target is the JVM platform.
 
+
 ## Async Tasks
 
 Firstly, lets define **async task**: a function that is executed out
 of current flow using a different thread. Here, **promesa** library
 exposes mainly two functions:
 
-- `promesa.exec/run!`: useful when you want run a function in a
+- `promesa.exec/run`: useful when you want run a function in a
   different thread and you don't care abour the return value; it
   returns a promise that will be fullfilled when the callback
   terminates.
-- `promesa.exec/submit!` useful when you want run a function in a
+- `promesa.exec/submit` useful when you want run a function in a
   different thread and you need the return value; it returns a promise
   that will be fullfilled with the return value of the function.
 
@@ -30,14 +31,14 @@ Let see some examples:
 (require '[promesa.exec :as px])
 
 
-@(px/run! (fn []
-            (prn "I'm running in different thread")
-            1))
+@(px/run (fn []
+           (prn "I'm running in different thread")
+           1))
 ;; => nil
 
-@(px/submit! (fn []
-               (prn "I'm running in different thread")
-               1))
+@(px/submit (fn []
+              (prn "I'm running in different thread")
+              1))
 ;; => 1
 ```
 
@@ -60,8 +61,8 @@ function after some amount of time.
 
 ```clojure
 (require '[promesa.exec :as exec])
-(exec/schedule! 1000 (fn []
-                       (println "hello world")))
+(exec/schedule 1000 (fn []
+                      (println "hello world")))
 ```
 
 This example shows you how you can schedule a function call to be
@@ -71,7 +72,7 @@ Clojure and ClojureScript.
 The tasks can be cancelled using its return value:
 
 ```clojure
-(def task (exec/schedule! 1000 #(do-stuff)))
+(def task (exec/schedule 1000 #(do-stuff)))
 
 (p/cancel! task)
 ```
