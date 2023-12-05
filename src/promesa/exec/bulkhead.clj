@@ -39,8 +39,7 @@
 
 (defprotocol IBulkhead
   "Bulkhead main API"
-  (-get-stats [_] "Get internal statistics of the bulkhead instance")
-  (-invoke! [_ f] "Call synchronously a function under bulkhead context"))
+  (-get-stats [_] "Get internal statistics of the bulkhead instance"))
 
 (extend-type BlockingQueue
   IQueue
@@ -81,9 +80,6 @@
        :queue (.size queue)
        :max-permits max-permits
        :max-queue max-queue}))
-
-  (-invoke! [this f]
-    (p/await! (pt/-submit! this (px/wrap-bindings f))))
 
   Executor
   (execute [this f]
@@ -166,10 +162,7 @@
                        :timeout timeout}]
             (throw (ex-info "bulkhead: timeout" props))))
         (finally
-          (.decrementAndGet counter)))))
-
-  (-invoke! [this f]
-    (p/await! (pt/-submit! this f))))
+          (.decrementAndGet counter))))))
 
 (ns-unmap *ns* '->SemaphoreBulkhead)
 (ns-unmap *ns* 'map->SemaphoreBulkhead)
@@ -204,13 +197,15 @@
     :semaphore (create-with-semaphore params)
     (throw (UnsupportedOperationException. "invalid bulkhead type provided"))))
 
+(defn invoke!
+  {:no-doc true
+   :deprecated true}
+  [instance f]
+  (px/invoke! instance f))
+
 (defn get-stats
   [instance]
   (-get-stats instance))
-
-(defn invoke!
-  [instance f]
-  (-invoke! instance f))
 
 (defn bulkhead?
   "Check if the provided object is instance of Bulkhead type."
