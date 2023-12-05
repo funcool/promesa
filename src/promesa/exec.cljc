@@ -384,12 +384,13 @@
   ([scheduler ms f]
    (pt/-schedule! (resolve-scheduler scheduler) ms f)))
 
-(defn invoke!
-  "Invoke a function to be executed in the provided executor
+#?(:clj
+   (defn invoke!
+     "Invoke a function to be executed in the provided executor
   or the default one, and waits for the result. Useful for using
   in virtual threads."
-  ([f] (pt/-await! (submit! f)))
-  ([executor f] (pt/-await! (submit! executor f))))
+     ([f] (pt/-await! (submit! f)))
+     ([executor f] (pt/-await! (submit! executor f)))))
 
 (defn- rejected
   [v]
