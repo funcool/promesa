@@ -9,10 +9,10 @@
     "url": "https://github.com/funcool/promesa"
   },
   "scripts": {
-    "watch-test": "clojure -M:dev:shadow-cljs watch test",
-    "compile-test": "clojure -M:dev:shadow-cljs compile test --config-merge '{:autorun false}'",
-    "run-test": "node target/tests.js",
-    "test": "npm run compile-test && npm run run-test"
+    "test:watch": "clojure -M:dev:shadow-cljs watch test",
+    "test:compile": "clojure -M:dev:shadow-cljs compile test --config-merge '{:autorun false}'",
+    "test:run": "node target/tests.js",
+    "test": "yarn run test:compile && yarn run test:run"
   },
   "devDependencies": {
     "source-map-support": "^0.5.21"
@@ -20,5 +20,6 @@
   "dependencies": {
     "shadow-cljs": "^2.22.0",
     "ws": "^8.12.1"
-  }
+  },
+  "packageManager": "yarn@4.0.2"
 }
