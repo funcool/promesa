@@ -77,11 +77,11 @@
   ([f executor]
    (c/let [d (impl/deferred)]
      (exec/run executor (fn []
-                           (try
-                             (f #(pt/-resolve! d %)
-                                #(pt/-reject! d %))
-                             (catch #?(:clj Exception :cljs :default) e
-                               (pt/-reject! d e)))))
+                          (try
+                            (f #(pt/-resolve! d %)
+                               #(pt/-reject! d %))
+                            (catch #?(:clj Exception :cljs :default) e
+                              (pt/-reject! d e)))))
      d)))
 
 (defn promise?
@@ -505,11 +505,11 @@
   [callable]
   (fn [& args]
     (create (fn [resolve reject]
-               (c/let [args (c/-> (vec args) (conj resolve))]
-                 (try
-                   (apply callable args)
-                   (catch #?(:clj Throwable :cljs js/Error) e
-                     (reject e))))))))
+              (c/let [args (c/-> (vec args) (conj resolve))]
+                (try
+                  (apply callable args)
+                  (catch #?(:clj Throwable :cljs js/Error) e
+                    (reject e))))))))
 
 #?(:cljs
    (defn ^{:jsdoc ["@constructor"]}
@@ -667,17 +667,17 @@
                                     (if (recur? ~res-s)
                                       (do
                                         (promesa.exec/run
-                                         :vthread
-                                         ~(if (seq names)
-                                            `(fn [] (apply ~tsym (:bindings ~res-s)))
-                                            tsym))
-                                      nil)
+                                          :vthread
+                                          ~(if (seq names)
+                                             `(fn [] (apply ~tsym (:bindings ~res-s)))
+                                             tsym))
+                                        nil)
                                       (~rsv-s ~res-s)))))))]
           (promesa.exec/run
-           :vthread
-           ~(if (seq names)
-              `(fn [] (~tsym ~@fvals))
-              tsym)))))))
+            :vthread
+            ~(if (seq names)
+               `(fn [] (~tsym ~@fvals))
+               tsym)))))))
 
 (defmacro recur
   [& args]
@@ -767,8 +767,8 @@
          ~xs))
 
 #?(:clj
-(defn await!
-  "Generic await operation. Block current thread until some operation
+   (defn await!
+     "Generic await operation. Block current thread until some operation
   terminates. Returns `nil` on timeout; does not catch any other
   exception.
 
@@ -776,33 +776,33 @@
   CountDownLatch.
 
   The return value is implementation specific."
-  ([resource]
-   (pt/-await! resource))
-  ([resource duration]
-   (try
-     (pt/-await! resource duration)
-     (catch TimeoutException _
-       nil)))))
+     ([resource]
+      (pt/-await! resource))
+     ([resource duration]
+      (try
+        (pt/-await! resource duration)
+        (catch TimeoutException _
+          nil)))))
 
 #?(:clj
-(defn await
-  "A exception safer variant of `await!`. Returns `nil` on timeout
+   (defn await
+     "A exception safer variant of `await!`. Returns `nil` on timeout
   exception, forwards interrupted exception and all other exceptions
   are returned as value, so user is responsible for checking if the returned
   value is exception or not."
-  ([resource]
-   (try
-     (pt/-await! resource)
-     (catch InterruptedException cause
-       (throw cause))
-     (catch Throwable cause
-       cause)))
-  ([resource duration]
-   (try
-     (pt/-await! resource duration)
-     (catch TimeoutException _
-       nil)
-     (catch InterruptedException cause
-       (throw cause))
-     (catch Throwable cause
-       cause)))))
+     ([resource]
+      (try
+        (pt/-await! resource)
+        (catch InterruptedException cause
+          (throw cause))
+        (catch Throwable cause
+          cause)))
+     ([resource duration]
+      (try
+        (pt/-await! resource duration)
+        (catch TimeoutException _
+          nil)
+        (catch InterruptedException cause
+          (throw cause))
+        (catch Throwable cause
+          cause)))))
