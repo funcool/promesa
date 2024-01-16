@@ -779,10 +779,12 @@
      ([resource]
       (pt/-await! resource))
      ([resource duration]
+      (await! resource duration nil))
+     ([resource duration default-on-timeout]
       (try
         (pt/-await! resource duration)
         (catch TimeoutException _
-          nil)))))
+          default-on-timeout)))))
 
 #?(:clj
    (defn await
@@ -798,10 +800,12 @@
         (catch Throwable cause
           cause)))
      ([resource duration]
+      (await resource duration nil))
+     ([resource duration default-on-timeout]
       (try
         (pt/-await! resource duration)
         (catch TimeoutException _
-          nil)
+          default-on-timeout)
         (catch InterruptedException cause
           (throw cause))
         (catch Throwable cause

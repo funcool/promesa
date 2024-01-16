@@ -178,7 +178,7 @@
      (-closed? [it]
        (.isShutdown it))
      (-close! [it]
-       (.close it))
+       (.close ^java.lang.AutoCloseable it))
 
      java.lang.AutoCloseable
      (-closed? [_]

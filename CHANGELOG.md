@@ -1,10 +1,11 @@
 # Changelog #
 
-
 ## Version 12.0.xxx
 
 - Add integration with StructuredTaskScope (Structured Concurrency)
 - Remove deprecated executors constructors (deprecated in v9)
+- Add default-on-timeout arity for `p/await` and `p/await!`.
+- Add helper for properly unwrap concurrent exceptions: `pu/unwrap-exception`
 
 BREAKING CHANGES:
 
