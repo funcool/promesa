@@ -67,24 +67,25 @@
      (instance? TimeoutException e)))
 
 #?(:clj
-   (defn unwrap-completion-exception
-     {:no-doc true}
+   (defn unwrap-exception
+     "Unwrap CompletionException or ExecutionException"
      [cause]
-     (if (instance? CompletionException cause)
-       (.getCause ^CompletionException cause)
+     (if (or (instance? CompletionException cause)
+             (instance? ExecutionException cause))
+       (or (ex-cause cause) cause)
        cause)))
 
 #?(:clj
    (deftype Function2 [f]
      java.util.function.BiFunction
      (apply [_ r e]
-       (f r (unwrap-completion-exception e)))))
+       (f r (unwrap-exception e)))))
 
 #?(:clj
    (deftype Consumer2 [f]
      java.util.function.BiConsumer
      (accept [_ r e]
-       (f r (unwrap-completion-exception e)))))
+       (f r (unwrap-exception e)))))
 
 (defn handler
   "Create a handler, mainly for combine two separate functions

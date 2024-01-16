@@ -23,6 +23,7 @@ BREAKING CHANGES:
   never have been there.
 
 
+
 ## Version 11.0.678
 
 - Fix internal coercion function (cljs only) that causes unexpected
