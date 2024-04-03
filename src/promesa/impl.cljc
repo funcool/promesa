@@ -25,6 +25,8 @@
       java.util.concurrent.Future
       java.util.concurrent.TimeUnit
       java.util.concurrent.TimeoutException
+      java.util.function.BiConsumer
+      java.util.function.BiFunction
       java.util.function.Function
       java.util.function.Supplier)))
 
