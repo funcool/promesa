@@ -20,7 +20,8 @@
    java.util.concurrent.Executor
    java.util.concurrent.LinkedBlockingQueue
    java.util.concurrent.Semaphore
-   java.util.concurrent.atomic.AtomicLong))
+   java.util.concurrent.atomic.AtomicLong
+   java.util.function.Supplier))
 
 (set! *warn-on-reflection* true)
 ;; (set! *unchecked-math* :warn-on-boxed)
