@@ -552,10 +552,10 @@
   [& exprs]
   (condp = (count exprs)
     0 `(impl/resolved nil)
-    1 `(pt/-promise ~(first exprs))
+    1 `(impl/coerce ~(first exprs))
     (reduce (fn [acc e]
-              `(pt/-mcat (pt/-promise ~e) (fn [_#] ~acc)))
-            `(pt/-promise ~(last exprs))
+              `(pt/-mcat (impl/coerce ~e) (fn [_#] ~acc)))
+            `(impl/coerce ~(last exprs))
             (reverse (butlast exprs)))))
 
 (defmacro do
@@ -564,7 +564,7 @@
   expression."
   [& exprs]
   `(pt/-mcat
-    (pt/-promise nil)
+    (impl/resolved nil)
     (fn [_#]
       (promesa.core/do* ~@exprs))))
 
@@ -580,7 +580,7 @@
   (assert (even? (count bindings)) (str "Uneven binding vector: " bindings))
   (c/->> (reverse (partition 2 bindings))
          (reduce (fn [acc [l r]]
-                   `(pt/-mcat (pt/-promise ~r) (fn [~l] ~acc)))
+                   `(pt/-mcat (impl/coerce ~r) (fn [~l] ~acc)))
                  `(do* ~@body))))
 
 (defmacro let
@@ -589,7 +589,7 @@
   [bindings & body]
   (if (seq bindings)
     `(pt/-mcat
-      (pt/-promise nil)
+      (impl/resolved nil)
       (fn [_#] (promesa.core/let* ~bindings ~@body)))
     `(promesa.core/do ~@body)))
 
@@ -599,7 +599,7 @@
   [bindings & body]
   (assert (even? (count bindings)) (str "Uneven binding vector: " bindings))
   `(pt/-mcat
-    (pt/-promise nil)
+    (impl/resolved nil)
     (fn [_#]
       ~(c/let [bindings (partition 2 bindings)]
          `(c/-> (all ~(mapv second bindings))
