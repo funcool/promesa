@@ -16,6 +16,7 @@
       java.util.concurrent.CompletionStage
       java.util.concurrent.CountDownLatch
       java.util.concurrent.ExecutionException
+      java.util.concurrent.TimeUnit
       java.util.concurrent.TimeoutException
       java.util.concurrent.locks.ReentrantLock)))
 
@@ -176,9 +177,25 @@
    (extend-protocol pt/ICloseable
      java.util.concurrent.ExecutorService
      (-closed? [it]
-       (.isShutdown it))
+       (.isTerminated it))
      (-close! [it]
-       (.close ^java.lang.AutoCloseable it))
+       (let [interrupted (volatile! false)]
+         (loop [terminated? ^Boolean (.isTerminated it)]
+           (when-not terminated?
+             (.shutdown it)
+             (let [terminated?
+                   (try
+                     (.awaitTermination it 1 TimeUnit/DAYS)
+                     (catch InterruptedException cause
+                       (when-not @interrupted
+                         (vreset! interrupted true)
+                         (.shutdownNow it))
+                       terminated?))]
+               (recur ^Boolean terminated?))))
+
+           (when @interrupted
+             (let [thread (Thread/currentThread)]
+               (.interrupt thread)))))
 
      java.lang.AutoCloseable
      (-closed? [_]
