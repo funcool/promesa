@@ -179,56 +179,58 @@
      @default-scheduler
      (pu/maybe-deref scheduler))))
 
+#?(:clj
+     (defn- binding-conveyor-inner
+       [f]
+       (let [frame (clojure.lang.Var/cloneThreadBindingFrame)]
+         (fn
+           ([]
+            (clojure.lang.Var/resetThreadBindingFrame frame)
+            (cond
+              (instance? clojure.lang.IFn f)
+              (.invoke ^clojure.lang.IFn f)
+
+              (instance? java.lang.Runnable f)
+              (.run ^java.lang.Runnable f)
+
+              (instance? java.util.concurrent.Callable f)
+              (.call ^java.util.concurrent.Callable f)
+
+              :else
+              (throw (ex-info "Unsupported function type" {:f f :type (type f)}))))
+           ([x]
+            (clojure.lang.Var/resetThreadBindingFrame frame)
+            (cond
+              (instance? clojure.lang.IFn f)
+              (.invoke ^clojure.lang.IFn f x)
+
+              (instance? java.util.function.Function f)
+              (.apply ^java.util.function.Function f x)
+
+              :else
+              (throw (ex-info "Unsupported function type" {:f f :type (type f)}))))
+           ([x y]
+            (clojure.lang.Var/resetThreadBindingFrame frame)
+            (f x y))
+           ([x y z]
+            (clojure.lang.Var/resetThreadBindingFrame frame)
+            (f x y z))
+           ([x y z & args]
+            (clojure.lang.Var/resetThreadBindingFrame frame)
+            (apply f x y z args))))))
+
 (defn wrap-bindings
   {:no-doc true}
+  ;; Passes on local bindings from one thread to another. Compatible with `clojure.lang.IFn`,
+  ;; `java.lang.Runnable`, `java.util.concurrent.Callable`, and `java.util.function.Function`.
+  ;; Adapted from `clojure.core/binding-conveyor-fn`."
   [f]
   #?(:cljs f
-     :clj
-     (let [bindings (get-thread-bindings)]
-       (fn
-         ([]
-          (push-thread-bindings bindings)
-          (try
-            (f)
-            (finally
-              (pop-thread-bindings))))
-         ([a]
-          (push-thread-bindings bindings)
-          (try
-            (f a)
-            (finally
-              (pop-thread-bindings))))
-         ([a b]
-          (push-thread-bindings bindings)
-          (try
-            (f a b)
-            (finally
-              (pop-thread-bindings))))
-         ([a b c]
-          (push-thread-bindings bindings)
-          (try
-            (f a b c)
-            (finally
-              (pop-thread-bindings))))
-         ([a b c d]
-          (push-thread-bindings bindings)
-          (try
-            (f a b c d)
-            (finally
-              (pop-thread-bindings))))
-         ([a b c d e]
-          (push-thread-bindings bindings)
-          (try
-            (f a b c d e)
-            (finally
-              (pop-thread-bindings))))
-         ([a b c d e & args]
-          (push-thread-bindings bindings)
-          (try
-            (apply f a b c d e args)
-            (finally
-              (pop-thread-bindings))))))))
-
+     :clj (reify
+            clojure.lang.IFn
+              (invoke [_ f] (binding-conveyor-inner f))
+            java.util.function.Function
+              (apply [_ f] (binding-conveyor-inner f)))))
 
 #?(:clj
    (defn thread-factory?
