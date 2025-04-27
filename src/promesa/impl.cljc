@@ -35,7 +35,13 @@
 (defn promise?
   "Return true if `v` is a promise instance."
   [v]
-  (satisfies? pt/IPromise v))
+  #?(:clj
+     (or (instance? CompletionStage v)
+         (satisfies? pt/IPromise v))
+
+     :cljs
+     (or (impl/isThenable v)
+         (satisfies? pt/IPromise v))))
 
 (defn deferred?
   "Return true if `v` is a deferred instance."
@@ -56,9 +62,12 @@
 
 (defn coerce
   [v]
-  (if (promise? v)
-    v
-    (resolved v)))
+  #?(:clj
+     (if (promise? v)
+       v
+       (resolved v))
+     :cljs
+     (impl/createFrom v)))
 
 (defn all
   [promises]

@@ -418,6 +418,22 @@ goog.scope(function() {
     }
   };
 
+  self.createFrom = function coerce (promise) {
+    if (promise instanceof PromiseImpl) {
+      return promise;
+    } else if (isThenable(promise)) {
+      const deferred = self.deferred();
+      promise.then((v) => {
+        deferred.resolve(v);
+      }, (c) => {
+        deferred.reject(c);
+      });
+      return deferred;
+    } else {
+      return self.resolved(promise);
+    }
+  };
+
   self.race = function race (promises) {
     const deferred = self.deferred();
 
@@ -435,6 +451,7 @@ goog.scope(function() {
   };
 
   self.nextTick = nextTick;
+  self.isThenable = isThenable;
 
   self.PENDING = PENDING;
   self.RESOLVED = RESOLVED;

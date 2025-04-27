@@ -6,8 +6,10 @@
 - Remove deprecated executors constructors (deprecated in v9)
 - Add default-on-timeout arity for `p/await` and `p/await!`.
 - Add helper for properly unwrap concurrent exceptions: `pu/unwrap-exception`
+- Add performance improvement by removing extensive usage of
+  `satisfies?` on promise coerce operation.
 
-BREAKING CHANGES:
+RELEVANT CHANGES:
 
 - Remove unwraping of `ExecutionException` and `CompletionException`
   exceptions on the JVM only experimental helpers: `await!`, `await`
@@ -22,8 +24,6 @@ BREAKING CHANGES:
 - Remove Inst impl on Duration class; it's bad practice to make global
   and implicit type extensions at a library level, and that should
   never have been there.
-
-
 
 ## Version 11.0.678
 
