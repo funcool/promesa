@@ -67,7 +67,7 @@
   promise instance, has the same semantics as `go` macro."
   [& body]
   `(let [c# (chan :buf 1)
-         f# (px/wrap-bindings (fn [] ~@body))]
+         f# (px/wrap-bindings (^{:once true} fn* [] ~@body))]
      (->> (p/thread-call *executor* f#)
           (p/fnly (fn [v# e#]
                     (if e#
@@ -80,7 +80,7 @@
   a promise instance."
   [& body]
   `(let [c# (chan :buf 1)
-         f# (px/wrap-bindings (fn [] ~@body))]
+         f# (px/wrap-bindings (^{:once true} fn* [] ~@body))]
      (->> (p/thread-call :thread f#)
           (p/fnly (fn [v# e#]
                     (if e#
