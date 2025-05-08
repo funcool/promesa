@@ -4,10 +4,11 @@
 
 - Add integration with StructuredTaskScope (Structured Concurrency)
 - Remove deprecated executors constructors (deprecated in v9)
-- Add default-on-timeout arity for `p/await` and `p/await!`.
+- Add default-on-timeout arity for `p/await` and `p/await!`
 - Add helper for properly unwrap concurrent exceptions: `pu/unwrap-exception`
 - Add performance improvement by removing extensive usage of
-  `satisfies?` on promise coerce operation.
+  `satisfies?` on promise coerce operation
+- Fix incorrect promise coerce operation on `p/wait-all` and `p/wait-all*`
 
 RELEVANT CHANGES:
 

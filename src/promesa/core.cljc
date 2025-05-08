@@ -441,20 +441,18 @@
           prom     (deferred)]
     (if (pos? total)
       (c/let [counter (atom total)]
-        (c/run! #(pt/-fnly % (fn [_ _]
-                               (when (= 0 (swap! counter dec))
-                                 (pt/-resolve! prom nil))))
+        (c/run! #(fnly % (fn [_ _]
+                           (when (= 0 (swap! counter dec))
+                             (pt/-resolve! prom nil))))
                 promises))
       (pt/-resolve! prom nil))
     prom))
 
 (defn wait-all
   "Given a variable number of promises, returns a promise which resolves
-  to `nil` when all provided promises complete (rejected or resolved).
-
-  **EXPERIMENTAL**"
+  to `nil` when all provided promises complete (rejected or resolved)"
   [& promises]
-  (wait-all* (into #{} promises)))
+  (wait-all* (vec promises)))
 
 #?(:clj
    (defn wait-all!
