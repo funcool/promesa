@@ -9,6 +9,7 @@
 - Add performance improvement by removing extensive usage of
   `satisfies?` on promise coerce operation
 - Fix incorrect promise coerce operation on `p/wait-all` and `p/wait-all*`
+- Fix inconsistent params handling on bulkhead API
 
 RELEVANT CHANGES:
 

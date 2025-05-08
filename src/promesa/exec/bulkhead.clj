@@ -66,8 +66,6 @@
           (log! "cmd:" "Task/run" "f:" (hash f) "task:" (hash this) "END" "permits:" (.availablePermits semaphore))
           (pt/-run! executor bulkhead))))))
 
-(ns-unmap *ns* '->ExecutorBulkheadTask)
-
 (defrecord ExecutorBulkhead [^Executor executor
                              ^Semaphore semaphore
                              ^BlockingQueue queue
@@ -116,9 +114,6 @@
         (pt/-exec! executor task)
         (recur)))))
 
-(ns-unmap *ns* '->ExecutorBulkhead)
-(ns-unmap *ns* 'map->ExecutorBulkhead)
-
 (defrecord SemaphoreBulkhead [^Semaphore semaphore
                               ^AtomicLong counter
                               max-permits
@@ -156,7 +151,8 @@
         (if (psm/acquire! semaphore :permits 1 :timeout timeout)
           (try
             (.run ^Runnable f)
-            (finally (psm/release! semaphore)))
+            (finally
+              (psm/release! semaphore)))
           (let [props {:type :bulkhead-error
                        :code :timeout
                        :timeout timeout}]
@@ -166,21 +162,24 @@
 
 (ns-unmap *ns* '->SemaphoreBulkhead)
 (ns-unmap *ns* 'map->SemaphoreBulkhead)
+(ns-unmap *ns* '->ExecutorBulkhead)
+(ns-unmap *ns* 'map->ExecutorBulkhead)
+(ns-unmap *ns* '->ExecutorBulkheadTask)
 
 (defn- create-with-executor
-  [{:keys [executor permits queue on-run on-queue]}]
+  [{:keys [executor permits queue]}]
   (let [executor    (px/resolve-executor executor)
         max-queue   (or queue Integer/MAX_VALUE)
         max-permits (or permits 1)
         queue       (LinkedBlockingQueue. (int max-queue))
-        semaphore   (Semaphore. (int permits))]
+        semaphore   (Semaphore. (int max-permits))]
     (ExecutorBulkhead. executor semaphore queue max-permits max-queue)))
 
 (defn- create-with-semaphore
   [{:keys [permits queue timeout]}]
   (let [max-queue   (or queue Integer/MAX_VALUE)
         max-permits (or permits 1)
-        counter     (AtomicLong. (- (long permits)))
+        counter     (AtomicLong. (- (long max-permits)))
         semaphore   (Semaphore. (int max-permits))]
     (SemaphoreBulkhead. semaphore
                         counter
