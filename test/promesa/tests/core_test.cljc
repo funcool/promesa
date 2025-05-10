@@ -1,5 +1,6 @@
 (ns promesa.tests.core-test
   (:require
+
    [clojure.test :as t]
    [promesa.tests.util :refer [promise-ok promise-ko normalize-to-value]]
    [promesa.core :as p :include-macros true]

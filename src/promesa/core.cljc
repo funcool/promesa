@@ -441,9 +441,10 @@
           prom     (deferred)]
     (if (pos? total)
       (c/let [counter (atom total)]
-        (c/run! #(fnly % (fn [_ _]
-                           (when (= 0 (swap! counter dec))
-                             (pt/-resolve! prom nil))))
+        (c/run! #(fnly (fn [_ _]
+                         (when (= 0 (swap! counter dec))
+                           (pt/-resolve! prom nil)))
+                       %)
                 promises))
       (pt/-resolve! prom nil))
     prom))

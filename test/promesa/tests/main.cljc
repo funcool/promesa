@@ -1,6 +1,7 @@
 (ns promesa.tests.main
-  (:require [clojure.test :as t]
-            [promesa.tests.core-test]))
+  (:require
+   [clojure.test :as t]
+   [promesa.tests.core-test]))
 
 #?(:cljs
    (do

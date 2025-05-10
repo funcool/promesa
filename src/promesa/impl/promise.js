@@ -301,7 +301,6 @@ goog.scope(function() {
       task.complete(null, cause);
     } else {
       if (task.type === RESOLVE_TYPE_MAP) {
-        // console.trace(task);
         task.complete(value, null);
       } else if (task.type === RESOLVE_TYPE_FLATTEN) {
         if (isPromiseImpl(value)) {
