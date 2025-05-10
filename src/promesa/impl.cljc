@@ -67,7 +67,7 @@
        v
        (resolved v))
      :cljs
-     (impl/createFrom v)))
+     (impl/coerce v)))
 
 (defn all
   [promises]
@@ -94,7 +94,7 @@
      [t]
      (extend-type t
        pt/IPromiseFactory
-       (-promise [p] (impl/coerce p)))))
+       (-promise [p] (impl/create p)))))
 
 
 #?(:cljs (extend-promise! js/Promise))

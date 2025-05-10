@@ -399,7 +399,7 @@ goog.scope(function() {
     }, self.resolved([]));
   };
 
-  self.coerce = function coerce (promise) {
+  self.create = function coerce (promise) {
     if (promise instanceof PromiseImpl) {
       return promise;
     } else if (isThenable(promise)) {
@@ -417,7 +417,7 @@ goog.scope(function() {
     }
   };
 
-  self.createFrom = function coerce (promise) {
+  self.coerce = function coerce (promise) {
     if (promise instanceof PromiseImpl) {
       return promise;
     } else if (isThenable(promise)) {
