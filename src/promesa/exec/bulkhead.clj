@@ -20,10 +20,10 @@
    java.util.concurrent.Executor
    java.util.concurrent.LinkedBlockingQueue
    java.util.concurrent.Semaphore
+   java.util.concurrent.TimeUnit
    java.util.concurrent.atomic.AtomicLong))
 
 (set! *warn-on-reflection* true)
-;; (set! *unchecked-math* :warn-on-boxed)
 
 (defmacro log!
   [& params]
@@ -31,11 +31,9 @@
   ;;    (prn ~@params))
   )
 
-(declare ^:private instant)
-
 (defprotocol IQueue
   (-poll! [_])
-  (-offer! [_ _]))
+  (-offer! [_ _] [_ _ _]))
 
 (defprotocol IBulkhead
   "Bulkhead main API"
@@ -44,7 +42,9 @@
 (extend-type BlockingQueue
   IQueue
   (-poll! [this] (.poll ^BlockingQueue this))
-  (-offer! [this o] (.offer ^BlockingQueue this o)))
+  (-offer!
+    ([this o] (.offer ^BlockingQueue this o))
+    ([this o timeout] (.offer ^BlockingQueue this o (long timeout) TimeUnit/MILLISECONDS))))
 
 (defn- instant
   []
@@ -70,24 +70,41 @@
                              ^Semaphore semaphore
                              ^BlockingQueue queue
                              max-permits
-                             max-queue]
+                             max-queue
+                             timeout]
   IBulkhead
   (-get-stats [_]
     (let [permits (.availablePermits semaphore)]
       {:permits (.availablePermits semaphore)
        :queue (.size queue)
        :max-permits max-permits
-       :max-queue max-queue}))
+       :max-queue max-queue
+       :timeout timeout}))
 
   Executor
   (execute [this f]
-    (log! "cmd:" "Bulkhead/execute" "f:" (hash f))
-    (-offer! this f))
+    (log! "cmd:" "Bulkhead/execute" "f:" (hash f) timeout)
+    (if timeout
+      (-offer! this f timeout)
+      (-offer! this f)))
 
   IQueue
   (-offer! [this f]
     (let [task (ExecutorBulkheadTask. this f (instant))]
       (when-not (-offer! queue task)
+        (let [size  (.size queue)
+              hint  (str "queue max capacity reached: " size)
+              props {:type :bulkhead-error
+                     :code :capacity-limit-reached
+                     :size size}]
+          (throw (ex-info hint props))))
+
+      (log! "cmd:" "Bulkhead/-offer!" "queue" (.size queue))
+      (.run ^Runnable this)))
+
+  (-offer! [this f timeout]
+    (let [task (ExecutorBulkheadTask. this f (instant))]
+      (when-not (-offer! queue task timeout)
         (let [size  (.size queue)
               hint  (str "queue max capacity reached: " size)
               props {:type :bulkhead-error
@@ -167,13 +184,13 @@
 (ns-unmap *ns* '->ExecutorBulkheadTask)
 
 (defn- create-with-executor
-  [{:keys [executor permits queue]}]
+  [{:keys [executor permits queue timeout]}]
   (let [executor    (px/resolve-executor executor)
         max-queue   (or queue Integer/MAX_VALUE)
         max-permits (or permits 1)
         queue       (LinkedBlockingQueue. (int max-queue))
         semaphore   (Semaphore. (int max-permits))]
-    (ExecutorBulkhead. executor semaphore queue max-permits max-queue)))
+    (ExecutorBulkhead. executor semaphore queue max-permits max-queue timeout)))
 
 (defn- create-with-semaphore
   [{:keys [permits queue timeout]}]

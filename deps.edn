@@ -14,7 +14,8 @@
   {:main-opts  ["-m" "rebel-readline.main"]}
 
   :shadow-cljs
-  {:main-opts ["-m" "shadow.cljs.devtools.cli"]}
+  {:main-opts ["-m" "shadow.cljs.devtools.cli"]
+   :jvm-opts ["--sun-misc-unsafe-memory-access=allow" "-Dpenpot.wasm.profile-marks=true"]}
 
   :test
   {:extra-paths ["test"]

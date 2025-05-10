@@ -10,6 +10,7 @@
   `satisfies?` on promise coerce operation
 - Fix incorrect promise coerce operation on `p/wait-all` and `p/wait-all*`
 - Fix inconsistent params handling on bulkhead API
+- Add timeout option for executor based bulkhead impl
 
 RELEVANT CHANGES:
 
