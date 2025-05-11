@@ -30,7 +30,7 @@ jobs:
         with:
           cli: 1.12.0.1530
 
-      - run: clojure -J-Djdk.tracePinnedThreads=full -J--enable-preview -X:dev:test
+      - run: clojure -M:dev -m promesa.tests.main
 
   test-cljs:
     runs-on: ubuntu-latest

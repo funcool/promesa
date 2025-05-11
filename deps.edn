@@ -17,14 +17,6 @@
   {:main-opts ["-m" "shadow.cljs.devtools.cli"]
    :jvm-opts ["--sun-misc-unsafe-memory-access=allow"]}
 
-  :test
-  {:extra-paths ["test"]
-   :extra-deps
-   {io.github.cognitect-labs/test-runner
-    {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
-   :exec-fn cognitect.test-runner.api/test
-   :exec-args {:patterns [".*-test.*"]}}
-
   :codox
   {:extra-deps
    {codox/codox {:mvn/version "RELEASE"}
