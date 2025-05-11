@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
+
+export JAVA_OPTS="\
+       -Djdk.tracePinnedThreads=short \
+       -XX:+EnableDynamicAgentLoading \
+       -XX:-OmitStackTraceInFastThrow \
+       -XX:+UnlockDiagnosticVMOptions \
+       -XX:+DebugNonSafepoints \
+       --sun-misc-unsafe-memory-access=allow \
+       --enable-native-access=ALL-UNNAMED \
+       --enable-preview";
+
 set -ex
-# clojure -M:dev -e "(set! *warn-on-reflection* true)" -m rebel-readline.main
-# clojure -M:dev -m rebel-readline.main
-clojure -J-Djdk.tracePinnedThreads=short -J-Djdk.virtualThreadScheduler.parallelism=16 -J--enable-preview -M:dev -m rebel-readline.main
+
+clojure -M:dev -m rebel-readline.main

@@ -1,4 +1,4 @@
-{:paths ["src" "resources" "target/classes"],
+{:paths ["src"],
  :aliases
  {:dev
   {:extra-deps
@@ -8,14 +8,14 @@
     org.clojure/core.async {:mvn/version "1.6.673"}
     criterium/criterium {:mvn/version "RELEASE"}
     thheller/shadow-cljs {:mvn/version "RELEASE"}}
-   :extra-paths ["test" "dev" "src"]}
+   :extra-paths ["test" "dev"]}
 
   :repl
   {:main-opts  ["-m" "rebel-readline.main"]}
 
   :shadow-cljs
   {:main-opts ["-m" "shadow.cljs.devtools.cli"]
-   :jvm-opts ["--sun-misc-unsafe-memory-access=allow" "-Dpenpot.wasm.profile-marks=true"]}
+   :jvm-opts ["--sun-misc-unsafe-memory-access=allow"]}
 
   :test
   {:extra-paths ["test"]
@@ -31,9 +31,9 @@
     org.clojure/tools.reader {:mvn/version "RELEASE"}
     codox-theme-rdash/codox-theme-rdash {:mvn/version "RELEASE"}}}
 
-
   :build
-  {:extra-deps
+  {:extra-paths ["resources"]
+   :extra-deps
    {io.github.clojure/tools.build {:git/tag "v0.9.3" :git/sha "e537cd1"}
     org.clojure/clojurescript {:mvn/version "RELEASE"}
     org.clojure/tools.deps.alpha {:mvn/version "RELEASE"}}
