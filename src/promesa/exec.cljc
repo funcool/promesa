@@ -180,44 +180,44 @@
      (pu/maybe-deref scheduler))))
 
 #?(:clj
-     (defn- binding-conveyor-inner
-       [f]
-       (let [frame (clojure.lang.Var/cloneThreadBindingFrame)]
-         (fn
-           ([]
-            (clojure.lang.Var/resetThreadBindingFrame frame)
-            (cond
-              (instance? clojure.lang.IFn f)
-              (.invoke ^clojure.lang.IFn f)
+   (defn- binding-conveyor-inner
+     [f]
+     (let [frame (clojure.lang.Var/cloneThreadBindingFrame)]
+       (fn
+         ([]
+          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (cond
+            (instance? clojure.lang.IFn f)
+            (.invoke ^clojure.lang.IFn f)
 
-              (instance? java.lang.Runnable f)
-              (.run ^java.lang.Runnable f)
+            (instance? java.lang.Runnable f)
+            (.run ^java.lang.Runnable f)
 
-              (instance? java.util.concurrent.Callable f)
-              (.call ^java.util.concurrent.Callable f)
+            (instance? java.util.concurrent.Callable f)
+            (.call ^java.util.concurrent.Callable f)
 
-              :else
-              (throw (ex-info "Unsupported function type" {:f f :type (type f)}))))
-           ([x]
-            (clojure.lang.Var/resetThreadBindingFrame frame)
-            (cond
-              (instance? clojure.lang.IFn f)
-              (.invoke ^clojure.lang.IFn f x)
+            :else
+            (throw (ex-info "Unsupported function type" {:f f :type (type f)}))))
+         ([x]
+          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (cond
+            (instance? clojure.lang.IFn f)
+            (.invoke ^clojure.lang.IFn f x)
 
-              (instance? java.util.function.Function f)
-              (.apply ^java.util.function.Function f x)
+            (instance? java.util.function.Function f)
+            (.apply ^java.util.function.Function f x)
 
-              :else
-              (throw (ex-info "Unsupported function type" {:f f :type (type f)}))))
-           ([x y]
-            (clojure.lang.Var/resetThreadBindingFrame frame)
-            (f x y))
-           ([x y z]
-            (clojure.lang.Var/resetThreadBindingFrame frame)
-            (f x y z))
-           ([x y z & args]
-            (clojure.lang.Var/resetThreadBindingFrame frame)
-            (apply f x y z args))))))
+            :else
+            (throw (ex-info "Unsupported function type" {:f f :type (type f)}))))
+         ([x y]
+          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (f x y))
+         ([x y z]
+          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (f x y z))
+         ([x y z & args]
+          (clojure.lang.Var/resetThreadBindingFrame frame)
+          (apply f x y z args))))))
 
 (defn wrap-bindings
   {:no-doc true}
@@ -226,11 +226,7 @@
   ;; Adapted from `clojure.core/binding-conveyor-fn`."
   [f]
   #?(:cljs f
-     :clj (reify
-            clojure.lang.IFn
-              (invoke [_ f] (binding-conveyor-inner f))
-            java.util.function.Function
-              (apply [_ f] (binding-conveyor-inner f)))))
+     :clj (binding-conveyor-inner f)))
 
 #?(:clj
    (defn thread-factory?
