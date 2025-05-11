@@ -28,6 +28,10 @@ RELEVANT CHANGES:
   and implicit type extensions at a library level, and that should
   never have been there.
 
+- Add near 83x performance improvement on internal dynamic binding
+  handling (more info https://github.com/funcool/promesa/pull/156)
+
+
 ## Version 11.0.678
 
 - Fix internal coercion function (cljs only) that causes unexpected
