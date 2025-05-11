@@ -100,7 +100,6 @@
 
 
 #?(:cljs (extend-promise! js/Promise))
-#?(:cljs (extend-promise! impl/PromiseImpl))
 
 #?(:cljs
    (extend-type impl/PromiseImpl
