@@ -368,16 +368,6 @@
   [p]
   "#<js/Promise[~]>")
 
-#?(:clj
-   (defmethod print-method java.util.concurrent.CompletionStage
-     [p ^java.io.Writer writer]
-     (let [status (cond
-                    (pt/-pending? p)   "pending"
-                    (pt/-cancelled? p) "cancelled"
-                    (pt/-rejected? p)  "rejected"
-                    :else              "resolved")]
-       (.write writer ^String (format "#<CompletableFuture[%s:%d]>" status (hash p))))))
-
 #?(:cljs
    (extend-type js/Promise
      IPrintWithWriter
