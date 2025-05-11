@@ -1,12 +1,14 @@
 (ns promesa.tests.core-test
   (:require
-
    [clojure.test :as t]
    [promesa.tests.util :refer [promise-ok promise-ko normalize-to-value]]
    [promesa.core :as p :include-macros true]
    [promesa.protocols :as pt]
+   [promesa.impl :as impl]
    [promesa.util :as pu]
-   [promesa.exec :as px]))
+   [promesa.exec :as px])
+  #?(:cljs
+     (:import goog.Promise)))
 
 ;; --- Core Interface Tests
 
@@ -831,3 +833,17 @@
                         (t/is (= @c2 2))
                         (done))))))))
 
+
+#?(:cljs
+   (impl/extend-promise! Promise))
+
+#?(:cljs
+   (t/deftest check-thenable-compatibility
+     (t/async done
+       (let [thenable (new Promise (fn [resolve reject]
+                                     (resolve 1)))]
+         (->> thenable
+              (p/fmap inc)
+              (p/fnly (fn [r]
+                        (t/is (= r 2))
+                        (done))))))))
