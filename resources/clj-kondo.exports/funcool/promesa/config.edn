@@ -4,6 +4,7 @@
            promesa.core/let         clojure.core/let
            promesa.core/plet        funcool.promesa/plet
            promesa.core/loop        clojure.core/loop
+           promesa.exec.csp/go-loop clojure.core/loop
            promesa.core/recur       clojure.core/recur
            promesa.core/with-redefs clojure.core/with-redefs
            promesa.core/doseq       clojure.core/doseq}}
