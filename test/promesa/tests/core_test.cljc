@@ -56,6 +56,46 @@
                          (t/is (= "foo" v))
                          (done)))))))
 
+#?(:cljs
+   (t/deftest catch-and-finally-1
+     (t/async done
+       (let [p1 (p/deferred)
+             p3 (p/finally p1 (fn [a b]
+                                (t/is (= b "boom"))
+                                ))
+             p2 (p/catch p1 (fn [v]
+                              (t/is (= v "boom"))
+                              v))
+             ]
+
+         (p/finally p2
+                    (fn [v c]
+                      (t/is (nil? c))
+                      (t/is (= v "boom"))))
+
+         (->> (p/wait-all p2 p1)
+              (p/fnly done))
+
+         (p/reject! p1 "boom")))))
+
+#?(:cljs
+   (t/deftest catch-and-finally-2
+     (t/async done
+       (let [p1 (p/deferred)
+             p2 (p/catch p1 (fn [e]
+                              (let [msg (str "wrap (" (ex-message e) ")")]
+                                (throw (ex-info msg {})))))
+             p3 (p/catch p2 (fn [e]
+                              (let [msg (str "wrap (" (ex-message e) ")")]
+                                (p/rejected (ex-info msg {})))))
+             ]
+
+         (p/finally p3 (fn [v c]
+                         (t/is (= (ex-message c) "wrap (wrap (boom))"))
+                         (done)))
+
+         (p/reject! p1 (ex-info "boom" {}))))))
+
 (t/deftest rejected-and-wrap-on-catch
   (let [p1 (p/rejected (ex-info "foobar" {}))
         p2 (p/catch p1 (fn [cause]
@@ -109,7 +149,6 @@
                          (t/is (nil? c))
                          (t/is (= "foo" v))
                          (done)))))))
-
 
 (t/deftest throw-on-fmap-and-catch-with-merr-2
   (let [p1 (->> (p/promise 1)
@@ -832,7 +871,6 @@
                         (t/is (p/rejected? c1))
                         (t/is (= @c2 2))
                         (done))))))))
-
 
 #?(:cljs
    (impl/extend-promise! Promise))

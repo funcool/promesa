@@ -22,7 +22,11 @@ goog.scope(function() {
 
   const defaultResolveMapHandler = (v) => v;
   const defaultResolveBindHandler = (v) => self.resolved(v);
-  const defaultRejectHandler = (c) => {throw c;};
+  const defaultResolveFlattenHandler = (v) => self.coerce(v);
+
+  const defaultRejectHandler = (c) => {
+    throw c;
+  };
 
   class CancellationError extends Error {}
 
@@ -52,7 +56,11 @@ goog.scope(function() {
         type: RESOLVE_TYPE_FLATTEN,
         resolve: resolve ?? defaultResolveMapHandler,
         reject: reject ?? defaultRejectHandler,
-        complete: completeDeferredFn(deferred)
+        complete: completeDeferredFn(deferred),
+        // metadata: {
+        //   origin: goog.getUid(this),
+        //   dest: goog.getUid(deferred)
+        // }
       });
 
       // console.log("then",
@@ -74,7 +82,11 @@ goog.scope(function() {
         type: RESOLVE_TYPE_FLATTEN,
         resolve: (value) => f(),
         reject: (cause) => f(),
-        complete: (value, cause) => null
+        complete: (value, cause) => null,
+        // metadata: {
+        //   origin: goog.getUid(this),
+        //   dest: goog.getUid(this)
+        // }
       });
 
       return this;
@@ -87,7 +99,11 @@ goog.scope(function() {
         type: RESOLVE_TYPE_MAP,
         resolve: resolve ?? defaultResolveMapHandler,
         reject: reject ?? defaultRejectHandler,
-        complete: completeDeferredFn(deferred)
+        complete: completeDeferredFn(deferred),
+        // metadata: {
+        //   origin: goog.getUid(this),
+        //   dest: goog.getUid(deferred)
+        // }
       });
 
       // console.log("fmap",
@@ -107,7 +123,11 @@ goog.scope(function() {
         type: RESOLVE_TYPE_BIND,
         resolve: resolve ?? defaultResolveBindHandler,
         reject: reject ?? defaultRejectHandler,
-        complete: completeDeferredFn(deferred)
+        complete: completeDeferredFn(deferred),
+        // metadata: {
+        //   origin: goog.getUid(this),
+        //   dest: goog.getUid(deferred)
+        // }
       });
 
       // console.log("fbind",
@@ -126,8 +146,12 @@ goog.scope(function() {
       this[QUEUE].push({
         type: resolveType,
         resolve: defaultResolveMapHandler,
-        reject: defaultRejectHandler,
-        complete: fn
+        reject: defaultResolveMapHandler,
+        complete: fn,
+        // metadata: {
+        //   origin: goog.getUid(this),
+        //   dest: goog.getUid(this)
+        // }
       });
 
       process(this);
@@ -260,79 +284,95 @@ goog.scope(function() {
   function processNextTick(p) {
     if (p[QUEUE].length === 0) return;
 
-    const state = p[STATE];
     const value = p[VALUE];
-    let task, rvalue, rcause;
+    let state = p[STATE];
+    let task, rvalue;
 
     // console.log(":: process:",
     //             "uid:", goog.getUid(p),
-    //             "queue size:", p[QUEUE].length,
+    //             "queue:", p[QUEUE].length,
     //             "state:", p[STATE],
     //             "value:", fmtValue(p[VALUE]));
 
     while (p[QUEUE].length) {
       task = p[QUEUE].shift();
-
-      // console.log(":: process-task:",
-      //             "deferred-uid:", task.deferred ? goog.getUid(task.deferred) : null,
-      //             "type:", task.type);
-
       try {
         if (state === RESOLVED) {
           rvalue = task.resolve(value)
         } else if (state === REJECTED) {
           rvalue = task.reject(value)
         } else {
-          rcause = new TypeError("invalid state");
+          rvalue = new TypeError("invalid state");
+          state = REJECTED;
         }
       } catch (e) {
-        rcause = e;
+        state = REJECTED;
+        if (task.type === RESOLVE_TYPE_BIND) {
+          // This is a special case, for handle when an exception is
+          // raised inside a handler instead of returning a resovled
+          // or rejected promise instance
+          rvalue = self.rejected(e);
+        } else {
+          rvalue = e;
+        }
       }
 
-      resolveTask(task, rvalue, rcause);
+      // console.log(":: process-task:",
+      //             task.metadata,
+      //             "rvalue:", fmtValue(rvalue),
+      //             "type:", task.type);
+
+      resolveTask(task, state, rvalue);
     }
   }
 
-  function resolveTask(task, value, cause) {
-
+  function resolveTask(task, state, value) {
     if (task.complete === undefined) return;
 
-    if (cause) {
-      task.complete(null, cause);
-    } else {
-      if (task.type === RESOLVE_TYPE_MAP) {
+    if (task.type === RESOLVE_TYPE_MAP) {
+      if (state === REJECTED) {
+        task.complete(null, value);
+      } else {
         task.complete(value, null);
-      } else if (task.type === RESOLVE_TYPE_FLATTEN) {
-        if (isPromiseImpl(value)) {
-          value.handle((v, c) => {
-            resolveTask(task, v, c);
-          });
-        } else if (isThenable(value)) {
-          value.then((v) => {
-            resolveTask(task, v, null);
-          }, (c) => {
-            resolveTask(task, null, c);
-          });
+      }
+    } else if (task.type === RESOLVE_TYPE_FLATTEN) {
+      if (isPromiseImpl(value)) {
+        value.handle((v, c) => {
+          if (c) {
+            resolveTask(task, REJECTED, c);
+          } else {
+            resolveTask(task, RESOLVED, v);
+          }
+        });
+      } else if (isThenable(value)) {
+        value.then((v) => {
+          resolveTask(task, RESOLVED, v);
+        }, (c) => {
+          resolveTask(task, REJECTED, c);
+        });
+      } else {
+        if (state === REJECTED) {
+          task.complete(null, value);
         } else {
           task.complete(value, null);
         }
-      } else if (task.type === RESOLVE_TYPE_BIND) {
-        if (isPromiseImpl(value)) {
-          value.handle((v, c) => {
-            task.complete(v, c);
-          });
-        } else if (isThenable(value)) {
-          value.then((v) => {
-            task.complete(v, null);
-          }, (c) => {
-            task.complete(null, c);
-          });
-        } else {
-          task.complete(null, new TypeError("expected thenable"));
-        }
-      } else {
-        task.complete(null, new TypeError("internal: invalid resolve type"));
       }
+    } else if (task.type === RESOLVE_TYPE_BIND) {
+      if (isPromiseImpl(value)) {
+        value.handle((v, c) => {
+          task.complete(v, c);
+        });
+      } else if (isThenable(value)) {
+        value.then((v) => {
+          task.complete(v, null);
+        }, (c) => {
+          task.complete(null, c);
+        });
+      } else {
+        task.complete(null, new TypeError("expected thenable"));
+      }
+    } else {
+      task.complete(null, new TypeError("internal: invalid resolve type"));
     }
   }
 
