@@ -11,6 +11,7 @@
 - Fix incorrect promise coerce operation on `p/wait-all` and `p/wait-all*`
 - Fix inconsistent params handling on bulkhead API
 - Add timeout option for executor based bulkhead impl
+- Add csp/merge operation (jvm only)
 
 RELEVANT CHANGES:
 
