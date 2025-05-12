@@ -228,3 +228,15 @@
                 (p/fnly done)))))))
 
 
+#?(:clj
+   (t/deftest merge-operation
+     (let [ch1 (sp/chan :buf 2)
+           ch2 (sp/chan :buf 2)
+           ch3 (sp/merge [ch1 ch2])
+           res (p/vthread (into [] ch3))]
+
+       (sp/offer! ch1 :a)
+       (sp/offer! ch2 :b)
+       (sp/close! ch1)
+       (sp/close! ch2)
+       (t/is (= [:a :b] @res)))))

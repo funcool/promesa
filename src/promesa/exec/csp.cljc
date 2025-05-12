@@ -24,7 +24,7 @@
   virtual threads and seamless blocking operations on channels.
 
   **EXPERIMENTAL API**"
-  (:refer-clojure :exclude [take])
+  (:refer-clojure :exclude [take merge])
   (:require
    [promesa.core :as p]
    [promesa.exec :as px]
@@ -576,3 +576,22 @@
 
      (-> (into #{} xfm (range n))
          (p/wait-all*)))))
+
+#?(:clj
+(defn merge
+  "Takes a collection of source channels and returns a channel which
+  contains all values taken from them. The returned channel will be
+  unbuffered by default, or opts can be supplied for channel creation.
+  The channel will close after all the source channels have closed."
+  [chs & {:as opts}]
+  (let [out (chan opts)]
+    (go-loop [cs (vec chs)]
+      (if (pos? (count cs))
+        (let [[v c] (alts! cs)]
+          (if (nil? v)
+            (recur (filterv #(not= c %) cs))
+            (do
+              (put! out v)
+              (recur cs))))
+        (close! out)))
+    out)))
