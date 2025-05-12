@@ -9,7 +9,7 @@
                             await map mapcat run!
                             future let loop recur
                             -> ->> as-> with-redefs do
-                            doseq])
+                            doseq reduce])
   (:require
    [promesa.protocols :as pt]
    [clojure.core :as c]
@@ -219,13 +219,13 @@
   "Chain variable number of functions to be executed serially using
   `then`."
   ([p f] (then p f))
-  ([p f & fs] (reduce then p (cons f fs))))
+  ([p f & fs] (c/reduce then p (cons f fs))))
 
 (defn chain'
   "Chain variable number of functions to be executed serially using
   `map`."
   ([p f] (then' p f))
-  ([p f & fs] (reduce #(map %2 %1) (pt/-promise p) (cons f fs))))
+  ([p f & fs] (c/reduce #(map %2 %1) (pt/-promise p) (cons f fs))))
 
 (defn handle
   "Chains a function `f` to be executed when the promise `p` is completed
@@ -462,6 +462,18 @@
      (pt/-await! (wait-all promises))))
 
 (defn run!
+  "A promise aware run! function. Executed in terms of `then` rules.
+
+  DEPRECATED, replaced by `run` (without !)"
+  {:deprecated true}
+  ([f coll]
+   (c/-> (c/reduce #(then %1 (fn [_] (f %2))) (impl/resolved nil) coll)
+         (pt/-fmap (constantly nil))))
+  ([f coll executor]
+   (c/-> (c/reduce #(then %1 (fn [_] (f %2)) executor) (impl/resolved nil) coll)
+         (pt/-fmap (constantly nil)))))
+
+(defn run
   "A promise aware run! function. Executed in terms of `then` rules."
   ([f coll]
    (c/-> (c/reduce #(then %1 (fn [_] (f %2))) (impl/resolved nil) coll)
@@ -469,6 +481,34 @@
   ([f coll executor]
    (c/-> (c/reduce #(then %1 (fn [_] (f %2)) executor) (impl/resolved nil) coll)
          (pt/-fmap (constantly nil)))))
+
+(defn reduce
+  [f init coll]
+  (c/reduce (fn [init item]
+              (mcat (fn [init] (f init item)) init))
+            (resolved init)
+            coll))
+
+(defn map
+  "Apply potentially asynchronous function over a collection of values,
+  always in-orden and waiting a function to be resolved before proceed
+  to calculate the next. Returns a promise resolved with a vector of results
+  or an exception of the first found failed promise."
+  [f coll]
+  (reduce (fn [result item]
+            (->> (f item)
+                 (fmap (fn [item]
+                         (conj result item)))))
+
+
+  (c/reduce (fn [init item]
+              (mcat (fn [init]
+                      (p/fmap (fn [item]
+                                (conj init item))
+                              (f item)))
+                    init))
+            (resolved init)
+            coll))
 
 ;; Cancellation
 
@@ -552,7 +592,7 @@
   (condp = (count exprs)
     0 `(impl/resolved nil)
     1 `(impl/coerce ~(first exprs))
-    (reduce (fn [acc e]
+    (c/reduce (fn [acc e]
               `(pt/-mcat (impl/coerce ~e) (fn [_#] ~acc)))
             `(impl/coerce ~(last exprs))
             (reverse (butlast exprs)))))
@@ -578,7 +618,7 @@
   [bindings & body]
   (assert (even? (count bindings)) (str "Uneven binding vector: " bindings))
   (c/->> (reverse (partition 2 bindings))
-         (reduce (fn [acc [l r]]
+         (c/reduce (fn [acc [l r]]
                    `(pt/-mcat (impl/coerce ~r) (fn [~l] ~acc)))
                  `(do* ~@body))))
 
@@ -640,6 +680,7 @@
   `(thread-call :default (^once fn [] ~@body)))
 
 (defrecord Recur [bindings])
+
 (defn recur?
   [o]
   (instance? Recur o))
@@ -759,11 +800,11 @@
 
 (defmacro doseq
   "Simplified version of `doseq` which takes one binding and a seq, and
-  runs over it using `promesa.core/run!`"
+  runs over it using `promesa.core/run`"
   [[binding xs] & body]
-  `(run! (fn [~binding]
-           (promesa.core/do* ~@body))
-         ~xs))
+  `(run (fn [~binding]
+          (promesa.core/do* ~@body))
+     ~xs))
 
 #?(:clj
    (defn await!
