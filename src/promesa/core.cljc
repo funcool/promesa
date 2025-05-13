@@ -487,7 +487,7 @@
   process over provided initial value and a collection."
   [f init coll]
   (c/reduce (fn [init item]
-              (then (fn [init] (f init item)) init))
+              (then init (fn [init] (f init item))))
             (resolved init)
             coll))
 
