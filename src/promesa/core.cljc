@@ -483,32 +483,28 @@
          (pt/-fmap (constantly nil)))))
 
 (defn reduce
+  "A promise-aware reduce. Allows reduce with potentially asynchrnous
+  process over provided initial value and a collection."
   [f init coll]
   (c/reduce (fn [init item]
-              (mcat (fn [init] (f init item)) init))
+              (then (fn [init] (f init item)) init))
             (resolved init)
             coll))
 
-(defn map
-  "Apply potentially asynchronous function over a collection of values,
-  always in-orden and waiting a function to be resolved before proceed
-  to calculate the next. Returns a promise resolved with a vector of results
-  or an exception of the first found failed promise."
-  [f coll]
-  (reduce (fn [result item]
-            (->> (f item)
-                 (fmap (fn [item]
-                         (conj result item)))))
-
-
-  (c/reduce (fn [init item]
-              (mcat (fn [init]
-                      (p/fmap (fn [item]
-                                (conj init item))
-                              (f item)))
-                    init))
-            (resolved init)
-            coll))
+;; (defn map
+;;   "Apply potentially asynchronous function over a collection of values,
+;;   always in-orden and waiting a function to be resolved before proceed
+;;   to calculate the next. Returns a promise resolved with a vector of results
+;;   or an exception of the first found failed promise."
+;;   [f coll]
+;;   (c/reduce (fn [init item]
+;;               (then (fn [init]
+;;                       (p/fmap (fn [item]
+;;                                 (conj init item))
+;;                               (f item)))
+;;                     init))
+;;             (resolved init)
+;;             coll))
 
 ;; Cancellation
 
