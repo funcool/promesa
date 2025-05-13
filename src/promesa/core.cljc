@@ -428,8 +428,8 @@
   Example:
 
   ```
-  (->> (p/wait-all* [(promise :first-promise)
-                     (promise :second-promise)])
+  (->> (p/wait-all* [(promise-returning-fn :first-promise)
+                     (promise-returning-fn :second-promise)])
        (p/fmap (fn [_]
                  (println \"done\"))))
   ```
