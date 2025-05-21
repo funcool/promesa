@@ -51,28 +51,32 @@
   []
   (System/currentTimeMillis))
 
-(deftype ExecutorBulkheadTask [bulkhead f inst]
+(deftype Task [bulkhead f inst]
   clojure.core/Inst
   (inst-ms* [_] inst)
 
   Runnable
   (run [this]
-    (let [^Semaphore semaphore (:semaphore bulkhead)
-          ^Executor executor  (:executor bulkhead)]
+    (let [semaphore (:semaphore bulkhead)
+          executor  (:executor bulkhead)]
+
       (log! "cmd:" "Task/run" "f:" (hash f) "task:" (hash this) "START")
       (try
         (.run ^Runnable f)
         (finally
           (psm/release! semaphore :permits 1)
-          (log! "cmd:" "Task/run" "f:" (hash f) "task:" (hash this) "END" "permits:" (.availablePermits semaphore))
-          (pt/-run! executor bulkhead))))))
+          (log! "cmd:" "Task/run" "f:" (hash f)
+                "task:" (hash this)
+                "permits:" (.availablePermits ^Semaphore semaphore)
+                "END")
+          (.execute ^Executor executor ^Runnable bulkhead))))))
 
-(defrecord ExecutorBulkhead [^Executor executor
-                             ^Semaphore semaphore
-                             ^BlockingQueue queue
-                             max-permits
-                             max-queue
-                             timeout]
+(defrecord Bulkhead [^Executor executor
+                     ^Semaphore semaphore
+                     ^BlockingQueue queue
+                     max-permits
+                     max-queue
+                     timeout]
   IBulkhead
   (-get-stats [_]
     (let [permits (.availablePermits semaphore)]
@@ -85,14 +89,12 @@
   Executor
   (execute [this f]
     (log! "cmd:" "Bulkhead/execute" "f:" (hash f) timeout)
-    (if timeout
-      (-offer! this f timeout)
-      (-offer! this f)))
+    (let [task (Task. this f (instant))
+          res  (if timeout
+                 (-offer! queue task timeout)
+                 (-offer! queue task))]
 
-  IQueue
-  (-offer! [this f]
-    (let [task (ExecutorBulkheadTask. this f (instant))]
-      (when-not (-offer! queue task)
+      (when-not res
         (let [size  (.size queue)
               hint  (str "queue max capacity reached: " size)
               props {:type :bulkhead-error
@@ -101,118 +103,42 @@
           (throw (ex-info hint props))))
 
       (log! "cmd:" "Bulkhead/-offer!" "queue" (.size queue))
-      (.run ^Runnable this)))
-
-  (-offer! [this f timeout]
-    (let [task (ExecutorBulkheadTask. this f (instant))]
-      (when-not (-offer! queue task timeout)
-        (let [size  (.size queue)
-              hint  (str "queue max capacity reached: " size)
-              props {:type :bulkhead-error
-                     :code :capacity-limit-reached
-                     :size size}]
-          (throw (ex-info hint props))))
-
-      (log! "cmd:" "Bulkhead/-offer!" "queue" (.size queue))
-      (.run ^Runnable this)))
-
-  (-poll! [this]
-    (when (pt/-try-acquire! semaphore)
-      (if-let [task (-poll! queue)]
-        task
-        (pt/-release! semaphore))))
+      (.execute ^Executor executor ^Runnable this)))
 
   Runnable
   (run [this]
     (log! "cmd:" "Bulkhead/run" "queue:" (.size queue) "permits:" (.availablePermits semaphore))
-    (loop []
-      (log! "cmd:" "Bulkhead/run$loop1" "queue:" (.size queue) "permits:" (.availablePermits semaphore))
-      (when-let [task (-poll! this)]
-        (log! "cmd:" "Bulkhead/run$loop2" "task:" (hash task) "available-permits:" (.availablePermits semaphore))
-        (pt/-exec! executor task)
-        (recur)))))
+    (let [poll-fn (fn []
+                    (when (pt/-try-acquire! semaphore)
+                      (if-let [task (-poll! queue)]
+                        task
+                        (pt/-release! semaphore))))]
+      (loop []
+        (log! "cmd:" "Bulkhead/run$loop1" "queue:" (.size queue) "permits:" (.availablePermits semaphore))
+        (when-let [task (poll-fn)]
+          (log! "cmd:" "Bulkhead/run$loop2" "task:" (hash task) "available-permits:" (.availablePermits semaphore))
+          (pt/-exec! executor task)
+          (recur))))))
 
-(defrecord SemaphoreBulkhead [^Semaphore semaphore
-                              ^AtomicLong counter
-                              max-permits
-                              max-queue
-                              timeout]
-  IBulkhead
-  (-get-stats [_]
-    {:permits (.availablePermits semaphore)
-     :queue (+ (long counter) (long max-permits))
-     :max-permits max-permits
-     :max-queue max-queue})
+(ns-unmap *ns* '->Bulkhead)
+(ns-unmap *ns* 'map->Bulkhead)
+(ns-unmap *ns* '->Task)
 
-  pt/IExecutor
-  (-exec! [this f]
-    (.execute ^Executor this ^Runnable f))
+;; --- PUBLIC API
 
-  (-run! [this f]
-    (CompletableFuture/runAsync ^Runnable f ^Executor this))
-
-  (-submit! [this f]
-    (CompletableFuture/supplyAsync ^Supplier (pu/->Supplier f) ^Executor this))
-
-  Executor
-  (execute [this f]
-    (let [nqueued (.incrementAndGet counter)]
-      (when (> (long nqueued) (long max-queue))
-        (let [hint  (str "bulkhead: queue max capacity reached (" max-queue ")")
-              props {:type :bulkhead-error
-                     :code :capacity-limit-reached
-                     :size max-queue}]
-          (.decrementAndGet counter)
-          (throw (ex-info hint props))))
-
-      (try
-        (if (psm/acquire! semaphore :permits 1 :timeout timeout)
-          (try
-            (.run ^Runnable f)
-            (finally
-              (psm/release! semaphore)))
-          (let [props {:type :bulkhead-error
-                       :code :timeout
-                       :timeout timeout}]
-            (throw (ex-info "bulkhead: timeout" props))))
-        (finally
-          (.decrementAndGet counter))))))
-
-(ns-unmap *ns* '->SemaphoreBulkhead)
-(ns-unmap *ns* 'map->SemaphoreBulkhead)
-(ns-unmap *ns* '->ExecutorBulkhead)
-(ns-unmap *ns* 'map->ExecutorBulkhead)
-(ns-unmap *ns* '->ExecutorBulkheadTask)
-
-(defn- create-with-executor
-  [{:keys [executor permits queue timeout]}]
+(defn create
+  [& {:keys [executor permits queue timeout]}]
   (let [executor    (px/resolve-executor executor)
         max-queue   (or queue Integer/MAX_VALUE)
         max-permits (or permits 1)
         queue       (LinkedBlockingQueue. (int max-queue))
         semaphore   (Semaphore. (int max-permits))]
-    (ExecutorBulkhead. executor semaphore queue max-permits max-queue timeout)))
-
-(defn- create-with-semaphore
-  [{:keys [permits queue timeout]}]
-  (let [max-queue   (or queue Integer/MAX_VALUE)
-        max-permits (or permits 1)
-        counter     (AtomicLong. (- (long max-permits)))
-        semaphore   (Semaphore. (int max-permits))]
-    (SemaphoreBulkhead. semaphore
-                        counter
-                        max-permits
-                        max-queue
-                        timeout)))
-
-;; --- PUBLIC API
-
-(defn create
-  [& {:keys [type] :as params}]
-  (case type
-    :executor (create-with-executor params)
-    :semaphore (create-with-semaphore params)
-    (throw (UnsupportedOperationException. "invalid bulkhead type provided"))))
+    (Bulkhead. executor
+               semaphore
+               queue
+               max-permits
+               max-queue
+               timeout)))
 
 (defn invoke!
   {:no-doc true

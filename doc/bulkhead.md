@@ -14,9 +14,7 @@ So let's start with an example:
          '[promesa.exec :as px])
 
 ;; All parameters are optional and have default value
-(def instance (pxb/create :concurrency 1
-                          :queue-size 16
-                          :executor px/*default-executor*))
+(def instance (pxb/create :permits 1 :queue 16))
 
 @(px/submit! instance (fn []
                         (Thread/sleep 1000)
@@ -36,14 +34,5 @@ When you submit a task to it, it does the following:
   indicating that queue limit was reached.
 
 This allows you to control the concurrency and the queue size on access to some resource.
-
-
-NOTES:
-
-- _As future improvements we consider adding an option for delimit the **max wait** and
-  cancel/reject tasks after some timeout._
-- _For now it is implemented only on JVM but I think is pretty easy to implement on CLJS, so if
-  there are some interest on it, feel free to open and issue for just show interest or discuss how
-  it can be contributed._
 
 [0]: https://stackoverflow.com/questions/30391809/what-is-bulkhead-pattern-used-by-hystrix

@@ -155,19 +155,21 @@
   {:no-doc true}
   ([] (resolve-executor nil))
   ([executor]
-   (case executor
-     (nil :default)      @default-executor
-     :cached             @default-cached-executor
-     (:platform :thread) @default-thread-executor
-     (:virtual :vthread) @default-vthread-executor
+   (cond
+     (executor? executor) executor
+     (nil? executor)      @default-executor
+     (delay? executor)    (resolve-executor @executor)
 
-     (:same-thread
-      :current-thread)   @default-current-thread-executor
+     :else
+     (case executor
+       (nil :default)      @default-executor
+       :cached             @default-cached-executor
+       (:platform :thread) @default-thread-executor
+       (:virtual :vthread) @default-vthread-executor
 
-     (cond
-       (executor? executor) executor
-       (delay? executor)    (resolve-executor @executor)
-       :else
+       (:same-thread
+        :current-thread)   @default-current-thread-executor
+
        (throw #?(:clj (IllegalArgumentException. "invalid executor")
                  :cljs (js/TypeError. "invalid executor")))))))
 
@@ -336,10 +338,10 @@
   Exception unsafe, can raise exceptions if the executor
   rejects the task."
   ([f]
-   (let [f (if (fn? f) (wrap-bindings f) f)]
+   (let [f (wrap-bindings f)]
      (pt/-exec! (resolve-executor *default-executor*) f)))
   ([executor f]
-   (let [f (if (fn? f) (wrap-bindings f) f)]
+   (let [f (wrap-bindings f)]
      (pt/-exec! (resolve-executor executor) f))))
 
 (defn run!
@@ -348,10 +350,10 @@
   Exception unsafe, can raise exceptions if the executor
   rejects the task."
   ([f]
-   (let [f (if (fn? f) (wrap-bindings f) f)]
+   (let [f (wrap-bindings f)]
      (pt/-run! (resolve-executor *default-executor*) f)))
   ([executor f]
-   (let [f (if (fn? f) (wrap-bindings f) f)]
+   (let [f (wrap-bindings f)]
      (pt/-run! (resolve-executor executor) f))))
 
 (defn submit!
@@ -362,10 +364,10 @@
   Exception unsafe, can raise exceptions if the executor
   rejects the task."
   ([f]
-   (let [f (if (fn? f) (wrap-bindings f) f)]
+   (let [f (wrap-bindings f)]
      (pt/-submit! (resolve-executor *default-executor*) f)))
   ([executor f]
-   (let [f (if (fn? f) (wrap-bindings f) f)]
+   (let [f (wrap-bindings f)]
      (pt/-submit! (resolve-executor executor) f))))
 
 (defn schedule!
@@ -383,12 +385,12 @@
    (pt/-schedule! (resolve-scheduler scheduler) ms f)))
 
 #?(:clj
-   (defn invoke!
-     "Invoke a function to be executed in the provided executor
+(defn invoke!
+  "Invoke a function to be executed in the provided executor
   or the default one, and waits for the result. Useful for using
   in virtual threads."
-     ([f] (pt/-await! (submit! f)))
-     ([executor f] (pt/-await! (submit! executor f)))))
+  ([f] (pt/-await! (submit! f)))
+  ([executor f] (pt/-await! (submit! executor f)))))
 
 (defn- rejected
   [v]
