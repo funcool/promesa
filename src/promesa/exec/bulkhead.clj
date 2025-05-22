@@ -103,22 +103,20 @@
           (throw (ex-info hint props))))
 
       (log! "cmd:" "Bulkhead/-offer!" "queue" (.size queue))
-      (.execute ^Executor executor ^Runnable this)))
+      (.run ^Runnable this)))
 
   Runnable
   (run [this]
     (log! "cmd:" "Bulkhead/run" "queue:" (.size queue) "permits:" (.availablePermits semaphore))
-    (let [poll-fn (fn []
-                    (when (pt/-try-acquire! semaphore)
-                      (if-let [task (-poll! queue)]
-                        task
-                        (pt/-release! semaphore))))]
-      (loop []
-        (log! "cmd:" "Bulkhead/run$loop1" "queue:" (.size queue) "permits:" (.availablePermits semaphore))
-        (when-let [task (poll-fn)]
-          (log! "cmd:" "Bulkhead/run$loop2" "task:" (hash task) "available-permits:" (.availablePermits semaphore))
-          (pt/-exec! executor task)
-          (recur))))))
+    (loop []
+      (log! "cmd:" "Bulkhead/run$loop1" "queue:" (.size queue) "permits:" (.availablePermits semaphore))
+      (when-let [task (when (pt/-try-acquire! semaphore)
+                        (if-let [task (-poll! queue)]
+                          task
+                          (pt/-release! semaphore)))]
+        (log! "cmd:" "Bulkhead/run$loop2" "task:" (hash task) "available-permits:" (.availablePermits semaphore))
+        (.execute ^Executor executor ^Runnable task)
+        (recur)))))
 
 (ns-unmap *ns* '->Bulkhead)
 (ns-unmap *ns* 'map->Bulkhead)
