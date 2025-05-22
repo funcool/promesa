@@ -9,8 +9,6 @@
 - Add performance improvement by removing extensive usage of
   `satisfies?` on promise coerce operation
 - Fix incorrect promise coerce operation on `p/wait-all` and `p/wait-all*`
-- Fix inconsistent params handling on bulkhead API
-- Add timeout option for executor based bulkhead impl
 - Add csp/merge operation (jvm only)
 
 RELEVANT CHANGES:
@@ -32,6 +30,9 @@ RELEVANT CHANGES:
 - Add near 83x performance improvement on internal dynamic binding
   handling (more info https://github.com/funcool/promesa/pull/156)
 
+- Simplifi a broken Bulkhead interface, now we only have a single
+  implementation and coherent documentation for it; it also adds
+  the option to pass timeout
 
 ## Version 11.0.678
 

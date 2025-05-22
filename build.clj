@@ -5,7 +5,7 @@
    [cljs.build.api :as api]))
 
 (def lib 'funcool/promesa)
-(def version (format "11.0.%s" (b/git-count-revs nil)))
+(def version (format "12.0.%s" (b/git-count-revs nil)))
 (def class-dir "target/classes")
 (def basis (b/create-basis {:project "deps.edn"}))
 (def jar-file (format "target/%s-%s.jar" (name lib) version))

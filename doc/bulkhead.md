@@ -16,14 +16,14 @@ So let's start with an example:
 ;; All parameters are optional and have default value
 (def instance (pxb/create :permits 1 :queue 16))
 
-@(px/submit! instance (fn []
-                        (Thread/sleep 1000)
-                        1))
+@(px/submit instance (fn []
+                       (Thread/sleep 1000)
+                       1))
 ;; => 1
 ```
 
 At first glance, this seems like an executor instance because it resembles the same API (aka
-`px/submit!` call).
+`px/submit` call).
 
 When you submit a task to it, it does the following:
 
