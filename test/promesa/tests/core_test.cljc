@@ -855,7 +855,8 @@
        (p/finally p (fn [v c]
                       (t/is (nil? c)))))))
 
-#?(:clj
+#?(:bb nil
+   :clj
    (t/deftest let-syntax-test
      (t/is (thrown? clojure.lang.Compiler$CompilerException
                     (eval `(p/let* [uneven#]))))

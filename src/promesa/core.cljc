@@ -11,18 +11,14 @@
                             -> ->> as-> with-redefs do
                             doseq reduce])
   (:require
-   [promesa.protocols :as pt]
    [clojure.core :as c]
    [promesa.exec :as exec]
    [promesa.impl :as impl]
+   [promesa.protocols :as pt]
    [promesa.util :as util])
   #?(:cljs (:require-macros [promesa.core]))
   #?(:clj
      (:import
-      java.util.concurrent.CompletableFuture
-      java.util.concurrent.CompletionException
-      java.util.concurrent.CompletionStage
-      java.util.concurrent.ExecutionException
       java.util.concurrent.TimeoutException)))
 
 #?(:clj (set! *warn-on-reflection* true))
@@ -659,14 +655,14 @@
   "Analogous to `clojure.core.async/thread` that returns a promise instance
   instead of the `Future`."
   [& body]
-  `(thread-call (^once fn [] ~@body)))
+  `(thread-call (^:once fn [] ~@body)))
 
 (defmacro vthread
   "Analogous to `clojure.core.async/thread` that returns a promise instance
   instead of the `Future`. Useful for executing synchronous code in a
   separate thread (also works in cljs)."
   [& body]
-  `(vthread-call (^once fn [] ~@body)))
+  `(vthread-call (^:once fn [] ~@body)))
 
 (defmacro future
   "Analogous macro to `clojure.core/future` that returns promise

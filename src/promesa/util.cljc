@@ -10,11 +10,9 @@
   #?(:clj
      (:import
       java.lang.reflect.Method
-      java.time.Duration
       java.util.concurrent.CancellationException
       java.util.concurrent.CompletionException
       java.util.concurrent.CompletionStage
-      java.util.concurrent.CountDownLatch
       java.util.concurrent.ExecutionException
       java.util.concurrent.TimeUnit
       java.util.concurrent.TimeoutException
@@ -22,12 +20,21 @@
 
 #?(:clj (set! *warn-on-reflection* true))
 
-#?(:clj
+#?(:bb
+   (defn ->Supplier [f]
+     (reify java.util.function.Supplier
+       (get [_] (f))))
+   :clj
    (deftype Supplier [f]
      java.util.function.Supplier
      (get [_] (f))))
 
-#?(:clj
+#?(:bb
+   (defn ->Function [f]
+     (reify java.util.function.Function
+       (apply [_ v]
+         (f v))))
+   :clj
    (deftype Function [f]
      java.util.function.Function
      (apply [_ v]
@@ -76,13 +83,23 @@
        (or (ex-cause cause) cause)
        cause)))
 
-#?(:clj
+#?(:bb
+   (defn ->Function2 [f]
+     (reify java.util.function.BiFunction
+       (apply [_ r e]
+         (f r (unwrap-exception e)))))
+   :clj
    (deftype Function2 [f]
      java.util.function.BiFunction
      (apply [_ r e]
        (f r (unwrap-exception e)))))
 
-#?(:clj
+#?(:bb
+   (defn ->Consumer2 [f]
+     (reify java.util.function.BiConsumer
+       (accept [_ r e]
+         (f r (unwrap-exception e)))))
+   :clj
    (deftype Consumer2 [f]
      java.util.function.BiConsumer
      (accept [_ r e]
