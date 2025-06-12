@@ -710,7 +710,7 @@
              (if (= a 5)
                a
                (p/recur (p/delay 50 (inc a)))))
-        p2 (p/race [p1 (p/delay 400 10)])]
+        p2 (p/race [p1 (p/delay 1000 10)])]
 
     #?(:clj
        (do
