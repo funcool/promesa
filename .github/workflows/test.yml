@@ -60,16 +60,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: ${{ matrix.java }}
 
-      - uses: DeLaGuardo/setup-clojure@13.4
+        - uses: DeLaGuardo/setup-clojure@13.4
         with:
           bb: latest
 
       - run: |
           # temporarily download the dev build until bb's next release
-          bash <(curl https://raw.githubusercontent.com/babashka/babashka/master/install)  --dev-build
+          bash <(curl https://raw.githubusercontent.com/babashka/babashka/master/install) --dev-build
           bb -cp src:test -m promesa.tests.main
