@@ -61,7 +61,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-        - uses: DeLaGuardo/setup-clojure@13.4
+      - uses: DeLaGuardo/setup-clojure@13.4
         with:
           bb: latest
 
