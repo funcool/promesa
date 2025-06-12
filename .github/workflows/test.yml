@@ -67,5 +67,5 @@ jobs:
 
       - run: |
           # temporarily download the dev build until bb's next release
-          bash <(curl https://raw.githubusercontent.com/babashka/babashka/master/install) --dev-build
-          bb -cp src:test -m promesa.tests.main
+          bash <(curl https://raw.githubusercontent.com/babashka/babashka/master/install) --dev-build --dir /tmp
+          /tmp/bb -cp src:test -m promesa.tests.main
