@@ -172,6 +172,8 @@
      @default-scheduler
      (pu/maybe-deref scheduler))))
 
+#?(:clj (def ^:private binding-conveyor-fn* @#'clojure.core/binding-conveyor-fn))
+
 #?(:clj
    (defn- binding-conveyor-inner
      [f]
@@ -206,7 +208,7 @@
               (f x y z))
              ([x y z & args]
               (apply f x y z args)))]
-       (bound-fn* ifn))))
+       (binding-conveyor-fn* ifn))))
 
 (defn wrap-bindings
   {:no-doc true}
