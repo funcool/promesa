@@ -10,11 +10,9 @@
   (:require
    [promesa.protocols :as pt]
    [promesa.util :as pu]
-   #?(:cljs [goog.object :as gobj])
    #?(:cljs [promesa.impl.promise :as pimpl]))
   #?(:clj
      (:import
-      clojure.lang.Var
       java.lang.AutoCloseable
       java.lang.Thread$UncaughtExceptionHandler
       java.time.Duration
@@ -24,25 +22,18 @@
       java.util.concurrent.Callable
       java.util.concurrent.CancellationException
       java.util.concurrent.CompletableFuture
-      java.util.concurrent.CompletionException
-      java.util.concurrent.CompletionStage
-      java.util.concurrent.CountDownLatch
-      java.util.concurrent.ExecutionException
       java.util.concurrent.Executor
       java.util.concurrent.ExecutorService
       java.util.concurrent.Executors
       java.util.concurrent.ForkJoinPool
       java.util.concurrent.ForkJoinPool$ForkJoinWorkerThreadFactory
-      java.util.concurrent.ForkJoinPool$ManagedBlocker
       java.util.concurrent.ForkJoinWorkerThread
-      java.util.concurrent.Future
       java.util.concurrent.ScheduledExecutorService
       java.util.concurrent.ScheduledThreadPoolExecutor
       java.util.concurrent.SynchronousQueue
       java.util.concurrent.ThreadFactory
       java.util.concurrent.ThreadPoolExecutor
       java.util.concurrent.TimeUnit
-      java.util.concurrent.TimeoutException
       java.util.concurrent.atomic.AtomicLong
       java.util.function.Supplier)))
 
@@ -181,45 +172,43 @@
      @default-scheduler
      (pu/maybe-deref scheduler))))
 
+#?(:clj (def ^:private binding-conveyor-fn* @#'clojure.core/binding-conveyor-fn))
+
 #?(:clj
    (defn- binding-conveyor-inner
      [f]
-     (let [frame (clojure.lang.Var/cloneThreadBindingFrame)]
-       (fn
-         ([]
-          (clojure.lang.Var/resetThreadBindingFrame frame)
-          (cond
-            (instance? clojure.lang.IFn f)
-            (.invoke ^clojure.lang.IFn f)
+     (let [ifn
+           (fn
+             ([]
+              (cond
+                (instance? clojure.lang.IFn f)
+                (f)
 
-            (instance? java.lang.Runnable f)
-            (.run ^java.lang.Runnable f)
+                (instance? java.lang.Runnable f)
+                (.run ^java.lang.Runnable f)
 
-            (instance? java.util.concurrent.Callable f)
-            (.call ^java.util.concurrent.Callable f)
+                (instance? java.util.concurrent.Callable f)
+                (.call ^java.util.concurrent.Callable f)
 
-            :else
-            (throw (ex-info "Unsupported function type" {:f f :type (type f)}))))
-         ([x]
-          (clojure.lang.Var/resetThreadBindingFrame frame)
-          (cond
-            (instance? clojure.lang.IFn f)
-            (.invoke ^clojure.lang.IFn f x)
+                :else
+                (throw (ex-info "Unsupported function type" {:f f :type (type f)}))))
+             ([x]
+              (cond
+                (instance? clojure.lang.IFn f)
+                (f x)
 
-            (instance? java.util.function.Function f)
-            (.apply ^java.util.function.Function f x)
+                (instance? java.util.function.Function f)
+                (.apply ^java.util.function.Function f x)
 
-            :else
-            (throw (ex-info "Unsupported function type" {:f f :type (type f)}))))
-         ([x y]
-          (clojure.lang.Var/resetThreadBindingFrame frame)
-          (f x y))
-         ([x y z]
-          (clojure.lang.Var/resetThreadBindingFrame frame)
-          (f x y z))
-         ([x y z & args]
-          (clojure.lang.Var/resetThreadBindingFrame frame)
-          (apply f x y z args))))))
+                :else
+                (throw (ex-info "Unsupported function type" {:f f :type (type f)}))))
+             ([x y]
+              (f x y))
+             ([x y z]
+              (f x y z))
+             ([x y z & args]
+              (apply f x y z args)))]
+       (binding-conveyor-fn* ifn))))
 
 (defn wrap-bindings
   {:no-doc true}
@@ -276,7 +265,7 @@
 
        (let [counter (AtomicLong. 0)]
          (reify ThreadFactory
-           (newThread [this runnable]
+           (newThread [_this runnable]
              (let [thr (Thread. ^Runnable runnable)]
                (when (some? priority)
                  (.setPriority thr (int priority)))
@@ -385,12 +374,12 @@
    (pt/-schedule! (resolve-scheduler scheduler) ms f)))
 
 #?(:clj
-(defn invoke!
-  "Invoke a function to be executed in the provided executor
+   (defn invoke!
+     "Invoke a function to be executed in the provided executor
   or the default one, and waits for the result. Useful for using
   in virtual threads."
-  ([f] (pt/-await! (submit! f)))
-  ([executor f] (pt/-await! (submit! executor f)))))
+     ([f] (pt/-await! (submit! f)))
+     ([executor f] (pt/-await! (submit! executor f)))))
 
 (defn- rejected
   [v]
@@ -704,7 +693,7 @@
 
 #?(:clj
    (defn pmap
-     "Analogous to the `clojure.core/pmap` with the excetion that it allows
+     "Analogous to the `clojure.core/pmap` with the exception that it allows
   use a custom executor (binded to *default-executor* var) The default
   clojure chunk size (32) is used for evaluation and the real
   parallelism is determined by the provided executor.
@@ -715,11 +704,9 @@
      {:experimental true}
      ([f coll]
       (let [executor (resolve-executor *default-executor*)
-            frame    (Var/cloneThreadBindingFrame)]
+            bf (binding-conveyor-fn* f)]
         (->> coll
-             (map (fn [o] (pt/-submit! executor #(do
-                                                   (Var/resetThreadBindingFrame frame)
-                                                   (f o)))))
+             (map (fn [o] (pt/-submit! executor #(bf o))))
              (clojure.lang.RT/iter)
              (clojure.lang.RT/chunkIteratorSeq)
              (map (fn [o] (.get ^CompletableFuture o))))))

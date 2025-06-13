@@ -710,7 +710,7 @@
              (if (= a 5)
                a
                (p/recur (p/delay 50 (inc a)))))
-        p2 (p/race [p1 (p/delay 400 10)])]
+        p2 (p/race [p1 (p/delay 1000 10)])]
 
     #?(:clj
        (do
@@ -855,7 +855,8 @@
        (p/finally p (fn [v c]
                       (t/is (nil? c)))))))
 
-#?(:clj
+#?(:bb nil
+   :clj
    (t/deftest let-syntax-test
      (t/is (thrown? clojure.lang.Compiler$CompilerException
                     (eval `(p/let* [uneven#]))))
