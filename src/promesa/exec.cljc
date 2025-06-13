@@ -704,7 +704,7 @@
      {:experimental true}
      ([f coll]
       (let [executor (resolve-executor *default-executor*)
-            bf (bound-fn* f)]
+            bf (binding-conveyor-fn* f)]
         (->> coll
              (map (fn [o] (pt/-submit! executor #(bf o))))
              (clojure.lang.RT/iter)
