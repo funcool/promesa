@@ -1,0 +1,4 @@
+{:deps {funcool/promesa {:local/root "."}}
+ :paths [".bb"]
+ :tasks {test:bb {:extra-paths ["test"]
+                  :task (exec 'test-runner/run-tests)}}}
