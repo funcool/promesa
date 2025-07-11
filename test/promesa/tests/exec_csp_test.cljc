@@ -4,6 +4,7 @@
    [promesa.core :as p]
    [promesa.exec :as px]
    [promesa.exec.csp :as sp]
+   #?(:bb [promesa.exec.csp.channel :as chan])
    [promesa.protocols :as pt]
    [promesa.tests.util :as u]))
 
@@ -22,16 +23,18 @@
     (t/is (sp/chan? c5))
     (t/is (sp/chan? c6))))
 
-(t/deftest chan-metadata
-  (let [c1 (sp/chan :buf 2)
-        c2 (with-meta c1 {:foo 1})]
-    (t/is (nil? (meta c1)))
-    (t/is (= {:foo 1} (meta c2)))
-    (t/is (not (identical? c1 c2)))
-    (sp/offer! c1 :a)
-    (sp/offer! c1 :b)
-    (t/is (= :a (sp/poll! c2)))
-    (t/is (= :b (sp/poll! c2)))))
+#?(:bb nil
+   :default
+   (t/deftest chan-metadata
+     (let [c1 (sp/chan :buf 2)
+           c2 (with-meta c1 {:foo 1})]
+       (t/is (nil? (meta c1)))
+       (t/is (= {:foo 1} (meta c2)))
+       (t/is (not (identical? c1 c2)))
+       (sp/offer! c1 :a)
+       (sp/offer! c1 :b)
+       (t/is (= :a (sp/poll! c2)))
+       (t/is (= :b (sp/poll! c2))))))
 
 (t/deftest chan-with-mapcat-transducer-1
   (let [ch (sp/chan :buf 2 :xf (mapcat identity))]
@@ -233,7 +236,8 @@
      (let [ch1 (sp/chan :buf 2)
            ch2 (sp/chan :buf 2)
            ch3 (sp/merge [ch1 ch2])
-           res (p/vthread (into #{} ch3))]
+           res (p/vthread (p/await ch3) (into #{} #?(:bb (chan/chan->seq ch3)
+                                                     :clj ch3)))]
 
        (sp/offer! ch1 :a)
        (sp/offer! ch2 :b)

@@ -672,8 +672,7 @@
                       (done)))))))
 
 (t/deftest reduce-operation
-  (let [s (atom [])
-        f (fn [result i]
+  (let [f (fn [result i]
             (->> (p/delay i)
                  (p/fmap (constantly i))
                  (p/fmap (fn [i]
@@ -686,12 +685,9 @@
 
      :cljs
      (t/async done
-       (p/finally p (fn [v c]
-                      (t/is (nil? c))
-                      (t/is (nil? v))
-                      (t/is (= [10 20 30] @s))
+       (p/finally p (fn [res]
+                      (t/is (= res [102 202 302 402]))
                       (done)))))))
-
 
 (t/deftest future-macro
   (let [p1 (p/future (+ 1 2 3))]

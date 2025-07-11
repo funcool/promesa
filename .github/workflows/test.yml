@@ -66,4 +66,4 @@ jobs:
           bb: latest
 
       - run: |
-          bb -cp src:test -m promesa.tests.main
+          bb test:bb

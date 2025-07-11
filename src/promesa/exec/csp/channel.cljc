@@ -210,7 +210,7 @@
      (p/finally d (fn [_ _] (p/cancel! t))))))
 
 #?(:clj
-   (defn- chan->seq
+   (defn chan->seq
      "Creates a seq that traverses channel until it is closed."
      [ch]
      (lazy-seq
@@ -224,7 +224,8 @@
   (-unlock! [_]
     (pt/-unlock! lock))
 
-  #?@(:cljs
+  #?@(:bb []
+      :cljs
       [cljs.core/IWithMeta
        (-with-meta [_ mdata] (Channel. takes puts buf closed error lock executor add-fn mdata))
        cljs.core/IMeta
@@ -235,7 +236,8 @@
        (meta [_] mdata)
        (withMeta [_ mdata] (Channel. takes puts buf closed error lock executor add-fn mdata))])
 
-  #?@(:clj
+  #?@(:bb []
+      :clj
       [clojure.lang.Seqable
        (seq [this] (chan->seq this))])
 
