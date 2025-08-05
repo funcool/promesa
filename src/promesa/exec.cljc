@@ -429,7 +429,6 @@
 
 ;; --- Pool & Thread Factories
 
-
 #?(:clj
    (defn forkjoin-thread-factory
      ^ForkJoinPool$ForkJoinWorkerThreadFactory

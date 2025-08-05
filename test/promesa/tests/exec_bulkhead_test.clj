@@ -35,7 +35,7 @@
 ;;       (t/is (< @res 10000000)))))
 
 (t/deftest operations-with-executor-bulkhead
-  (let [instance (pbh/create {:permits 1 :queue 1 :type :executor})
+  (let [instance (pbh/create {:permits 1 :queue 2 :type :executor})
         res1     (pu/try! (px/submit! instance (waiting-fn 1000)))
         res2     (pu/try! (px/submit! instance (waiting-fn 200)))
         res3     (pu/try! (px/submit! instance (waiting-fn 200)))
@@ -51,7 +51,9 @@
     (t/is (pos? (deref res2 2000 -1)))
     (let [data (ex-data res3)]
       (t/is (= :bulkhead-error (:type data)))
-      (t/is (= :capacity-limit-reached (:code data))))))
+      (t/is (= :capacity-limit-reached (:code data))))
+
+    ))
 
 (t/deftest operations-with-semaphore-bulkhead
   (let [instance (pbh/create {:permits 1 :queue 1 :type :semaphore})
