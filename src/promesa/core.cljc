@@ -655,21 +655,21 @@
   "Analogous to `clojure.core.async/thread` that returns a promise instance
   instead of the `Future`."
   [& body]
-  `(thread-call (^:once fn [] ~@body)))
+  `(thread-call (^:once fn* [] ~@body)))
 
 (defmacro vthread
   "Analogous to `clojure.core.async/thread` that returns a promise instance
   instead of the `Future`. Useful for executing synchronous code in a
   separate thread (also works in cljs)."
   [& body]
-  `(vthread-call (^:once fn [] ~@body)))
+  `(vthread-call (^:once fn* [] ~@body)))
 
 (defmacro future
   "Analogous macro to `clojure.core/future` that returns promise
   instance instead of the `Future`. Exposed just for convenience and
   works as an alias to `thread`."
   [& body]
-  `(thread-call :default (^once fn [] ~@body)))
+  `(thread-call :default (^:once fn* [] ~@body)))
 
 (defrecord Recur [bindings])
 
