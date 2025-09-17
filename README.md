@@ -52,14 +52,22 @@ more than welcome.
 Run the Clojure (.clj) tests:
 
 ``` shell
-clojure -X:dev:test
+clojure -M:dev -m promesa.tests.main
 ```
 
 Run the ClojureScript (.cljs) tests:
 
 ``` shell
-npm install
-npm test
+corepack enable
+corepack install
+yarn install
+yarn run test
+```
+
+Run the Babashka tests:
+
+``` shell
+bb test:bb
 ```
 
 [1]: https://funcool.github.io/promesa/latest/
