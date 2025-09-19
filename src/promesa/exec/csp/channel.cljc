@@ -300,33 +300,61 @@
     (try
       (pt/-lock! this)
       (pt/-cleanup! this)
-      (if @closed
+
+      (if (and (not (nil? buf) (pos? (pt/-size buf))))
         (when-let [take-fn (commit! handler)]
-          (if-let [val (some-> buf pt/-poll!)]
-            (take-fn val nil)
-            (take-fn nil @error)))
+          (take-fn (pt/-poll! buf) nil)
 
-        (if buf
-          (if (pos? (pt/-size buf))
-            (when-let [take-fn (commit! handler)]
-              (take-fn (pt/-poll! buf) nil)
+          ;; Proces pending puts
+          (let [[done? fns] (lookup-pending-puts this @puts add-fn buf)]
+            (when done? (pt/-close! this))
+            (run! #(px/exec! executor (fn [] (% true))) fns))
 
-              ;; Proces pending puts
-              (let [[done? fns] (lookup-pending-puts this @puts add-fn buf)]
-                (when done? (pt/-close! this))
-                (run! #(px/exec! executor (fn [] (% true))) fns))
-
-              nil)
-
-            (when (pt/-active? handler)
-              (process-take-handler! takes handler)))
+          nil)
 
           (if-let [[put-fn val take-fn] (lookup-take-transfer @puts handler)]
             (do
               (take-fn val)
               (px/exec! executor (partial put-fn true))
               nil)
-            (process-take-handler! takes handler))))
+            (if @closed
+              (do
+                ;; Flush transducer state if need
+                (some->> buf (add-fn this))
+                (when-let [take-fn (commit! handler)]
+                  (let [val (some-> buf pt/-poll!)]
+                    (take-fn val nil))))
+
+              (when (pt/-active? handler)
+                (process-take-handler! takes handler)))))
+
+      ;; (if @closed
+      ;;   (when-let [take-fn (commit! handler)]
+      ;;     (if-let [val (some-> buf pt/-poll!)]
+      ;;       (take-fn val nil)
+      ;;       (take-fn nil @error)))
+
+      ;;   (if buf
+      ;;     (if (pos? (pt/-size buf))
+      ;;       (when-let [take-fn (commit! handler)]
+      ;;         (take-fn (pt/-poll! buf) nil)
+
+      ;;         ;; Proces pending puts
+      ;;         (let [[done? fns] (lookup-pending-puts this @puts add-fn buf)]
+      ;;           (when done? (pt/-close! this))
+      ;;           (run! #(px/exec! executor (fn [] (% true))) fns))
+
+      ;;         nil)
+
+      ;;       (when (pt/-active? handler)
+      ;;         (process-take-handler! takes handler)))
+
+      ;;     (if-let [[put-fn val take-fn] (lookup-take-transfer @puts handler)]
+      ;;       (do
+      ;;         (take-fn val)
+      ;;         (px/exec! executor (partial put-fn true))
+      ;;         nil)
+      ;;       (process-take-handler! takes handler))))
 
       (finally
         (pt/-unlock! this))))
@@ -337,33 +365,30 @@
   (-close! [this] (pt/-close! this nil))
   (-close! [this cause]
     (when (compare-and-set! closed false true)
+      (pt/-lock! this)
       (try
-        (pt/-lock! this)
-
         ;; assign a new cause, only if the cause field is not set
         (when cause
-          (swap! error (fn [prev-cause]
-                         (if prev-cause
-                           prev-cause
-                           cause))))
+          (compare-and-set! error nil cause))
 
-        ;; flush any transducer state
-        (some->> buf (add-fn this))
+        ;; flush transducer if we have buf and no pending puts
+        (when (and buf (zero? @puts))
+          (add-fn this buf))
 
         (loop [items (seq @takes)]
           (when-let [taker (first items)]
             (when-let [take-fn (commit! taker)]
               (if-let [val (some-> buf pt/-poll!)]
                 (px/exec! executor #(take-fn val nil))
-                (let [error @error]
+                (when-let [error @error]
                   (px/exec! executor #(take-fn nil error)))))
             (recur (rest items))))
 
-        (loop [items (seq @puts)]
-          (when-let [[putter] (first items)]
-            (when-let [put-fn (commit! putter)]
-              (px/exec! executor #(put-fn false)))
-            (recur (rest items))))
+        ;; (loop [items (seq @puts)]
+        ;;   (when-let [[putter] (first items)]
+        ;;     (when-let [put-fn (commit! putter)]
+        ;;       (px/exec! executor #(put-fn false)))
+        ;;     (recur (rest items))))
 
         (finally
           (some-> buf pt/-close!)
