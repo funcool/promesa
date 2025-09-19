@@ -47,6 +47,10 @@
   [n]
   (let [buf (mlist/create)]
     (reify
+      clojure.lang.Seqable
+      (seq [_]
+        (seq buf))
+
       pt/IBuffer
       (-full? [_]
         (>= (mlist/size buf) n))
@@ -128,7 +132,7 @@
 
   pt/ICloseable
   (-closed? [this] closed)
-  (-close! [this] (set! closed true)))
+  (-close! [this] (compare-and-set! closed false true)))
 
 (defn once
   "Creates a promise like buffer that holds a single value and only

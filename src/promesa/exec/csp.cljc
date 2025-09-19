@@ -49,7 +49,7 @@
   Forwards dynamic bindings."
   [& body]
   (when (:ns &env)
-    (throw (UnsupportedOperationException. "cljs not supported")))
+    (throw (ex-info "cljs not supported" {})))
   `(->> (px/wrap-bindings (fn [] ~@body))
         (p/thread-call *executor*)))
 
@@ -310,17 +310,15 @@
 
 (defn offer!
   "Puts a val into channel if it's possible to do so immediately.
-  Returns a resolved promise with `true` if the operation
-  succeeded. Never blocks."
+  Returns `true` if the operation succeeded. Never blocks."
   [port val]
   (let [o (volatile! nil)]
     (pt/-put! port val (channel/volatile->handler o))
     (first @o)))
 
 (defn poll!
-  "Takes a val from port if it's possible to do so
-  immediatelly. Returns a resolved promise with the value if
-  succeeded,  `nil` otherwise."
+  "Takes a val from port if it's possible to do so immediatelly. Returns
+  the value if succeeded, `nil` otherwise."
   [port]
   (let [o (volatile! nil)]
     (pt/-take! port (channel/volatile->handler o))

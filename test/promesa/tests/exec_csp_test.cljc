@@ -44,6 +44,21 @@
     (t/is (= 3 (sp/poll! ch)))
     (t/is (= nil (sp/poll! ch)))))
 
+
+(t/deftest chan-close-with-pending-puts
+  (let [ch (sp/chan :buf 2 :xf (mapcat identity))]
+    (sp/put ch [1 2])
+    (sp/put ch [3 4])
+    (sp/put ch [5 6])
+    (sp/close! ch)
+    (t/is (= 1 (sp/poll! ch)))
+    (t/is (= 2 (sp/poll! ch)))
+    (t/is (= 3 (sp/poll! ch)))
+    (t/is (= 4 (sp/poll! ch)))
+    (t/is (= 5 (sp/poll! ch)))
+    (t/is (= 6 (sp/poll! ch)))
+    (t/is (= nil (sp/poll! ch)))))
+
 (t/deftest chan-with-mapcat-transducer-2
   (let [ch (sp/chan :buf (sp/fixed-buffer 2)
                     :xf (mapcat identity))]
@@ -72,14 +87,14 @@
     #?(:clj
        (do
          (t/is (= [1] (sp/take! ch)))
-         (t/is (= [2] (sp/take! ch))))
+         (t/is (= [2 2] (sp/take! ch))))
 
        :cljs
        (t/async done
          (->> (p/let [v1 (sp/take ch)
                       v2 (sp/take ch)]
                 (t/is (= [1] v1))
-                (t/is (= [2] v2)))
+                (t/is (= [2 2] v2)))
               (p/fnly (fn [v c]
                         (t/is (nil? c))
                         (done))))))))

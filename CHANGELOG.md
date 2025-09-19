@@ -25,14 +25,18 @@ RELEVANT CHANGES:
 
 - Remove Inst impl on Duration class; it's bad practice to make global
   and implicit type extensions at a library level, and that should
-  never have been there.
+  never have been there
 
 - Add near 83x performance improvement on internal dynamic binding
   handling (more info https://github.com/funcool/promesa/pull/156)
 
-- Simplifi a broken Bulkhead interface, now we only have a single
+- Simplify a broken Bulkhead interface, now we only have a single
   implementation and coherent documentation for it; it also adds
   the option to pass timeout
+
+- Don't cancel pending puts on CSP channel close, allowing process
+  flows without lossing messages.
+
 
 ## Version 11.0.678
 
