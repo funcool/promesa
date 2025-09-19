@@ -146,6 +146,33 @@
             (recur nil fns done?)))
         [done? fns]))))
 
+(defn- process-pending-puts
+  "This is the loop that processes the pending puts after a succesfull
+  take operation (that has probably have freed a slot in the buffer)."
+  [this executor puts add-fn buf]
+  (loop [items (seq puts)
+         done? false]
+    (if-let [[putter val] (first items)]
+      (if (or (pt/-full? buf) done?)
+        done?
+        (if-let [put-fn (commit! putter)]
+          (let [done? (reduced? (add-fn this buf val))]
+            (px/exec! executor (partial put-fn true))
+            (recur (rest items) done?))
+          (recur (rest items) done?)))
+      done?)))
+
+(defn- abort
+  "Process all pending put handlers and execute them ignoring the values"
+  [executor puts]
+  (loop [items (seq puts)]
+    (when-let [[putter] (first items)]
+      (if-let [put-fn (commit! putter)]
+        (let [done? (reduced? (add-fn this buf val))]
+          (px/exec! executor (partial put-fn true))
+          (recur (rest items)))
+        (recur (rest items))))))
+
 (defn- lookup-pending-takes
   "This is the loop that processes the pending takes after a succesfull
   put operation."
@@ -306,9 +333,13 @@
           (take-fn (pt/-poll! buf) nil)
 
           ;; Proces pending puts
-          (let [[done? fns] (lookup-pending-puts this @puts add-fn buf)]
-            (when done? (pt/-close! this))
-            (run! #(px/exec! executor (fn [] (% true))) fns))
+          (let [done? (process-pending-puts this executor puts add-fn buf)]
+            (when done? (pt/-close! this)))
+
+
+          ;; (let [[done? fns] (lookup-pending-puts this @puts add-fn buf)]
+          ;;   (when done? (pt/-close! this))
+          ;;   (run! #(px/exec! executor (fn [] (% true))) fns))
 
           nil)
 
@@ -321,7 +352,9 @@
               (do
                 ;; Flush transducer state if need
                 (some->> buf (add-fn this))
+
                 (when-let [take-fn (commit! handler)]
+                  ;; After transducer flush
                   (let [val (some-> buf pt/-poll!)]
                     (take-fn val nil))))
 
@@ -467,8 +500,8 @@
                       (when-let [v (exh ch t)]
                         (pt/-offer! buf v))))))
         ]
-    (Channel. (volatile! (mlist/create))
-              (volatile! (mlist/create))
+    (Channel. (mlist/create)
+              (mlist/create)
               buf
               (atom false)
               (atom nil)

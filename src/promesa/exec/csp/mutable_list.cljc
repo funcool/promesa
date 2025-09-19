@@ -15,6 +15,8 @@
 
 #?(:clj (set! *warn-on-reflection* true))
 
+;; TODO: we need a more efficient data stucture for the JS runtime because
+
 (defn create
   []
   #?(:clj (LinkedList.)
@@ -39,6 +41,17 @@
              (catch java.util.NoSuchElementException _
                nil))
      :cljs (.pop ^js o)))
+
+(defn remove-first!
+  "Remove the first element from list and return it. If no elements,
+  `nil` is returned."
+  [o]
+  #?(:clj  (try
+             (.removeFirst ^LinkedList o)
+             (catch java.util.NoSuchElementException _
+               nil))
+     :cljs (.shift ^js o)))
+
 
 (defn size
   [o]
