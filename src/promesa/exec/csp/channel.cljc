@@ -99,11 +99,11 @@
     (try
       (pt/-lock! handler)
       (when (pt/-active? handler)
-        (loop [items (seq puts)]
-          (when-let [match (first items)]
+        (loop []
+          (when-let [match (mlist/remove-first! puts)]
             (if-let [match (validate! match)]
               (conj match (pt/-commit! handler))
-            (recur (rest items))))))
+              (recur)))))
       (finally
         (pt/-unlock! handler)))))
 
@@ -122,42 +122,50 @@
     (try
       (pt/-lock! handler)
       (when (pt/-active? handler)
-        (loop [items (seq takes)]
-          (when-let [match (first items)]
+        (loop []
+          (when-let [match (mlist/remove-first! takes)]
             (if-let [match (validate! match)]
               (conj match (pt/-commit! handler))
-              (recur (rest items))))))
+              (recur)))))
       (finally
         (pt/-unlock! handler)))))
 
-(defn- lookup-pending-puts
+(defn- process-pending-puts
   "This is the loop that processes the pending puts after a succesfull
   take operation (that has probably have freed a slot in the buffer)."
-  [this puts add-fn buf]
-  (loop [items (seq puts)
-         fns   nil
-         done? false]
-    (let [[putter val] (first items)]
-      (if-let [put-fn (some-> putter commit!)]
-        (let [fns   (cons put-fn fns)
-              done? (reduced? (add-fn this buf val))]
-          (if (and (not done?) (not (pt/-full? buf)))
-            (recur (rest items) fns done?)
-            (recur nil fns done?)))
-        [done? fns]))))
+  [this executor puts add-fn buf]
+  (loop [done? false]
+    (if (or (pt/-full? buf) done?)
+      done?
+      (if-let [[putter val] (mlist/remove-first! puts)]
+        (do
+          (if-let [put-fn (commit! putter)]
+            (let [done? (reduced? (add-fn this buf val))]
+              (px/exec! executor (partial put-fn true))
+              (recur done?))
+            (recur done?)))
 
-(defn- lookup-pending-takes
+        done?))))
+
+(defn- abort
+  "Process all pending put handlers and execute them ignoring the values"
+  [executor puts]
+  (loop []
+    (when-let [[putter] (mlist/remove-first! puts)]
+      (when-let [put-fn (commit! putter)]
+        (px/exec! executor (partial put-fn true)))
+      (recur))))
+
+(defn- process-pending-takes
   "This is the loop that processes the pending takes after a succesfull
   put operation."
-  [takes buf]
-  (loop [items  (seq takes)
-         result []]
-    (let [taker (first items)]
-      (if (and taker (pos? (pt/-size buf)))
-        (if-let [take-fn (commit! taker)]
-          (recur (rest items) (conj result (partial take-fn (pt/-poll! buf))))
-          (recur (rest items) result))
-        result))))
+  [executor takes buf]
+  (loop []
+    (when (pos? (pt/-size buf))
+      (when-let [taker (mlist/remove-first! takes)]
+        (when-let [take-fn (commit! taker)]
+          (px/exec! executor (partial take-fn (pt/-poll! buf))))
+        (recur)))))
 
 (defn- process-take-handler!
   "When buffer is full or no buffer, we need to do a common task: if
@@ -165,17 +173,16 @@
   cancel it."
   [takes handler]
   (if (pt/-blockable? handler)
-    (vswap! takes mlist/add-last! handler)
+    (mlist/add-last! takes handler)
     (commit-and-run! handler nil))
   nil)
 
 (defn- process-put-handler!
-  "When buffer is full or no buffer, we need to do a common task: if
-  task is blockable, enqueue it and if task is not blockable we just
-  cancel it."
+  "When buffer is full or no buffer, if task is blockable, enqueue it
+  and if task is not blockable we just cancel it."
   [puts handler val]
   (if (pt/-blockable? handler)
-    (vswap! puts mlist/add-last! [handler val])
+    (mlist/add-last! puts [handler val])
     (commit-and-run! handler false))
   nil)
 
@@ -217,7 +224,11 @@
       (when-let [val (pt/-await! (take ch))]
         (cons val (chan->seq ch))))))
 
-(deftype Channel [takes puts buf closed error lock executor add-fn mdata]
+(deftype Channel [^:mutable ^:unsynchronized-mutable takes
+                  ^:mutable ^:unsynchronized-mutable puts
+                  ^:mutable ^:unsynchronized-mutable error
+                  buf closed lock executor add-fn mdata]
+
   pt/ILock
   (-lock! [_]
     (pt/-lock! lock))
@@ -227,14 +238,14 @@
   #?@(:bb []
       :cljs
       [cljs.core/IWithMeta
-       (-with-meta [_ mdata] (Channel. takes puts buf closed error lock executor add-fn mdata))
+       (-with-meta [_ mdata] (Channel. takes puts error buf closed lock executor add-fn mdata))
        cljs.core/IMeta
        (-meta [_] mdata)]
 
       :clj
       [clojure.lang.IObj
        (meta [_] mdata)
-       (withMeta [_ mdata] (Channel. takes puts buf closed error lock executor add-fn mdata))])
+       (withMeta [_ mdata] (Channel. takes puts error buf closed lock executor add-fn mdata))])
 
   #?@(:bb []
       :clj
@@ -243,31 +254,26 @@
 
   pt/IChannelInternal
   (-cleanup! [_]
-    (loop [items  (seq @takes)
-           result (mlist/create)]
-      (if-let [taker (first items)]
+    (loop [result (mlist/create)]
+      (if-let [taker (mlist/remove-first! takes)]
         (if (pt/-active? taker)
-          (recur (rest items)
-                 (mlist/add-last! result taker))
-          (recur (rest items)
-                 result))
-        (vreset! takes result)))
-    (loop [items  (seq @puts)
-           result (mlist/create)]
-      (if-let [[putter val :as item] (first items)]
+          (recur (mlist/add-last! result taker))
+          (recur result))
+        (set! takes result)))
+    (loop [result (mlist/create)]
+      (if-let [[putter val :as item] (mlist/remove-first! puts)]
         (if (pt/-active? putter)
-          (recur (rest items)
-                 (mlist/add-last! result item))
-          (recur (rest items)
-                 result))
-        (vreset! puts result))))
+          (recur (mlist/add-last! result item))
+          (recur result))
+        (set! puts result))))
 
   pt/IWriteChannel
   (-put! [this val handler]
     (when (nil? val)
       (throw (ex-info "Can't put nil on channel" {})))
+
+    (pt/-lock! this)
     (try
-      (pt/-lock! this)
       (pt/-cleanup! this)
       (if @closed
         (let [put-fn (commit! handler)]
@@ -275,16 +281,19 @@
           nil)
         (if buf
           (if (pt/-full? buf)
-            (when (pt/-active? handler)
-              (process-put-handler! puts handler val))
-            (when (commit-and-run! handler true)
-              (let [done?     (reduced? (add-fn this buf val))
-                    takes-fns (lookup-pending-takes @takes buf)]
-                (when done? (pt/-close! this))
-                (run! (partial px/exec! executor) takes-fns)
+            (do
+              (when (pt/-active? handler)
+                (process-put-handler! puts handler val))
+              nil)
+
+            (do
+              (when (commit-and-run! handler true)
+                (when (reduced? (add-fn this buf val))
+                  (pt/-close! this))
+                (process-pending-takes executor takes buf)
                 nil)))
 
-          (if-let [[take-fn put-fn] (lookup-put-transfer @takes handler)]
+          (if-let [[take-fn put-fn] (lookup-put-transfer takes handler)]
             (do
               (put-fn true)
               (px/exec! executor (partial take-fn val))
@@ -300,33 +309,39 @@
     (try
       (pt/-lock! this)
       (pt/-cleanup! this)
-      (if @closed
+
+      (if (and (not (nil? buf)) (pos? (pt/-size buf)))
         (when-let [take-fn (commit! handler)]
-          (if-let [val (some-> buf pt/-poll!)]
-            (take-fn val nil)
-            (take-fn nil @error)))
+          (let [val (pt/-poll! buf)]
+            (take-fn val nil))
 
-        (if buf
-          (if (pos? (pt/-size buf))
+          ;; Proces pending puts
+          (let [done? (process-pending-puts this executor puts add-fn buf)]
+            (if done?
+              (do
+                (when (pos? (mlist/size puts))
+                  (abort executor puts))
+                (pt/-close! this))
+
+              (when (and @closed (zero? (mlist/size puts)))
+                (add-fn this buf)))
+
+            nil))
+
+        (if-let [[put-fn val take-fn] (lookup-take-transfer puts handler)]
+          (do
+            (take-fn val)
+            (px/exec! executor (partial put-fn true))
+            nil)
+
+          (if @closed
             (when-let [take-fn (commit! handler)]
-              (take-fn (pt/-poll! buf) nil)
-
-              ;; Proces pending puts
-              (let [[done? fns] (lookup-pending-puts this @puts add-fn buf)]
-                (when done? (pt/-close! this))
-                (run! #(px/exec! executor (fn [] (% true))) fns))
-
-              nil)
+              (if-let [val (some-> buf pt/-poll!)]
+                (take-fn val nil)
+                (take-fn nil error)))
 
             (when (pt/-active? handler)
-              (process-take-handler! takes handler)))
-
-          (if-let [[put-fn val take-fn] (lookup-take-transfer @puts handler)]
-            (do
-              (take-fn val)
-              (px/exec! executor (partial put-fn true))
-              nil)
-            (process-take-handler! takes handler))))
+              (process-take-handler! takes handler)))))
 
       (finally
         (pt/-unlock! this))))
@@ -336,39 +351,32 @@
 
   (-close! [this] (pt/-close! this nil))
   (-close! [this cause]
-    (when (compare-and-set! closed false true)
-      (try
-        (pt/-lock! this)
+    (pt/-lock! this)
+    (try
+      (when (compare-and-set! closed false true)
+        ;; assign a new cause, only if the `error` field is not set
+        (when (and cause (not error))
+          (set! error cause))
 
-        ;; assign a new cause, only if the cause field is not set
-        (when cause
-          (swap! error (fn [prev-cause]
-                         (if prev-cause
-                           prev-cause
-                           cause))))
 
-        ;; flush any transducer state
-        (some->> buf (add-fn this))
+        (when (mlist/empty? puts)
+          ;; flush transducer if we have buf and no pending puts
+          (some->> buf (add-fn this)))
 
-        (loop [items (seq @takes)]
-          (when-let [taker (first items)]
-            (when-let [take-fn (commit! taker)]
-              (if-let [val (some-> buf pt/-poll!)]
-                (px/exec! executor #(take-fn val nil))
-                (let [error @error]
-                  (px/exec! executor #(take-fn nil error)))))
-            (recur (rest items))))
+        ;; If we have pending takes, this also means we have no
+        ;; pending puts
+        (when (pos? (mlist/size takes))
+          (loop []
+            (when-let [taker (mlist/remove-first! takes)]
+              (when-let [take-fn (commit! taker)]
+                (if-let [val (some-> buf pt/-poll!)]
+                  (px/exec! executor #(take-fn val nil))
+                  (px/exec! executor #(take-fn nil error))))
+              (recur)))))
 
-        (loop [items (seq @puts)]
-          (when-let [[putter] (first items)]
-            (when-let [put-fn (commit! putter)]
-              (px/exec! executor #(put-fn false)))
-            (recur (rest items))))
-
-        (finally
-          (some-> buf pt/-close!)
-          (pt/-unlock! this))))))
-
+      (finally
+        (some-> buf pt/-close!)
+        (pt/-unlock! this)))))
 
 (defn- add-fn
   ([b] b)
@@ -414,13 +422,7 @@
 (defn close-with-exception
   "A exception handler that closes the channel with error if an error."
   [ch cause]
-  (if (pt/-closed? ch)
-    (let [error (.-error ^Channel ch)]
-      (swap! error (fn [prev-cause]
-                     (if prev-cause
-                       prev-cause
-                       cause))))
-    (pt/-close! ch cause))
+  (pt/-close! ch cause)
   nil)
 
 (defn chan
@@ -442,11 +444,11 @@
                       (when-let [v (exh ch t)]
                         (pt/-offer! buf v))))))
         ]
-    (Channel. (volatile! (mlist/create))
-              (volatile! (mlist/create))
+    (Channel. (mlist/create)
+              (mlist/create)
+              nil
               buf
               (atom false)
-              (atom nil)
               (util/mutex)
               exc
               add-fn
