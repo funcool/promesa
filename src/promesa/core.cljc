@@ -807,7 +807,10 @@
   Default implementation for Thread, CompletableFuture and
   CountDownLatch.
 
-  The return value is implementation specific."
+  The return value is implementation specific.
+
+  DEPRECATED: use `await`"
+     {:deprecated "12.0.0"}
      ([resource]
       (pt/-await! resource))
      ([resource duration]
@@ -820,10 +823,12 @@
 
 #?(:clj
    (defn await
-     "A exception safer variant of `await!`. Returns `nil` on timeout
-  exception, forwards interrupted exception and all other exceptions
-  are returned as value, so user is responsible for checking if the returned
-  value is exception or not."
+     "Generic await operation. Block current thread until some operation
+  terminates. Returns `nil` on timeout; does not catch any other
+  exception.
+
+  Default implementation for Thread, CompletableFuture and
+  CountDownLatch."
      ([resource]
       (try
         (pt/-await! resource)

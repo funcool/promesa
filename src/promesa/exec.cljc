@@ -153,7 +153,7 @@
 
      :else
      (case executor
-       (nil :default)      @default-executor
+       :default            @default-executor
        :cached             @default-cached-executor
        (:platform :thread) @default-thread-executor
        (:virtual :vthread) @default-vthread-executor
@@ -337,7 +337,9 @@
   "Run the task in the provided executor.
 
   Exception unsafe, can raise exceptions if the executor
-  rejects the task."
+  rejects the task.
+
+  DEPRECATED: use `run`"
   ([f]
    (let [f (wrap-bindings f)]
      (pt/-run! (resolve-executor *default-executor*) f)))
@@ -351,7 +353,9 @@
   the return value of a task.
 
   Exception unsafe, can raise exceptions if the executor
-  rejects the task."
+  rejects the task.
+
+  DEPRECATED: use `submit`"
   ([f]
    (let [f (wrap-bindings f)]
      (pt/-submit! (resolve-executor *default-executor*) f)))
@@ -367,7 +371,9 @@
   it uses the `setTimeout` function.
 
   Exception unsafe, can raise exceptions if the executor
-  rejects the task."
+  rejects the task.
+
+  DEPRECATED: use `schedule`"
   ([ms f]
    (pt/-schedule! (resolve-scheduler) ms f))
   ([scheduler ms f]
@@ -377,7 +383,9 @@
    (defn invoke!
      "Invoke a function to be executed in the provided executor
   or the default one, and waits for the result. Useful for using
-  in virtual threads."
+  in virtual threads.
+
+  DEPRECATED: use `invoke`"
      ([f] (pt/-await! (submit! f)))
      ([executor f] (pt/-await! (submit! executor f)))))
 
@@ -388,8 +396,23 @@
             (.completeExceptionally ^CompletableFuture p v)
             p)))
 
+(defn exec
+  "Run the task in the provided executor, returns `Promise<nil>`. Analogous to
+  the `(.execute executor f)`. Fire and forget."
+
+  ([f]
+   (try
+     (exec! f)
+     (catch #?(:clj Throwable :cljs :default) cause
+       (rejected cause))))
+  ([executor f]
+   (try
+     (exec! executor f)
+     (catch #?(:clj Throwable :cljs :default) cause
+       (rejected cause)))))
+
 (defn run
-  "Exception safe version of `run!`. It always returns an promise instance."
+    "Run the task in the provided executor. Returns a Promise<nil>"
   ([f]
    (try
      (run! f)
@@ -980,7 +1003,10 @@
 #?(:clj
    (defn await!
      "Generic await operation. Block current thread until some operatiomn terminates.
-     The return value is implementation specific."
+     The return value is implementation specific.
+
+     DEPRECATED: use `promesa.core/await`"
+     {:deprecated "12.0.0"}
      ([resource]
       (pt/-await! resource))
      ([resource duration]
