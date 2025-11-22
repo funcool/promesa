@@ -38,9 +38,9 @@
   (-poll! [_])
   (-offer! [_ _] [_ _ _]))
 
-(defprotocol IBulkhead
-  "Bulkhead main API"
-  (-invoke [_ f] "Call a function in bulkhead context and return a result"))
+;; (defprotocol IBulkhead
+;;   "Bulkhead main API"
+;;   (-invoke [_ f] "Call a function in bulkhead context and return a result"))
 
 (extend-type BlockingQueue
   IQueue
@@ -82,14 +82,15 @@
   cp/Datafiable
   (datafy [_]
     {:permits (.availablePermits semaphore)
+     :executor executor
      :queue (.size queue)
      :max-permits max-permits
      :max-queue max-queue
      :timeout timeout})
 
-  IBulkhead
-  (-invoke [this f]
-    (px/await! (px/submit! this f)))
+  ;; IBulkhead
+  ;; (-invoke [this f]
+  ;;   (px/await! (px/submit! this f)))
 
   Executor
   (execute [this f]
@@ -127,78 +128,96 @@
 (ns-unmap *ns* 'map->Bulkhead)
 (ns-unmap *ns* '->Task)
 
-(defrecord SemaphoreBulkhead [^Semaphore semaphore
-                              ^AtomicInteger counter
-                              max-permits
-                              max-queue
-                              timeout]
-  cp/Datafiable
-  (datafy [_]
-    {:permits (.availablePermits semaphore)
-     :queue (+ (long counter) (long max-permits))
-     :max-permits max-permits
-     :max-queue max-queue})
+;; (defrecord SemaphoreBulkhead [^Semaphore semaphore
+;;                               ^AtomicInteger counter
+;;                               max-permits
+;;                               max-queue
+;;                               timeout]
+;;   cp/Datafiable
+;;   (datafy [_]
+;;     {:permits (.availablePermits semaphore)
+;;      :queue (+ (long counter) (long max-permits))
+;;      :max-permits max-permits
+;;      :max-queue max-queue})
 
-  IBulkhead
-  (-invoke [this f]
-    (let [nqueued (.incrementAndGet counter)]
-      (when (> (long nqueued) (long max-queue))
-        (let [hint  (str "bulkhead: queue max capacity reached (" max-queue ")")
-              props {:type :bulkhead-error
-                     :code :capacity-limit-reached
-                     :size max-queue}]
-          (.decrementAndGet counter)
-          (throw (ex-info hint props))))
+;;   IBulkhead
+;;   (-invoke [this f]
+;;     (let [nqueued (.incrementAndGet counter)]
+;;       (when (> (long nqueued) (long max-queue))
+;;         (let [hint  (str "bulkhead: queue max capacity reached (" max-queue ")")
+;;               props {:type :bulkhead-error
+;;                      :code :capacity-limit-reached
+;;                      :size max-queue}]
+;;           (.decrementAndGet counter)
+;;           (throw (ex-info hint props))))
 
-      (try
-        (if (psm/acquire! semaphore :permits 1 :timeout timeout)
-          (try
-            (f)
-            (finally
-              (psm/release! semaphore)))
-          (let [props {:type :bulkhead-error
-                       :code :timeout
-                       :timeout timeout}]
-            (throw (ex-info "bulkhead: timeout" props))))
-        (finally
-          (.decrementAndGet counter))))))
+;;       (try
+;;         (if (psm/acquire! semaphore :permits 1 :timeout timeout)
+;;           (try
+;;             (f)
+;;             (finally
+;;               (psm/release! semaphore)))
+;;           (let [props {:type :bulkhead-error
+;;                        :code :timeout
+;;                        :timeout timeout}]
+;;             (throw (ex-info "bulkhead: timeout" props))))
+;;         (finally
+;;           (.decrementAndGet counter))))))
 
-(ns-unmap *ns* '->SemaphoreBulkhead)
-(ns-unmap *ns* 'map->SemaphoreBulkhead)
+;; (ns-unmap *ns* '->SemaphoreBulkhead)
+;; (ns-unmap *ns* 'map->SemaphoreBulkhead)
 
 
 ;; --- PUBLIC API
 
 (defn create
-  [& {:keys [type permits queue timeout] :as params}]
-  (case type
-    (:async :executor)
-    (let [executor    (px/resolve-executor (:executor params))
-          max-queue   (or queue Integer/MAX_VALUE)
-          max-permits (or permits 1)
-          queue       (LinkedBlockingQueue. (int max-queue))
-          semaphore   (Semaphore. (int max-permits))]
-      (Bulkhead. executor
-                 semaphore
-                 queue
-                 max-permits
-                 max-queue
-                 timeout))
+  [& {:keys [permits queue timeout executor] :as params}]
+  (let [executor    (px/resolve-executor executor)
+        max-queue   (or queue Integer/MAX_VALUE)
+        max-permits (or permits 1)
+        queue       (LinkedBlockingQueue. (int max-queue))
+        semaphore   (Semaphore. (int max-permits))]
+    (Bulkhead. executor
+               semaphore
+               queue
+               max-permits
+               max-queue
+               timeout)))
 
-    (:sync :semaphore)
-    (let [max-queue   (or queue Integer/MAX_VALUE)
-          max-permits (or permits 1)
-          counter     (AtomicInteger. (int (- max-permits)))
-          semaphore   (Semaphore. (int max-permits))]
-      (SemaphoreBulkhead. semaphore
-                          counter
-                          max-permits
-                          max-queue
-                          timeout))))
+;; (defn create
+;;   [& {:keys [type permits queue timeout executor] :as params}]
+;;   (case type
+;;     ;; (:async :executor)
+;;     (let [executor    (px/resolve-executor executor)
+;;           max-queue   (or queue Integer/MAX_VALUE)
+;;           max-permits (or permits 1)
+;;           queue       (LinkedBlockingQueue. (int max-queue))
+;;           semaphore   (Semaphore. (int max-permits))]
+;;       (Bulkhead. executor
+;;                  semaphore
+;;                  queue
+;;                  max-permits
+;;                  max-queue
+;;                  timeout))
 
-(defn invoke!
-  [instance f]
-  (-invoke instance f))
+;;     (:sync :semaphore)
+;;     (let [max-queue   (or queue Integer/MAX_VALUE)
+;;           max-permits (or permits 1)
+;;           counter     (AtomicInteger. (int (- max-permits)))
+;;           semaphore   (Semaphore. (int max-permits))]
+;;       (SemaphoreBulkhead. semaphore
+;;                           counter
+;;                           max-permits
+;;                           max-queue
+;;                           timeout))))
+
+;; (defn invoke!
+;;   [instance f]
+;;   (-invoke instance f))
+
+;; (defn submit
+;;   [instance f]
+;;   (-invoke instance f))
 
 (defn get-stats
   [instance]
@@ -207,4 +226,4 @@
 (defn bulkhead?
   "Check if the provided object is instance of Bulkhead type."
   [o]
-  (satisfies? IBulkhead o))
+  (satisfies? Bulkhead o))

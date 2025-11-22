@@ -35,37 +35,10 @@
 ;;       (t/is (< @res 10000000)))))
 
 (t/deftest operations-with-executor-bulkhead
-  (let [instance (pbh/create {:permits 1 :queue 2 :type :executor})
-        res1     (pu/try! (px/submit! instance (waiting-fn 1000)))
-        res2     (pu/try! (px/submit! instance (waiting-fn 200)))
-        res3     (pu/try! (px/submit! instance (waiting-fn 200)))
-        ]
-    (t/is (p/promise? res1))
-    (t/is (p/promise? res2))
-    (t/is (instance? Throwable res3))
-
-    (t/is (p/pending? res1))
-    (t/is (p/pending? res2))
-
-    (t/is (pos? (deref res1 2000 -1)))
-    (t/is (pos? (deref res2 2000 -1)))
-    (let [data (ex-data res3)]
-      (t/is (= :bulkhead-error (:type data)))
-      (t/is (= :capacity-limit-reached (:code data))))
-
-    ))
-
-(t/deftest operations-with-semaphore-bulkhead
-  (let [instance (pbh/create {:permits 1 :queue 1 :type :semaphore})
-        res1     (px/with-dispatch :thread
-                   (pbh/invoke! instance (waiting-fn 2000)))
-        _        (px/sleep 200)
-        res2     (px/with-dispatch :thread
-                   (pbh/invoke! instance (waiting-fn 2000)))
-        _        (px/sleep 200)
-        res3     (px/with-dispatch :thread
-                   (pbh/invoke! instance (with-meta (waiting-fn 200) {:name "res3"})))
-        ]
+  (let [instance (pbh/create {:permits 1 :queue 2})
+        res1     (px/submit instance (waiting-fn 1000))
+        res2     (px/submit instance (waiting-fn 200))
+        res3     (px/submit instance (waiting-fn 200))]
 
     (t/is (p/promise? res1))
     (t/is (p/promise? res2))
@@ -73,15 +46,42 @@
 
     (t/is (p/pending? res1))
     (t/is (p/pending? res2))
-
-    (p/await res3)
-
     (t/is (p/rejected? res3))
-    (t/is (pos? (deref res1 2200 -1)))
-    (t/is (pos? (deref res2 2200 -1)))
 
-    (t/is (thrown? java.util.concurrent.ExecutionException (deref res3)))
+    (t/is (pos? (deref res1 2000 -1)))
+    (t/is (pos? (deref res2 2000 -1)))
 
-    (let [data (ex-data (p/extract res3))]
+    (let [data (ex-data (pu/try! @res))]
       (t/is (= :bulkhead-error (:type data)))
       (t/is (= :capacity-limit-reached (:code data))))))
+
+;; (t/deftest operations-with-semaphore-bulkhead
+;;   (let [instance (pbh/create {:permits 1 :queue 1 :type :semaphore})
+;;         res1     (px/with-dispatch :thread
+;;                    (pbh/invoke! instance (waiting-fn 2000)))
+;;         _        (px/sleep 200)
+;;         res2     (px/with-dispatch :thread
+;;                    (pbh/invoke! instance (waiting-fn 2000)))
+;;         _        (px/sleep 200)
+;;         res3     (px/with-dispatch :thread
+;;                    (pbh/invoke! instance (with-meta (waiting-fn 200) {:name "res3"})))
+;;         ]
+
+;;     (t/is (p/promise? res1))
+;;     (t/is (p/promise? res2))
+;;     (t/is (p/promise? res3))
+
+;;     (t/is (p/pending? res1))
+;;     (t/is (p/pending? res2))
+
+;;     (p/await res3)
+
+;;     (t/is (p/rejected? res3))
+;;     (t/is (pos? (deref res1 2200 -1)))
+;;     (t/is (pos? (deref res2 2200 -1)))
+
+;;     (t/is (thrown? java.util.concurrent.ExecutionException (deref res3)))
+
+;;     (let [data (ex-data (p/extract res3))]
+;;       (t/is (= :bulkhead-error (:type data)))
+;;       (t/is (= :capacity-limit-reached (:code data))))))
