@@ -38,6 +38,9 @@ RELEVANT CHANGES:
   continue use the same pattern for not make this a breaking change
   and the old symbols are still available for the same reason.
 
+- The `promesa.exec/set-name!` is replaced with
+  `promesa.exec/set-thread-name`, preserving backward compatibility.
+
 OTHER CHANGES:
 
 - Remove deprecated executors constructors (deprecated in v9)

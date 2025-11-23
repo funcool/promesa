@@ -920,8 +920,10 @@
 #?(:clj
    (defn interrupt
      "Interrupt a thread."
-     [^Thread thread]
-     (.interrupt thread)))
+     ([]
+      (.interrupt ^Thread (Thread/currentThread)))
+     ([^Thread thread]
+      (.interrupt thread))))
 
 #?(:clj
    (defn thread?
