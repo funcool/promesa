@@ -43,14 +43,17 @@
     (px/with-executor ^:interrupt executor
       (px/with-dispatch executor
         (Thread/sleep 1000)))
-    (t/is (thrown? java.util.concurrent.RejectedExecutionException
-                   (px/submit! executor (constantly nil))))))
+
+    (let [cause (p/await (px/submit executor (constantly nil)))
+          cause (pu/unwrap-exception cause)]
+      (t/is (instance? java.util.concurrent.RejectedExecutionException cause)))))
 
 (t/deftest with-executor-closes-pool-2
   (let [executor (px/single-executor)]
-    (pu/close! executor)
-    (t/is (thrown? java.util.concurrent.RejectedExecutionException
-                   (px/submit! executor (constantly nil))))))
+    (pu/close executor)
+    (let [cause (p/await (px/submit executor (constantly nil)))
+          cause (pu/unwrap-exception cause)]
+      (t/is (instance? java.util.concurrent.RejectedExecutionException cause)))))
 
 (t/deftest pmap-sample-1
   (let [result (->> (range 5) (pmap inc) vec)]

@@ -242,8 +242,19 @@
      [ports & {:as opts}]
      (p/await! (alts* ports opts))))
 
+(defn close
+  "Close the channel."
+  ([port]
+   (pt/-close! port)
+   nil)
+  ([port cause]
+   (pt/-close! port cause)
+   nil))
+
 (defn close!
   "Close the channel."
+  {:no-doc true
+   :deprecated "12.0.0"}
   ([port]
    (pt/-close! port)
    nil)
@@ -308,7 +319,7 @@
   [n]
   (buffers/expanding n))
 
-(defn offer!
+(defn offer
   "Puts a val into channel if it's possible to do so immediately.
   Returns `true` if the operation succeeded. Never blocks."
   [port val]
@@ -316,7 +327,17 @@
     (pt/-put! port val (channel/volatile->handler o))
     (first @o)))
 
-(defn poll!
+(defn offer!
+  "Puts a val into channel if it's possible to do so immediately.
+  Returns `true` if the operation succeeded. Never blocks.
+
+  DEPRECATE: replaced with `offer`"
+  {:deprecated "12.0.0"
+   :no-doc true}
+  [port val]
+  (offer port val))
+
+(defn poll
   "Takes a val from port if it's possible to do so immediatelly. Returns
   the value if succeeded, `nil` otherwise."
   [port]
@@ -326,6 +347,16 @@
       (if c
         (throw c)
         v))))
+
+(defn poll!
+  "Takes a val from port if it's possible to do so immediatelly. Returns
+  the value if succeeded, `nil` otherwise.
+
+  DEPRECATE: replace with `poll`"
+  {:deprecated "12.0.0"
+   :no-doc true}
+  [port]
+  (poll port))
 
 (defn pipe
   "Takes elements from the from channel and supplies them to the to
@@ -356,13 +387,13 @@
 
    to))
 
-(defn onto-chan!
+(defn onto-chan
   "Puts the contents of coll into the supplied channel.
 
   By default the channel will be closed after the items are copied,
   but can be determined by the close? parameter. Returns a promise
   that will be resolved with `nil` once the items are copied."
-  ([ch coll] (onto-chan! ch coll true))
+  ([ch coll] (onto-chan ch coll true))
   ([ch coll close?]
    #?(:clj
       (go-loop [coll (seq coll)]
@@ -382,6 +413,19 @@
            (p/fnly (fn [_ _]
                      (when close?
                        (pt/-close! ch))))))))
+
+(defn onto-chan!
+  "Puts the contents of coll into the supplied channel.
+
+  By default the channel will be closed after the items are copied,
+  but can be determined by the close? parameter. Returns a promise
+  that will be resolved with `nil` once the items are copied.
+
+  DEPRECATED: replaced with `onto-chan`"
+  {:deprecated "12.0.0"
+   :no-doc true}
+  [& params]
+  (apply onto-chan params))
 
 (defn mult*
   "Create a multiplexer with an externally provided channel. From now,
@@ -463,7 +507,7 @@
   (let [ch (chan opts)]
     (mult* ch true)))
 
-(defn tap!
+(defn tap
   "Copies the multiplexer source onto the provided channel."
   ([mult ch]
    (pt/-tap! mult ch true)
@@ -472,11 +516,27 @@
    (pt/-tap! mult ch close?)
    ch))
 
-(defn untap!
+(defn tap!
+  "Copies the multiplexer source onto the provided channel.
+
+  DEPRECATED: replace by `tap`"
+  {:deprecated true}
+  [& params]
+  (apply tap params))
+
+(defn untap
   "Disconnects a channel from the multiplexer."
   [mult ch]
   (pt/-untap! mult ch)
   ch)
+
+(defn untap!
+  "Disconnects a channel from the multiplexer.
+
+  DEPRECATED: replace by `untap`"
+  {:deprecated "12.0.0"}
+  [mult ch]
+  (untap mult ch))
 
 #?(:clj
 (defn pipeline

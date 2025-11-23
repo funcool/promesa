@@ -417,7 +417,7 @@
         p1    (p/run! f [1 2 3 4 5 6])]
     #?(:clj
        (do
-         (p/await! p1)
+         @p1
          (t/is (= [1 2 3 4 5 6] @state)))
 
        :cljs
@@ -639,7 +639,7 @@
                    (promise-ok 10 :ok2))]
     #?(:clj
        (do
-         (p/await! (p/wait-all p2 p3))
+         @(p/wait-all p2 p3)
          (t/is (p/rejected? p2))
          (t/is (p/resolved? p3)))
 
@@ -660,7 +660,7 @@
 
   #?(:clj
      (do
-       (p/await! p)
+       @p
        (t/is (= @s [10 20 30])))
 
      :cljs
@@ -692,7 +692,7 @@
 (t/deftest future-macro
   (let [p1 (p/future (+ 1 2 3))]
     #?(:clj
-       (t/is (= 6 (p/await! p1)))
+       (t/is (= 6 @p1))
 
        :cljs
        (t/async done
@@ -710,8 +710,8 @@
 
     #?(:clj
        (do
-         (t/is (= 5 (p/await! p1)))
-         (t/is (= 5 (p/await! p2))))
+         (t/is (= 5 @p1))
+         (t/is (= 5 @p2)))
 
        :cljs
        (t/async done
@@ -731,7 +731,7 @@
 (t/deftest thread-first-macro
   (let [p1 (p/-> (p/future (+ 1 2 3)) (* 2) future-inc)]
     #?(:clj
-       (t/is (= 13 (p/await! p1)))
+       (t/is (= 13 @p1))
 
        :cljs
        (t/async done
@@ -743,7 +743,7 @@
 (t/deftest thread-last-macro
   (let [p1 (p/->> (p/future [1 2 3]) (map inc))]
     #?(:clj
-       (t/is (= [2 3 4] (p/await! p1)))
+       (t/is (= [2 3 4] @p1))
 
        :cljs
        (t/async done
@@ -760,7 +760,7 @@
              (future-inc <>))]
 
     #?(:clj
-       (t/is (= 8 (p/await! p1)))
+       (t/is (= 8 @p1))
 
        :cljs
        (t/async done
@@ -789,7 +789,7 @@
                        [v redefs-var])))]
 
     #?(:clj
-       (let [res (p/await! p1)]
+       (let [res @p1]
          (t/is (= res ["mocked" :mocked]))
          (t/is (= redefs-async-fn original-fn)))
 
@@ -809,7 +809,7 @@
 
     #?(:clj
        (do
-         (p/await! p)
+         @p
          (t/is (= [10 20 30] @s)))
 
        :cljs

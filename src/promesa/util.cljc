@@ -184,11 +184,16 @@
   [& exprs]
   `(try* (^:once fn* [] ~@exprs) identity))
 
-(defn close!
+(defn close
   ([o]
    (pt/-close! o))
   ([o reason]
    (pt/-close! o reason)))
+
+(defn close!
+  {:deprecated "12.0.0"}
+  [& params]
+  (apply close params))
 
 #?(:clj
    (extend-protocol pt/ICloseable
