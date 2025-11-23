@@ -461,7 +461,8 @@
 
   ([f]
    (try
-     (exec! f)
+     (let [f (wrap-bindings f)]
+       (pt/-exec! (resolve-executor *default-executor*) f))
      (catch #?(:clj Throwable :cljs :default) cause
        (rejected cause))))
   ([executor f]
@@ -474,7 +475,8 @@
     "Run the task in the provided executor. Returns a Promise<nil>"
   ([f]
    (try
-     (run! f)
+     (let [f (wrap-bindings f)]
+       (pt/-run! (resolve-executor *default-executor*) f))
      (catch #?(:clj Throwable :cljs :default) cause
        (rejected cause))))
   ([executor f]
@@ -487,7 +489,8 @@
   "Exception safe version of `submit!`. It always returns an promise instance."
   ([f]
    (try
-     (submit! f)
+     (let [f (wrap-bindings f)]
+       (pt/-submit! (resolve-executor *default-executor*) f))
      (catch #?(:clj Throwable :cljs :default) cause
        (rejected cause))))
   ([executor f]

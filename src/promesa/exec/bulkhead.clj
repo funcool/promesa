@@ -75,6 +75,7 @@
                      max-permits
                      max-queue
                      timeout]
+
   cp/Datafiable
   (datafy [_]
     {:permits (.availablePermits semaphore)
@@ -195,3 +196,11 @@
   "Check if the provided object is instance of Bulkhead type."
   [o]
   (satisfies? Bulkhead o))
+
+(defn invoke
+  ([instance f]
+   @(CompletableFuture/runAsync ^Runnable f ^Executor instance))
+  ([instance f timeout-ms]
+   (assert (bulkhead? instance?) "expected bulkhead instance")
+   (-> (assoc instance :timeout timeout-ms)
+       (invoke))))
