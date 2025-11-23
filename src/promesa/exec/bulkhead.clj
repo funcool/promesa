@@ -38,10 +38,6 @@
   (-poll! [_])
   (-offer! [_ _] [_ _ _]))
 
-(defprotocol IBulkhead
-  "Bulkhead main API"
-  (-invoke [_ f] "Call a function in bulkhead context and return a result"))
-
 (extend-type BlockingQueue
   IQueue
   (-poll! [this] (.poll ^BlockingQueue this))
@@ -86,10 +82,6 @@
      :max-permits max-permits
      :max-queue max-queue
      :timeout timeout})
-
-  IBulkhead
-  (-invoke [this f]
-    (px/await! (px/submit! this f)))
 
   Executor
   (execute [this f]
@@ -139,8 +131,8 @@
      :max-permits max-permits
      :max-queue max-queue})
 
-  IBulkhead
-  (-invoke [this f]
+  Executor
+  (execute [this f]
     (let [nqueued (.incrementAndGet counter)]
       (when (> (long nqueued) (long max-queue))
         (let [hint  (str "bulkhead: queue max capacity reached (" max-queue ")")
@@ -153,7 +145,7 @@
       (try
         (if (psm/acquire! semaphore :permits 1 :timeout timeout)
           (try
-            (f)
+            (.run ^Runnable f)
             (finally
               (psm/release! semaphore)))
           (let [props {:type :bulkhead-error
@@ -165,7 +157,6 @@
 
 (ns-unmap *ns* '->SemaphoreBulkhead)
 (ns-unmap *ns* 'map->SemaphoreBulkhead)
-
 
 ;; --- PUBLIC API
 
@@ -196,10 +187,6 @@
                           max-queue
                           timeout))))
 
-(defn invoke!
-  [instance f]
-  (-invoke instance f))
-
 (defn get-stats
   [instance]
   (cp/datafy instance))
@@ -207,4 +194,4 @@
 (defn bulkhead?
   "Check if the provided object is instance of Bulkhead type."
   [o]
-  (satisfies? IBulkhead o))
+  (satisfies? Bulkhead o))
