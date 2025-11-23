@@ -2,15 +2,6 @@
 
 ## Version 12.0.xxx
 
-- Add integration with StructuredTaskScope (Structured Concurrency)
-- Remove deprecated executors constructors (deprecated in v9)
-- Add default-on-timeout arity for `p/await` and `p/await!`
-- Add helper for properly unwrap concurrent exceptions: `pu/unwrap-exception`
-- Add performance improvement by removing extensive usage of
-  `satisfies?` on promise coerce operation
-- Fix incorrect promise coerce operation on `p/wait-all` and `p/wait-all*`
-- Add csp/merge operation (jvm only)
-
 RELEVANT CHANGES:
 
 - Remove unwraping of `ExecutionException` and `CompletionException`
@@ -36,10 +27,6 @@ RELEVANT CHANGES:
 - Don't cancel pending puts on CSP channel close, allowing process
   flows without lossing messages
 
-- Remove experimental support for structured concurrency because of
-  constant API changes, we will take it back once the API becomes
-  stable
-
 - Internal IAwaitable protocol is deprecated and replaced with
   IJoinable; we still preserve the old protocol for backward
   compatibility
@@ -50,6 +37,18 @@ RELEVANT CHANGES:
   alternative name without the suffix. The internal protocols still
   continue use the same pattern for not make this a breaking change
   and the old symbols are still available for the same reason.
+
+OTHER CHANGES:
+
+- Remove deprecated executors constructors (deprecated in v9)
+- Add default-on-timeout arity for `p/await` and `p/await!`
+- Add helper for properly unwrap concurrent exceptions: `pu/unwrap-exception`
+- Add performance improvement by removing extensive usage of
+  `satisfies?` on promise coerce operation
+- Fix incorrect promise coerce operation on `p/wait-all` and `p/wait-all*`
+- Add csp/merge operation (jvm only)
+
+
 
 
 ## Version 11.0.678
