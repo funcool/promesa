@@ -9,7 +9,7 @@
                             await map mapcat run!
                             future let loop recur
                             -> ->> as-> with-redefs do
-                            doseq reduce])
+                            doseq reduce resolve])
   (:require
    [clojure.core :as c]
    [promesa.exec :as exec]
@@ -461,7 +461,8 @@
   "A promise aware run! function. Executed in terms of `then` rules.
 
   DEPRECATED, replaced by `run` (without !)"
-  {:deprecated true}
+  {:deprecated true
+   :no-doc true}
   ([f coll]
    (c/-> (c/reduce #(then %1 (fn [_] (f %2))) (impl/resolved nil) coll)
          (pt/-fmap (constantly nil))))
@@ -505,7 +506,16 @@
 ;; Cancellation
 
 (defn cancel!
-  "Cancel the promise."
+  "Cancel the promise.
+
+  DEPRECATED: replaced by `cancel`"
+  {:deprecated "12.0.0"}
+  [p]
+  (pt/-cancel! p)
+  p)
+
+(defn cancel
+  "Cancel the promise"
   [p]
   (pt/-cancel! p)
   p)
@@ -518,11 +528,27 @@
 ;; Completable
 
 (defn resolve!
-  "Resolve a completable promise with a value."
+  "Resolve a completable promise with a value.
+
+  DEPRECATED: replaced by `resolve`"
+  {:deprecated "12.0.0"}
   ([o] (pt/-resolve! o nil))
   ([o v] (pt/-resolve! o v)))
 
 (defn reject!
+  "Reject a completable promise with an error.
+
+  DEPRECATED: replaced by `reject`"
+  {:deprecated "12.0.0"}
+  [p e]
+  (pt/-reject! p e))
+
+(defn resolve
+  "Resolve a completable promise with a value."
+  ([o] (pt/-resolve! o nil))
+  ([o v] (pt/-resolve! o v)))
+
+(defn reject
   "Reject a completable promise with an error."
   [p e]
   (pt/-reject! p e))
@@ -601,6 +627,8 @@
 
 (defmacro do!
   "A convenience alias for `do` macro."
+  {:deprecated "12.0.0"
+   :no-doc true}
   [& exprs]
   `(promesa.core/do ~@exprs))
 

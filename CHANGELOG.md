@@ -44,6 +44,13 @@ RELEVANT CHANGES:
   IJoinable; we still preserve the old protocol for backward
   compatibility
 
+- Deprecate several functions like `run!`, `exec!`, `submit!`,
+  `resolve!`, `reject!`, `cancel!`, `await!` and probably other
+  functions that have the `!`  suffix. They are all replaced with the
+  alternative name without the suffix. The internal protocols still
+  continue use the same pattern for not make this a breaking change
+  and the old symbols are still available for the same reason.
+
 
 ## Version 11.0.678
 

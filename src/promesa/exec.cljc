@@ -127,12 +127,32 @@
 
 #?(:clj
    (defn shutdown!
+     "Shutdowns the executor service.
+
+  DEPRECATED: replaced by `shutdown`"
+     {:deprecated "12.0.0"
+      :no-doc true}
+     [^ExecutorService executor]
+     (.shutdown executor)))
+
+#?(:clj
+   (defn shutdown
      "Shutdowns the executor service."
      [^ExecutorService executor]
      (.shutdown executor)))
 
 #?(:clj
    (defn shutdown-now!
+     "Shutdowns and interrupts the executor service.
+
+  DEPRECATED: replaced by `shutdown`"
+     {:deprecated "12.0.0"
+      :no-doc true}
+     [^ExecutorService executor]
+     (.shutdownNow executor)))
+
+#?(:clj
+   (defn shutdown-now
      "Shutdowns and interrupts the executor service."
      [^ExecutorService executor]
      (.shutdownNow executor)))
@@ -353,7 +373,11 @@
   the `(.execute executor f)`. Fire and forget.
 
   Exception unsafe, can raise exceptions if the executor
-  rejects the task."
+  rejects the task.
+
+  DEPRECATED: use `exec`"
+  {:deprecated "12.0.0"
+   :no-doc true}
   ([f]
    (let [f (wrap-bindings f)]
      (pt/-exec! (resolve-executor *default-executor*) f)))
@@ -368,6 +392,8 @@
   rejects the task.
 
   DEPRECATED: use `run`"
+  {:deprecated "12.0.0"
+   :no-doc true}
   ([f]
    (let [f (wrap-bindings f)]
      (pt/-run! (resolve-executor *default-executor*) f)))
@@ -384,6 +410,8 @@
   rejects the task.
 
   DEPRECATED: use `submit`"
+  {:deprecated "12.0.0"
+   :no-doc true}
   ([f]
    (let [f (wrap-bindings f)]
      (pt/-submit! (resolve-executor *default-executor*) f)))
@@ -402,6 +430,8 @@
   rejects the task.
 
   DEPRECATED: use `schedule`"
+  {:deprecated "12.0.0"
+   :no-doc true}
   ([ms f]
    (pt/-schedule! (resolve-scheduler) ms f))
   ([scheduler ms f]
@@ -414,6 +444,7 @@
   in virtual threads.
 
   DEPRECATED"
+     {:deprecated "12.0.0"}
      ([f] (pt/-await! (submit! f)))
      ([executor f] (pt/-await! (submit! executor f)))))
 
@@ -652,7 +683,7 @@
      (apply forkjoin-executor params)))
 
 #?(:clj
-   (defn configure-default-executor!
+   (defn configure-default-executor
      [& params]
      (alter-var-root #'*default-executor*
                      (fn [executor]
@@ -661,6 +692,13 @@
                        (when (instance? AutoCloseable executor)
                          (.close ^AutoCloseable executor))
                        (apply forkjoin-executor params)))))
+
+#?(:clj
+   (defn configure-default-executor!
+     {:deprecated "12.0.0"
+      :no-doc true}
+     [& params]
+     (apply configure-default-executor params)))
 
 #?(:clj
    (extend-type Executor
@@ -814,7 +852,14 @@
 #?(:clj
    (defn set-name!
      "Rename thread."
+     {:deprecated "12.0.0"
+      :no-doc true}
      ([name] (set-name! (current-thread) name))
+     ([thread name] (.setName ^Thread thread ^String name))))
+
+#?(:clj
+   (defn set-thread-name
+     ([name] (set-thread-name (current-thread) name))
      ([thread name] (.setName ^Thread thread ^String name))))
 
 #?(:clj
@@ -862,11 +907,21 @@
 
 #?(:clj
    (defn interrupt!
-     "Interrupt a thread."
+     "Interrupt a thread.
+
+  DEPRECATED: replaced by `interrupt`"
+     {:deprecated "12.0.0"
+      :no-doc true}
      ([]
       (.interrupt (Thread/currentThread)))
      ([^Thread thread]
       (.interrupt thread))))
+
+#?(:clj
+   (defn interrupt
+     "Interrupt a thread."
+     [^Thread thread]
+     (.interrupt thread)))
 
 #?(:clj
    (defn thread?
@@ -884,7 +939,7 @@
        (Thread/sleep (int ms)))))
 
 #?(:clj
-   (defn throw-uncaught!
+   (defn throw-uncaught
      "Throw an exception to the current uncaught exception handler."
      [cause]
      (let [thr (current-thread)
@@ -892,6 +947,16 @@
        (.uncaughtException ^Thread$UncaughtExceptionHandler hdl
                            ^Thread thr
                            ^Throwable cause))))
+
+#?(:clj
+   (defn throw-uncaught!
+     "Throw an exception to the current uncaught exception handler.
+
+  DEPRECATED: replaced by `throw-uncaught`"
+     {:deprecated "12.0.0"
+      :no-doc true}
+     [cause]
+     (throw-uncaught cause)))
 
 ;; #?(:clj
 ;;    (defn structured-task-scope
@@ -1076,7 +1141,8 @@
      The return value is implementation specific.
 
      DEPRECATED: use `promesa.core/await`"
-     {:deprecated "12.0.0"}
+     {:deprecated "12.0.0"
+      :no-doc true}
      ([resource]
       (pt/-join resource))
      ([resource duration]
