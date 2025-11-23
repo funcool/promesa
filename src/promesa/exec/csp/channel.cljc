@@ -221,7 +221,7 @@
      "Creates a seq that traverses channel until it is closed."
      [ch]
      (lazy-seq
-      (when-let [val (pt/-await! (take ch))]
+      (when-let [val (pt/-join (take ch))]
         (cons val (chan->seq ch))))))
 
 (deftype Channel [^:mutable ^:unsynchronized-mutable takes

@@ -24,6 +24,7 @@
       java.util.concurrent.CompletableFuture
       java.util.concurrent.Executor
       java.util.concurrent.ExecutorService
+      java.util.concurrent.CountDownLatch
       java.util.concurrent.Executors
       java.util.concurrent.ForkJoinPool
       java.util.concurrent.ForkJoinPool$ForkJoinWorkerThreadFactory
@@ -412,7 +413,7 @@
   or the default one, and waits for the result. Useful for using
   in virtual threads.
 
-  DEPRECATED: use `invoke`"
+  DEPRECATED"
      ([f] (pt/-await! (submit! f)))
      ([executor f] (pt/-await! (submit! executor f)))))
 
@@ -995,6 +996,49 @@
 ;;             (.joinUntil ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it ^Instant deadline)
 ;;             (.throwIfFailed ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it)))))))
 
+;; NOTE: still implement for backward compatibility, but is replaced
+;; with IJoinable protocol internally
+#?(:clj
+   (extend-protocol pt/IAwaitable
+     Thread
+     (-await!
+       ([it] (.join ^Thread it))
+       ([it duration]
+        (if (instance? Duration duration)
+          (.join ^Thread it ^Duration duration)
+          (.join ^Thread it (int duration)))))
+
+     CountDownLatch
+     (-await!
+       ([it]
+        (.await ^CountDownLatch it))
+       ([it duration]
+        (let [timeout (if (instance? Duration duration)
+                        (.toMillis ^Duration duration)
+                        (long duration))]
+          (.await ^CountDownLatch it ^long timeout TimeUnit/MILLISECONDS))))))
+
+
+#?(:clj
+   (extend-protocol pt/IJoinable
+     Thread
+     (-join
+       ([it] (.join ^Thread it))
+       ([it duration]
+        (if (instance? Duration duration)
+          (.join ^Thread it ^Duration duration)
+          (.join ^Thread it (int duration)))))
+
+     CountDownLatch
+     (-join
+       ([it]
+        (.await ^CountDownLatch it))
+       ([it duration]
+        (let [timeout (if (instance? Duration duration)
+                        (.toMillis ^Duration duration)
+                        (long duration))]
+          (.await ^CountDownLatch it ^long timeout TimeUnit/MILLISECONDS))))))
+
 ;; #?(:clj
 ;;    (defn managed-blocker
 ;;      {:no-doc true}
@@ -1034,9 +1078,18 @@
      DEPRECATED: use `promesa.core/await`"
      {:deprecated "12.0.0"}
      ([resource]
-      (pt/-await! resource))
+      (pt/-join resource))
      ([resource duration]
-      (pt/-await! resource duration))))
+      (pt/-join resource duration))))
+
+#?(:clj
+   (defn join
+     "Block current thread until some operatiomn terminates. The return
+  value is implementation specific."
+     ([resource]
+      (pt/-join resource))
+     ([resource duration-or-ms]
+      (pt/-join resource duration-or-ms))))
 
 (defn close!
   {:no-doc true

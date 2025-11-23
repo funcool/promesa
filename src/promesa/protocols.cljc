@@ -100,3 +100,7 @@
 #?(:clj
    (defprotocol IAwaitable
      (-await! [it] [it duration] "block current thread await termination")))
+
+#?(:clj
+   (defprotocol IJoinable
+     (-join [it] [it duration-or-ms] "block current thread await termination")))

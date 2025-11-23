@@ -19,7 +19,6 @@
       java.util.concurrent.CompletableFuture
       java.util.concurrent.CompletionException
       java.util.concurrent.CompletionStage
-      java.util.concurrent.CountDownLatch
       java.util.concurrent.ExecutionException
       java.util.concurrent.Executor
       java.util.concurrent.Future
@@ -290,26 +289,10 @@
      (-pending? [it]
        (not (.isDone it)))))
 
+;; NOTE: still implement for backward compatibility, but is replaced
+;; with IJoinable protocol internally
 #?(:clj
    (extend-protocol pt/IAwaitable
-     Thread
-     (-await!
-       ([it] (.join ^Thread it))
-       ([it duration]
-        (if (instance? Duration duration)
-          (.join ^Thread it ^Duration duration)
-          (.join ^Thread it (int duration)))))
-
-     CountDownLatch
-     (-await!
-       ([it]
-        (.await ^CountDownLatch it))
-       ([it duration]
-        (let [timeout (if (instance? Duration duration)
-                        (.toMillis ^Duration duration)
-                        (long duration))]
-          (.await ^CountDownLatch it ^long timeout TimeUnit/MILLISECONDS))))
-
      CompletableFuture
      (-await!
        ([it]
@@ -325,7 +308,48 @@
        ([it]
         (pt/-await! (.toCompletableFuture ^CompletionStage it)))
        ([it duration]
-        (pt/-await! (.toCompletableFuture ^CompletionStage it) duration)))))
+        (pt/-await! (.toCompletableFuture ^CompletionStage it) duration)))
+
+     ;; The slow path, forward IAwaitable protocol calls to the
+     ;; IJoinable protocol as default implementation.
+     Object
+     (-await!
+       ([it]
+        (if (satisfies? pt/IJoinable it)
+          (pt/-join it)
+          (throw (IllegalArgumentException. "IJoinable protocol not implemented"))))
+       ([it duration]
+        (if (satisfies? pt/IJoinable it)
+          (pt/-join it duration)
+          (throw (IllegalArgumentException. "IJoinable protocol not implemented")))))))
+
+#?(:clj
+   (extend-protocol pt/IJoinable
+     Object
+     (-join
+       ([it]
+        (if (satisfies? pt/IAwaitable it)
+          (pt/-await! it)
+          (throw (IllegalArgumentException. "protocol not implemented"))))
+       ([it duration]
+        (if (satisfies? pt/IAwaitable it)
+          (pt/-await! it duration)
+          (throw (IllegalArgumentException. "protocol not implemented")))))
+
+     CompletableFuture
+     (-join
+       ([it] (.get ^CompletableFuture it))
+       ([it duration]
+        (let [timeout (if (instance? Duration duration)
+                        (.toMillis ^Duration duration)
+                        (long duration))]
+          (.get ^CompletableFuture it ^long timeout TimeUnit/MILLISECONDS))))
+
+     CompletionStage
+     (-join
+       ([it] (pt/-join (.toCompletableFuture ^CompletionStage it)))
+       ([it duration] (pt/-join (.toCompletableFuture ^CompletionStage it) duration)))))
+
 
 ;; --- Promise Factory
 

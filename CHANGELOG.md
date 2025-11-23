@@ -40,6 +40,10 @@ RELEVANT CHANGES:
   constant API changes, we will take it back once the API becomes
   stable
 
+- Internal IAwaitable protocol is deprecated and replaced with
+  IJoinable; we still preserve the old protocol for backward
+  compatibility
+
 
 ## Version 11.0.678
 

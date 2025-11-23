@@ -455,7 +455,7 @@
    (defn wait-all!
      "A blocking version of `wait-all`."
      [promises]
-     (pt/-await! (wait-all promises))))
+     (pt/-join (wait-all promises))))
 
 (defn run!
   "A promise aware run! function. Executed in terms of `then` rules.
@@ -809,29 +809,31 @@
 
   The return value is implementation specific.
 
-  DEPRECATED: use `await`"
+  DEPRECATED: replaced with `promesa.exec/join` or
+  `clojure.core/deref` depending on use case."
+
      {:deprecated "12.0.0"}
      ([resource]
-      (pt/-await! resource))
+      (pt/-join resource))
      ([resource duration]
       (await! resource duration nil))
      ([resource duration default-on-timeout]
       (try
-        (pt/-await! resource duration)
+        (pt/-join resource duration)
         (catch TimeoutException _
           default-on-timeout)))))
 
 #?(:clj
    (defn await
      "Generic await operation. Block current thread until some operation
-  terminates. Returns `nil` on timeout; does not catch any other
-  exception.
+  terminates. Returns `nil` on timeout, value if resolves successfully
+  and exception as value in case of exception.
 
   Default implementation for Thread, CompletableFuture and
   CountDownLatch."
      ([resource]
       (try
-        (pt/-await! resource)
+        (pt/-join resource)
         (catch InterruptedException cause
           (throw cause))
         (catch Throwable cause
@@ -840,7 +842,7 @@
       (await resource duration nil))
      ([resource duration default-on-timeout]
       (try
-        (pt/-await! resource duration)
+        (pt/-join resource duration)
         (catch TimeoutException _
           default-on-timeout)
         (catch InterruptedException cause
