@@ -59,10 +59,10 @@
                (pu/can-eval? '(Thread/ofVirtual)))
      :cljs false))
 
-(def structured-task-scope-available?
-  #?(:clj (and (pu/class-exists? "java.util.concurrent.StructuredTaskScope")
-               (pu/can-eval? '(java.util.concurrent.StructuredTaskScope.)))
-     :cljs false))
+;; (def structured-task-scope-available?
+;;   #?(:clj (and (pu/class-exists? "java.util.concurrent.StructuredTaskScope")
+;;                (pu/can-eval? '(java.util.concurrent.StructuredTaskScope.)))
+;;      :cljs false))
 
 (def ^{:no-doc true} noop (constantly nil))
 
@@ -892,109 +892,108 @@
                            ^Thread thr
                            ^Throwable cause))))
 
-#?(:clj
-   (defn structured-task-scope
-     ([]
-      (pu/with-compile-cond structured-task-scope-available?
-        (java.util.concurrent.StructuredTaskScope.)
-        (throw (IllegalArgumentException. "implementation not available"))))
-     ([& {:keys [name preset] :as options}]
-      (pu/with-compile-cond structured-task-scope-available?
-        (let [tf (options->thread-factory options :virtual)]
-          (case preset
-            :shutdown-on-success
-            (java.util.concurrent.StructuredTaskScope$ShutdownOnSuccess.
-             ^String name ^ThreadFactory tf)
+;; #?(:clj
+;;    (defn structured-task-scope
+;;      ([]
+;;       (pu/with-compile-cond structured-task-scope-available?
+;;         (java.util.concurrent.StructuredTaskScope.)
+;;         (throw (IllegalArgumentException. "implementation not available"))))
+;;      ([& {:keys [name preset] :as options}]
+;;       (pu/with-compile-cond structured-task-scope-available?
+;;         (let [tf (options->thread-factory options :virtual)]
+;;           (case preset
+;;             :shutdown-on-success
+;;             (java.util.concurrent.StructuredTaskScope$ShutdownOnSuccess.
+;;              ^String name ^ThreadFactory tf)
 
-            :shutdown-on-failure
-            (java.util.concurrent.StructuredTaskScope$ShutdownOnFailure.
-             ^String name ^ThreadFactory tf)
+;;             :shutdown-on-failure
+;;             (java.util.concurrent.StructuredTaskScope$ShutdownOnFailure.
+;;              ^String name ^ThreadFactory tf)
 
-            (java.util.concurrent.StructuredTaskScope.
-             ^String name ^ThreadFactory tf)))
+;;             (java.util.concurrent.StructuredTaskScope.
+;;              ^String name ^ThreadFactory tf)))
 
-        (throw (IllegalArgumentException. "implementation not available"))))))
+;;         (throw (IllegalArgumentException. "implementation not available"))))))
 
-#?(:clj
-   (pu/with-compile-cond structured-task-scope-available?
-     (extend-type java.util.concurrent.StructuredTaskScope$Subtask
-       pt/IState
-       (-extract
-         ([it]
-          (let [state (.state ^java.util.concurrent.StructuredTaskScope$Subtask it)]
-            (case (str state)
-              "UNAVAILABLE" nil
-              "FAILED"      (.exception ^java.util.concurrent.StructuredTaskScope$Subtask it)
-              "SUCCESS"     (.get ^java.util.concurrent.StructuredTaskScope$Subtask it))))
-         ([it default]
-          (or (pt/-extract it) default)))
+;; #?(:clj
+;;    (pu/with-compile-cond structured-task-scope-available?
+;;      (extend-type java.util.concurrent.StructuredTaskScope$Subtask
+;;        pt/IState
+;;        (-extract
+;;          ([it]
+;;           (let [state (.state ^java.util.concurrent.StructuredTaskScope$Subtask it)]
+;;             (case (str state)
+;;               "UNAVAILABLE" nil
+;;               "FAILED"      (.exception ^java.util.concurrent.StructuredTaskScope$Subtask it)
+;;               "SUCCESS"     (.get ^java.util.concurrent.StructuredTaskScope$Subtask it))))
+;;          ([it default]
+;;           (or (pt/-extract it) default)))
 
-       (-pending? [it]
-         (let [state (.state ^java.util.concurrent.StructuredTaskScope$Subtask it)]
-           (not= state java.util.concurrent.StructuredTaskScope$Subtask$State/UNAVAILABLE)))
-       (-rejected? [it]
-         (let [state (.state ^java.util.concurrent.StructuredTaskScope$Subtask it)]
-           (= state java.util.concurrent.StructuredTaskScope$Subtask$State/FAILED)))
-       (-resolved? [it]
-         (let [state (.state ^java.util.concurrent.StructuredTaskScope$Subtask it)]
-           (= state java.util.concurrent.StructuredTaskScope$Subtask$State/SUCCESS))))))
+;;        (-pending? [it]
+;;          (let [state (.state ^java.util.concurrent.StructuredTaskScope$Subtask it)]
+;;            (not= state java.util.concurrent.StructuredTaskScope$Subtask$State/UNAVAILABLE)))
+;;        (-rejected? [it]
+;;          (let [state (.state ^java.util.concurrent.StructuredTaskScope$Subtask it)]
+;;            (= state java.util.concurrent.StructuredTaskScope$Subtask$State/FAILED)))
+;;        (-resolved? [it]
+;;          (let [state (.state ^java.util.concurrent.StructuredTaskScope$Subtask it)]
+;;            (= state java.util.concurrent.StructuredTaskScope$Subtask$State/SUCCESS))))))
 
-#?(:clj
-   (pu/with-compile-cond structured-task-scope-available?
-     (extend-type java.util.concurrent.StructuredTaskScope
-       pt/IAwaitable
-       (-await!
-         ([it] (.join ^java.util.concurrent.StructuredTaskScope it))
-         ([it duration]
-          (let [duration (if (instance? Duration duration)
-                           duration
-                           (Duration/ofMillis duration))
-                deadline (Instant/now)
-                deadline (.plus ^Instant deadline
-                                ^TemporalAmount duration)]
-            (.joinUntil ^java.util.concurrent.StructuredTaskScope it
-                        ^Instant deadline))))
+;; #?(:clj
+;;    (pu/with-compile-cond structured-task-scope-available?
+;;      (extend-type java.util.concurrent.StructuredTaskScope
+;;        pt/IAwaitable
+;;        (-await!
+;;          ([it] (.join ^java.util.concurrent.StructuredTaskScope it))
+;;          ([it duration]
+;;           (let [duration (if (instance? Duration duration)
+;;                            duration
+;;                            (Duration/ofMillis duration))
+;;                 deadline (Instant/now)
+;;                 deadline (.plus ^Instant deadline
+;;                                 ^TemporalAmount duration)]
+;;             (.joinUntil ^java.util.concurrent.StructuredTaskScope it
+;;                         ^Instant deadline))))
 
-       pt/ICloseable
-       (-closed? [it]
-         (.isShutdown ^java.util.concurrent.StructuredTaskScope it))
+;;        pt/ICloseable
+;;        (-closed? [it]
+;;          (.isShutdown ^java.util.concurrent.StructuredTaskScope it))
 
-       (-close!
-         ([it]
-          (.close ^java.util.concurrent.StructuredTaskScope it))
-         ([it reason]
-          (.close ^java.util.concurrent.StructuredTaskScope it)))
+;;        (-close!
+;;          ([it]
+;;           (.close ^java.util.concurrent.StructuredTaskScope it))
+;;          ([it reason]
+;;           (.close ^java.util.concurrent.StructuredTaskScope it)))
 
-       pt/IExecutor
-       (-exec! [it task]
-         (let [task (wrap-bindings task)]
-           (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task)
-           nil))
-       (-run! [it task]
-         (let [task (wrap-bindings task)]
-           (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task)))
-       (-submit! [it task]
-         (let [task (wrap-bindings task)]
-           (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task))))))
+;;        pt/IExecutor
+;;        (-exec! [it task]
+;;          (let [task (wrap-bindings task)]
+;;            (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task)
+;;            nil))
+;;        (-run! [it task]
+;;          (let [task (wrap-bindings task)]
+;;            (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task)))
+;;        (-submit! [it task]
+;;          (let [task (wrap-bindings task)]
+;;            (.fork ^java.util.concurrent.StructuredTaskScope it ^Callable task))))))
 
-#?(:clj
-   (pu/with-compile-cond structured-task-scope-available?
-     (extend-type java.util.concurrent.StructuredTaskScope$ShutdownOnFailure
-       pt/IAwaitable
-       (-await!
-         ([it]
-          (.join ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it)
-          (.throwIfFailed ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it))
-         ([it duration]
-          (let [duration (if (instance? Duration duration)
-                           duration
-                           (Duration/ofMillis duration))
-                deadline (Instant/now)
-                deadline (.plus ^Instant deadline
-                                ^TemporalAmount duration)]
-            (.joinUntil ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it ^Instant deadline)
-            (.throwIfFailed ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it)))))))
-
+;; #?(:clj
+;;    (pu/with-compile-cond structured-task-scope-available?
+;;      (extend-type java.util.concurrent.StructuredTaskScope$ShutdownOnFailure
+;;        pt/IAwaitable
+;;        (-await!
+;;          ([it]
+;;           (.join ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it)
+;;           (.throwIfFailed ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it))
+;;          ([it duration]
+;;           (let [duration (if (instance? Duration duration)
+;;                            duration
+;;                            (Duration/ofMillis duration))
+;;                 deadline (Instant/now)
+;;                 deadline (.plus ^Instant deadline
+;;                                 ^TemporalAmount duration)]
+;;             (.joinUntil ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it ^Instant deadline)
+;;             (.throwIfFailed ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it)))))))
 
 ;; #?(:clj
 ;;    (defn managed-blocker

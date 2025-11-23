@@ -36,6 +36,10 @@ RELEVANT CHANGES:
 - Don't cancel pending puts on CSP channel close, allowing process
   flows without lossing messages
 
+- Remove experimental support for structured concurrency because of
+  constant API changes, we will take it back once the API becomes
+  stable
+
 
 ## Version 11.0.678
 
