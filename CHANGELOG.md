@@ -30,12 +30,11 @@ RELEVANT CHANGES:
 - Add near 83x performance improvement on internal dynamic binding
   handling (more info https://github.com/funcool/promesa/pull/156)
 
-- Simplify a broken Bulkhead interface, now we only have a single
-  implementation and coherent documentation for it; it also adds
-  the option to pass timeout
+- Simplify a broken Bulkhead interface and add coherent documentation
+  for it; it also adds the option to pass timeout
 
 - Don't cancel pending puts on CSP channel close, allowing process
-  flows without lossing messages.
+  flows without lossing messages
 
 
 ## Version 11.0.678
