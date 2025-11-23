@@ -172,52 +172,79 @@
      @default-scheduler
      (pu/maybe-deref scheduler))))
 
-#?(:clj (def ^:private binding-conveyor-fn* @#'clojure.core/binding-conveyor-fn))
+;; A modified version of clojure.core/binding-conveyor-fn that does
+;; not resets the var binding frame if the callback is executed in the
+;; same thread as where the frame was taken from. This fixes the issue
+;; then a SAME_THREAD executor is used.
+#?(:clj
+   (defn- binding-conveyor-fn
+     [f]
+     (let [frame  (clojure.lang.Var/cloneThreadBindingFrame)
+           thread (Thread/currentThread)]
+       (fn
+         ([]
+          (when-not (identical? thread (Thread/currentThread))
+            (clojure.lang.Var/resetThreadBindingFrame frame))
+          (f))
+         ([x]
+          (when-not (identical? thread (Thread/currentThread))
+            (clojure.lang.Var/resetThreadBindingFrame frame))
+          (f x))
+         ([x y]
+          (when-not (identical? thread (Thread/currentThread))
+            (clojure.lang.Var/resetThreadBindingFrame frame))
+          (f x y))
+         ([x y z]
+          (when-not (identical? thread (Thread/currentThread))
+            (clojure.lang.Var/resetThreadBindingFrame frame))
+          (f x y z))
+         ([x y z & args]
+          (when-not (identical? thread (Thread/currentThread))
+            (clojure.lang.Var/resetThreadBindingFrame frame))
+          (apply f x y z args))))))
 
 #?(:clj
-   (defn- binding-conveyor-inner
+   (defn- binding-conveyor-wrapper
      [f]
-     (let [ifn
-           (fn
-             ([]
-              (cond
-                (instance? clojure.lang.IFn f)
-                (f)
+     (binding-conveyor-fn
+      (fn
+        ([]
+         (cond
+           (instance? clojure.lang.IFn f)
+           (f)
 
-                (instance? java.lang.Runnable f)
-                (.run ^java.lang.Runnable f)
+           (instance? java.lang.Runnable f)
+           (.run ^java.lang.Runnable f)
 
-                (instance? java.util.concurrent.Callable f)
-                (.call ^java.util.concurrent.Callable f)
+           (instance? java.util.concurrent.Callable f)
+           (.call ^java.util.concurrent.Callable f)
 
-                :else
-                (throw (ex-info "Unsupported function type" {:f f :type (type f)}))))
-             ([x]
-              (cond
-                (instance? clojure.lang.IFn f)
-                (f x)
+           :else
+           (throw (ex-info "Unsupported function type" {:f f :type (type f)}))))
+        ([x]
+         (cond
+           (instance? clojure.lang.IFn f)
+           (f x)
 
-                (instance? java.util.function.Function f)
-                (.apply ^java.util.function.Function f x)
+           (instance? java.util.function.Function f)
+           (.apply ^java.util.function.Function f x)
 
-                :else
-                (throw (ex-info "Unsupported function type" {:f f :type (type f)}))))
-             ([x y]
-              (f x y))
-             ([x y z]
-              (f x y z))
-             ([x y z & args]
-              (apply f x y z args)))]
-       (binding-conveyor-fn* ifn))))
+           :else
+           (throw (ex-info "Unsupported function type" {:f f :type (type f)}))))
+        ([x y]
+         (f x y))
+        ([x y z]
+         (f x y z))
+        ([x y z & args]
+         (apply f x y z args))))))
 
 (defn wrap-bindings
   {:no-doc true}
   ;; Passes on local bindings from one thread to another. Compatible with `clojure.lang.IFn`,
   ;; `java.lang.Runnable`, `java.util.concurrent.Callable`, and `java.util.function.Function`.
-  ;; Adapted from `clojure.core/binding-conveyor-fn`."
   [f]
   #?(:cljs f
-     :clj (binding-conveyor-inner f)))
+     :clj (binding-conveyor-wrapper f)))
 
 #?(:clj
    (defn thread-factory?
@@ -726,7 +753,7 @@
      {:experimental true}
      ([f coll]
       (let [executor (resolve-executor *default-executor*)
-            bf (binding-conveyor-fn* f)]
+            bf       (binding-conveyor-fn f)]
         (->> coll
              (map (fn [o] (pt/-submit! executor #(bf o))))
              (clojure.lang.RT/iter)
