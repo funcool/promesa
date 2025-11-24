@@ -18,6 +18,7 @@
   (:import
    java.util.concurrent.BlockingQueue
    java.util.concurrent.CompletableFuture
+   java.util.concurrent.ForkJoinTask
    java.util.concurrent.Executor
    java.util.concurrent.LinkedBlockingQueue
    java.util.concurrent.Semaphore
@@ -56,11 +57,15 @@
   Runnable
   (run [this]
     (let [semaphore (:semaphore bulkhead)
-          executor  (:executor bulkhead)]
+          executor  (:executor bulkhead)
+          done?     (if (instance? ForkJoinTask f)
+                      (.isDone ^ForkJoinTask f)
+                      false)]
 
       (log! "cmd:" "Task/run" "f:" (hash f) "task:" (hash this) "START")
       (try
-        (.run ^Runnable f)
+        (when-not done?
+          (.run ^Runnable f))
         (finally
           (psm/release! semaphore :permits 1)
           (log! "cmd:" "Task/run" "f:" (hash f)
@@ -101,7 +106,7 @@
           (throw (ex-info hint props))))
 
       (log! "cmd:" "Bulkhead/-offer!" "queue" (.size queue))
-      (.execute ^Executor executor ^Runnable task)))
+      (.execute ^Executor executor ^Runnable this)))
 
   Runnable
   (run [this]
@@ -150,7 +155,7 @@
             (finally
               (psm/release! semaphore)))
           (let [props {:type :bulkhead-error
-                       :code :timeout
+                       :code :capacity-limit-reached
                        :timeout timeout}]
             (throw (ex-info "bulkhead: timeout" props))))
         (finally
