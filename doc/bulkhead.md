@@ -5,6 +5,8 @@ taking the entire system limiting the number of concurrent calls.
 
 This [SO answer][0] explains the concept very well.
 
+## Getting Started
+
 There are two different implementations: `:sync` and `:async`.
 
 - `:async` (or `:executor`) - runs the task in an executor.
@@ -42,5 +44,18 @@ that the `sync` or `semaphore` based bulkhead implementation executes
 the task in the current thread, blocking the call on the submit).
 
 The `sync` bulkhead works fine with JVM virtual threads.
+
+## Available options
+
+The `create` function accept the following parameters and its defaults:
+
+- `:type`: can be `:sync` or `:async`
+- `:executor`: only when async type is used, allows provide custome
+  executor, if not provided the default one is used
+- `:permits`: the max permits (concurrent jobs) allowed (defaults to 1)
+- `:queue`: the max queued jobs allowed (defaults to
+  Integer/MAX_VALUE), when maximum queue is reached, the task
+  submision will be rejected
+- `:timeout`: TBD
 
 [0]: https://stackoverflow.com/questions/30391809/what-is-bulkhead-pattern-used-by-hystrix
