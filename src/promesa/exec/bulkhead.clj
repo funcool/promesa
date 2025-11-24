@@ -204,8 +204,13 @@
 
 (defn invoke
   ([instance f]
-   @(CompletableFuture/runAsync ^Runnable f ^Executor instance))
+   (let [f (if (instance? Bulkhead instance?)
+             (px/wrap-bindings f)
+             f)
+         f (pu/->Supplier f)]
+     @(CompletableFuture/supplyAsync ^Supplier f
+                                     ^Executor instance)))
+
   ([instance f timeout-ms]
-   (assert (bulkhead? instance?) "expected bulkhead instance")
    (-> (assoc instance :timeout timeout-ms)
-       (invoke))))
+       (invoke f))))
