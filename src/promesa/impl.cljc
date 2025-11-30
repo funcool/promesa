@@ -350,7 +350,6 @@
        ([it] (pt/-join (.toCompletableFuture ^CompletionStage it)))
        ([it duration] (pt/-join (.toCompletableFuture ^CompletionStage it) duration)))))
 
-
 ;; --- Promise Factory
 
 ;; This code is responsible of coercing the incoming value to a valid

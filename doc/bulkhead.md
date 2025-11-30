@@ -43,7 +43,17 @@ resembles the same API (aka `px/submit` call, with the particularity
 that the `sync` or `semaphore` based bulkhead implementation executes
 the task in the current thread, blocking the call on the submit).
 
-The `sync` bulkhead works fine with JVM virtual threads.
+Additionally to the executor interface, it also implemens the new
+`IInvokable` protocol, so you can execute a synchronous call
+(independently of the final bulkhead implementation) thaks to the
+`px/invoke` helper. Internally, on async bulkhead is just a
+combination of `px/submit` with `px/join`, but on the `sync` bulkhead
+implementation it does not uses the CompletableFuture machinary and
+just executes the function almost with no indirections.
+
+NOTE: The `sync` bulkhead works fine with JVM virtual threads.
+
+
 
 ## Available options
 
@@ -56,6 +66,14 @@ The `create` function accept the following parameters and its defaults:
 - `:queue`: the max queued jobs allowed (defaults to
   Integer/MAX_VALUE), when maximum queue is reached, the task
   submision will be rejected
-- `:timeout`: TBD
+- `:timeout`: this settings means two different things depending on
+  the used implementation (although in practical terms they represent
+  something analogous):
+  - on the `async` it means the timeout to put the task on the queue
+    and is effective only if the queue is full, and it happens
+    synchronously (before the task is submited to the internal
+    executor)
+  - on the `sync` it means the timeout of aquiring the semaphore
+    and is always happens synchronously.
 
 [0]: https://stackoverflow.com/questions/30391809/what-is-bulkhead-pattern-used-by-hystrix

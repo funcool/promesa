@@ -104,3 +104,9 @@
 #?(:clj
    (defprotocol IJoinable
      (-join [it] [it duration-or-ms] "block current thread await termination")))
+
+#?(:clj
+   (defprotocol IInvoke
+     (-invoke [it f] [it f duration-or-ms] "Call a function f in a context with optional timeout")))
+
+

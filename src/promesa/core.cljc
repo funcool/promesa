@@ -42,10 +42,13 @@
 
 (defn promise
   "The coerce based promise constructor. Creates an appropriate promise
-  instance depending on the provided value.
+  instance depending on the provided value. If no value is provided,
+  pending promise will be returnined (deferred).
 
   If an executor is provided, it will be used to resolve this
   promise."
+  ([]
+   (impl/deferred))
   ([v]
    (pt/-promise v))
   ([v executor]
@@ -515,10 +518,10 @@
   p)
 
 (defn cancel
-  "Cancel the promise"
-  [p]
-  (pt/-cancel! p)
-  p)
+  "Cancel, a cancellable resource"
+  [resource]
+  (pt/-cancel! resource)
+  resource)
 
 (defn cancelled?
   "Return true if `v` is a cancelled promise."
@@ -850,6 +853,17 @@
         (pt/-join resource duration)
         (catch TimeoutException _
           default-on-timeout)))))
+
+#?(:clj
+   (defn join
+     "Block current thread until some operatiomn terminates. The return
+  value is implementation specific.
+
+  Is a lower-level version of `await`."
+     ([resource]
+      (pt/-join resource))
+     ([resource duration-or-ms]
+      (pt/-join resource duration-or-ms))))
 
 #?(:clj
    (defn await

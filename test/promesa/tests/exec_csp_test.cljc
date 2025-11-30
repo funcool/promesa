@@ -197,7 +197,7 @@
     (t/is (p/promise? rs))
     #?(:clj
        (do
-         (px/join rs)
+         (p/join rs)
          (t/is (= :a (sp/poll ch)))
          (t/is (= :b (sp/poll ch)))
          (t/is (= :c (sp/poll ch)))

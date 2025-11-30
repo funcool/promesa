@@ -18,7 +18,6 @@
   (:import
    java.util.concurrent.BlockingQueue
    java.util.concurrent.CompletableFuture
-   java.util.concurrent.ForkJoinTask
    java.util.concurrent.Executor
    java.util.concurrent.LinkedBlockingQueue
    java.util.concurrent.Semaphore
@@ -29,20 +28,20 @@
 
 (set! *warn-on-reflection* true)
 
-(defmacro log!
+(defmacro log
   [& params]
   ;; `(locking prn
   ;;    (prn ~@params))
   )
 
 (defprotocol IQueue
-  (-poll! [_])
-  (-offer! [_ _] [_ _ _]))
+  (-poll [_])
+  (-offer [_ _] [_ _ _]))
 
 (extend-type BlockingQueue
   IQueue
-  (-poll! [this] (.poll ^BlockingQueue this))
-  (-offer!
+  (-poll [this] (.poll ^BlockingQueue this))
+  (-offer
     ([this o] (.offer ^BlockingQueue this o))
     ([this o timeout] (.offer ^BlockingQueue this o (long timeout) TimeUnit/MILLISECONDS))))
 
@@ -57,21 +56,17 @@
   Runnable
   (run [this]
     (let [semaphore (:semaphore bulkhead)
-          executor  (:executor bulkhead)
-          done?     (if (instance? ForkJoinTask f)
-                      (.isDone ^ForkJoinTask f)
-                      false)]
+          executor  (:executor bulkhead)]
 
-      (log! "cmd:" "Task/run" "f:" (hash f) "task:" (hash this) "START")
+      (log "cmd:" "Task/run" "f:" (hash f) "task:" (hash this) "done" done? "START")
       (try
-        (when-not done?
-          (.run ^Runnable f))
+        (.run ^Runnable f)
         (finally
           (psm/release! semaphore :permits 1)
-          (log! "cmd:" "Task/run" "f:" (hash f)
-                "task:" (hash this)
-                "permits:" (.availablePermits ^Semaphore semaphore)
-                "END")
+          (log "cmd:" "Task/run" "f:" (hash f)
+               "task:" (hash this)
+               "permits:" (.availablePermits ^Semaphore semaphore)
+               "END")
           (.execute ^Executor executor ^Runnable bulkhead))))))
 
 (defrecord Bulkhead [^Executor executor
@@ -89,13 +84,26 @@
      :max-queue max-queue
      :timeout timeout})
 
+  pt/IInvoke
+  (-invoke [this f]
+    (->> (px/submit this f)
+         (p/join)))
+
+  (-invoke [this f ms-or-duration]
+    (let [result (px/submit this f)]
+      (try
+        (p/join result ms-or-duration)
+        (catch java.util.concurrent.TimeoutException cause
+          (p/cancel result)
+          (throw cause)))))
+
   Executor
   (execute [this f]
-    (log! "cmd:" "Bulkhead/execute" "f:" (hash f) timeout)
+    (log "cmd:" "Bulkhead/execute" "f:" (hash f) timeout)
     (let [task (Task. this f (instant))
           res  (if timeout
-                 (-offer! queue task timeout)
-                 (-offer! queue task))]
+                 (-offer queue task timeout)
+                 (-offer queue task))]
 
       (when-not res
         (let [size  (.size queue)
@@ -105,19 +113,19 @@
                      :size size}]
           (throw (ex-info hint props))))
 
-      (log! "cmd:" "Bulkhead/-offer!" "queue" (.size queue))
+      (log "cmd:" "Bulkhead/-offer" "queue" (.size queue))
       (.execute ^Executor executor ^Runnable this)))
 
   Runnable
   (run [this]
-    (log! "cmd:" "Bulkhead/run" "queue:" (.size queue) "permits:" (.availablePermits semaphore))
+    (log "cmd:" "Bulkhead/run" "queue:" (.size queue) "permits:" (.availablePermits semaphore))
     (loop []
-      (log! "cmd:" "Bulkhead/run$loop1" "queue:" (.size queue) "permits:" (.availablePermits semaphore))
+      (log "cmd:" "Bulkhead/run$loop1" "queue:" (.size queue) "permits:" (.availablePermits semaphore))
       (when-let [task (when (pt/-try-acquire! semaphore)
-                        (if-let [task (-poll! queue)]
+                        (if-let [task (-poll queue)]
                           task
                           (pt/-release! semaphore)))]
-        (log! "cmd:" "Bulkhead/run$loop2" "task:" (hash task) "available-permits:" (.availablePermits semaphore))
+        (log "cmd:" "Bulkhead/run$loop2" "task:" (hash task) "available-permits:" (.availablePermits semaphore))
         (.execute ^Executor executor ^Runnable task)
         (recur)))))
 
@@ -136,6 +144,19 @@
      :queue (+ (long counter) (long max-permits))
      :max-permits max-permits
      :max-queue max-queue})
+
+  pt/IInvoke
+  (-invoke [this f]
+    (let [result (volatile! nil)
+          f'     (fn [] (vreset! result (f)))]
+      (.execute ^Executor this
+                ^Runnable f)
+      (deref @result)))
+
+  (-invoke [this f ms-or-duration]
+    (-> this
+        (assoc :timeout ms-or-duration)
+        (pt/-invoke f)))
 
   Executor
   (execute [this f]

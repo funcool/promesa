@@ -22,19 +22,21 @@
       java.util.concurrent.Callable
       java.util.concurrent.CancellationException
       java.util.concurrent.CompletableFuture
+      java.util.concurrent.CountDownLatch
       java.util.concurrent.Executor
       java.util.concurrent.ExecutorService
-      java.util.concurrent.CountDownLatch
       java.util.concurrent.Executors
       java.util.concurrent.ForkJoinPool
       java.util.concurrent.ForkJoinPool$ForkJoinWorkerThreadFactory
       java.util.concurrent.ForkJoinWorkerThread
+      java.util.concurrent.Future
       java.util.concurrent.ScheduledExecutorService
       java.util.concurrent.ScheduledThreadPoolExecutor
       java.util.concurrent.SynchronousQueue
       java.util.concurrent.ThreadFactory
       java.util.concurrent.ThreadPoolExecutor
       java.util.concurrent.TimeUnit
+      java.util.concurrent.TimeoutException
       java.util.concurrent.atomic.AtomicLong
       java.util.function.Supplier)))
 
@@ -126,30 +128,10 @@
      :cljs (satisfies? pt/IExecutor o)))
 
 #?(:clj
-   (defn shutdown!
-     "Shutdowns the executor service.
-
-  DEPRECATED: replaced by `shutdown`"
-     {:deprecated "12.0.0"
-      :no-doc true}
-     [^ExecutorService executor]
-     (.shutdown executor)))
-
-#?(:clj
    (defn shutdown
      "Shutdowns the executor service."
      [^ExecutorService executor]
      (.shutdown executor)))
-
-#?(:clj
-   (defn shutdown-now!
-     "Shutdowns and interrupts the executor service.
-
-  DEPRECATED: replaced by `shutdown`"
-     {:deprecated "12.0.0"
-      :no-doc true}
-     [^ExecutorService executor]
-     (.shutdownNow executor)))
 
 #?(:clj
    (defn shutdown-now
@@ -368,86 +350,6 @@
 ;; PUBLIC API
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn exec!
-  "Run the task in the provided executor, returns `nil`. Analogous to
-  the `(.execute executor f)`. Fire and forget.
-
-  Exception unsafe, can raise exceptions if the executor
-  rejects the task.
-
-  DEPRECATED: use `exec`"
-  {:deprecated "12.0.0"
-   :no-doc true}
-  ([f]
-   (let [f (wrap-bindings f)]
-     (pt/-exec! (resolve-executor *default-executor*) f)))
-  ([executor f]
-   (let [f (wrap-bindings f)]
-     (pt/-exec! (resolve-executor executor) f))))
-
-(defn run!
-  "Run the task in the provided executor.
-
-  Exception unsafe, can raise exceptions if the executor
-  rejects the task.
-
-  DEPRECATED: use `run`"
-  {:deprecated "12.0.0"
-   :no-doc true}
-  ([f]
-   (let [f (wrap-bindings f)]
-     (pt/-run! (resolve-executor *default-executor*) f)))
-  ([executor f]
-   (let [f (wrap-bindings f)]
-     (pt/-run! (resolve-executor executor) f))))
-
-(defn submit!
-  "Submit a task to be executed in a provided executor
-  and return a promise that will be completed with
-  the return value of a task.
-
-  Exception unsafe, can raise exceptions if the executor
-  rejects the task.
-
-  DEPRECATED: use `submit`"
-  {:deprecated "12.0.0"
-   :no-doc true}
-  ([f]
-   (let [f (wrap-bindings f)]
-     (pt/-submit! (resolve-executor *default-executor*) f)))
-  ([executor f]
-   (let [f (wrap-bindings f)]
-     (pt/-submit! (resolve-executor executor) f))))
-
-(defn schedule!
-  "Schedule a callable to be executed after the `ms` delay
-  is reached.
-
-  In JVM it uses a scheduled executor service and in JS
-  it uses the `setTimeout` function.
-
-  Exception unsafe, can raise exceptions if the executor
-  rejects the task.
-
-  DEPRECATED: use `schedule`"
-  {:deprecated "12.0.0"
-   :no-doc true}
-  ([ms f]
-   (pt/-schedule! (resolve-scheduler) ms f))
-  ([scheduler ms f]
-   (pt/-schedule! (resolve-scheduler scheduler) ms f)))
-
-#?(:clj
-   (defn invoke!
-     "Invoke a function to be executed in the provided executor
-  or the default one, and waits for the result. Useful for using
-  in virtual threads.
-
-  DEPRECATED"
-     {:deprecated "12.0.0"}
-     ([f] (pt/-await! (submit! f)))
-     ([executor f] (pt/-await! (submit! executor f)))))
-
 (defn- rejected
   [v]
   #?(:cljs (pimpl/rejected v)
@@ -467,7 +369,8 @@
        (rejected cause))))
   ([executor f]
    (try
-     (exec! executor f)
+     (let [f (wrap-bindings f)]
+       (pt/-exec! (resolve-executor executor) f))
      (catch #?(:clj Throwable :cljs :default) cause
        (rejected cause)))))
 
@@ -481,7 +384,8 @@
        (rejected cause))))
   ([executor f]
    (try
-     (run! executor f)
+     (let [f (wrap-bindings f)]
+       (pt/-run! (resolve-executor executor) f))
      (catch #?(:clj Throwable :cljs :default) cause
        (rejected cause)))))
 
@@ -495,7 +399,8 @@
        (rejected cause))))
   ([executor f]
    (try
-     (submit! executor f)
+     (let [f (wrap-bindings f)]
+       (pt/-submit! (resolve-executor executor) f))
      (catch #?(:clj Throwable :cljs :default) cause
        (rejected cause)))))
 
@@ -503,14 +408,23 @@
   "Exception safe version of `schedule!`. It always returns an promise instance."
   ([ms f]
    (try
-     (schedule! ms f)
+     (pt/-schedule! (resolve-scheduler) ms f)
      (catch #?(:clj Throwable :cljs :default) cause
        (rejected cause))))
   ([scheduler ms f]
    (try
-     (schedule! scheduler ms f)
+     (pt/-schedule! (resolve-scheduler scheduler) ms f)
      (catch #?(:clj Throwable :cljs :default) cause
        (rejected cause)))))
+
+#?(:clj
+   (defn invoke
+     "Execute a function `f` in a provided context. Optional timeout can be
+  provided. If timeout is reached and the context allows cancellation,
+  the task will be cancelled."
+     ([context f] (pt/-invoke context f))
+     ([context f ms-or-duration]
+      (pt/-invoke context f ms-or-duration))))
 
 ;; --- Pool & Thread Factories
 
@@ -697,13 +611,6 @@
                        (apply forkjoin-executor params)))))
 
 #?(:clj
-   (defn configure-default-executor!
-     {:deprecated "12.0.0"
-      :no-doc true}
-     [& params]
-     (apply configure-default-executor params)))
-
-#?(:clj
    (extend-type Executor
      pt/IExecutor
      (-exec! [this f]
@@ -713,7 +620,27 @@
        (CompletableFuture/runAsync ^Runnable f ^Executor this))
 
      (-submit! [this f]
-       (CompletableFuture/supplyAsync ^Supplier (pu/->Supplier f) ^Executor this))))
+       (CompletableFuture/supplyAsync ^Supplier (pu/->Supplier f) ^Executor this))
+
+     pt/IInvoke
+     (-invoke [this f]
+       (let [cfuture (CompletableFuture/supplyAsync ^Supplier (pu/->Supplier f) ^Executor this)]
+         (.get ^CompletableFuture cf)))
+
+     (-invoke [this f ms-or-duration]
+       (let [timeout
+             (if (instance? Duration ms-or-duration)
+               (.toMillis ^Duration ms-or-duration)
+               (long ms-or-duration))
+
+             cfuture
+             (CompletableFuture/supplyAsync ^Supplier (pu/->Supplier f) ^Executor this)]
+
+         (try
+           (.get ^CompletableFuture this ^long timeout TimeUnit/MILLISECONDS)
+           (catch TimeoutException cause
+             (.cancel ^CompletableFuture cfuture true)
+             (throw cause)))))))
 
 ;; --- Scheduler
 
@@ -721,23 +648,26 @@
    (extend-type ScheduledExecutorService
      pt/IScheduler
      (-schedule! [this ms f]
-       (let [ms  (if (instance? Duration ms)
-                   (.toMillis ^Duration ms)
-                   ms)
-             df  (CompletableFuture.)
-             fut (.schedule this
-                            ^Runnable (fn []
-                                        (try
-                                          (pt/-resolve! df (f))
-                                          (catch Throwable cause
-                                            (pt/-reject! df cause))))
-                            (long ms)
-                            TimeUnit/MILLISECONDS)]
+       (let [ms (if (instance? Duration ms)
+                  (.toMillis ^Duration ms)
+                  (long ms))
+             df (CompletableFuture.)
+             rf (fn []
+                  (when-not (.isDone ^CompletableFuture df)
+                    (try
+                      (.complete ^CompletableFuture df (f))
+                      (catch Throwable cause
+                        (.completeExceptionally ^CompletableFuture df
+                                                ^Throwable cause)))))
+             sf (.schedule ^ScheduledExecutorService this
+                           ^Runnable rf
+                           ^long ms
+                           TimeUnit/MILLISECONDS)]
 
          (pt/-fnly df
-                   (fn [_ c]
-                     (when (instance? CancellationException c)
-                       (pt/-cancel! fut))))
+                   (fn [_ cause]
+                     (when (instance? CancellationException cause)
+                       (.cancel ^Future sf true))))
          df))))
 
 (defmacro with-dispatch
@@ -853,14 +783,6 @@
      (Thread/currentThread)))
 
 #?(:clj
-   (defn set-name!
-     "Rename thread."
-     {:deprecated "12.0.0"
-      :no-doc true}
-     ([name] (set-name! (current-thread) name))
-     ([thread name] (.setName ^Thread thread ^String name))))
-
-#?(:clj
    (defn set-thread-name
      ([name] (set-thread-name (current-thread) name))
      ([thread name] (.setName ^Thread thread ^String name))))
@@ -900,27 +822,6 @@
       (.getId thread))))
 
 #?(:clj
-   (defn thread-id
-     "Retrieves the thread ID."
-     {:deprecated "11.0"}
-     ([]
-      (.getId ^Thread (Thread/currentThread)))
-     ([^Thread thread]
-      (.getId thread))))
-
-#?(:clj
-   (defn interrupt!
-     "Interrupt a thread.
-
-  DEPRECATED: replaced by `interrupt`"
-     {:deprecated "12.0.0"
-      :no-doc true}
-     ([]
-      (.interrupt (Thread/currentThread)))
-     ([^Thread thread]
-      (.interrupt thread))))
-
-#?(:clj
    (defn interrupt
      "Interrupt a thread."
      ([]
@@ -954,14 +855,24 @@
                            ^Throwable cause))))
 
 #?(:clj
-   (defn throw-uncaught!
-     "Throw an exception to the current uncaught exception handler.
+   (extend-protocol pt/IJoinable
+     Thread
+     (-join
+       ([it] (.join ^Thread it))
+       ([it duration]
+        (if (instance? Duration duration)
+          (.join ^Thread it ^Duration duration)
+          (.join ^Thread it (int duration)))))
 
-  DEPRECATED: replaced by `throw-uncaught`"
-     {:deprecated "12.0.0"
-      :no-doc true}
-     [cause]
-     (throw-uncaught cause)))
+     CountDownLatch
+     (-join
+       ([it]
+        (.await ^CountDownLatch it))
+       ([it duration]
+        (let [timeout (if (instance? Duration duration)
+                        (.toMillis ^Duration duration)
+                        (long duration))]
+          (.await ^CountDownLatch it ^long timeout TimeUnit/MILLISECONDS))))))
 
 ;; #?(:clj
 ;;    (defn structured-task-scope
@@ -1066,49 +977,6 @@
 ;;             (.joinUntil ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it ^Instant deadline)
 ;;             (.throwIfFailed ^java.util.concurrent.StructuredTaskScope$ShutdownOnFailure it)))))))
 
-;; NOTE: still implement for backward compatibility, but is replaced
-;; with IJoinable protocol internally
-#?(:clj
-   (extend-protocol pt/IAwaitable
-     Thread
-     (-await!
-       ([it] (.join ^Thread it))
-       ([it duration]
-        (if (instance? Duration duration)
-          (.join ^Thread it ^Duration duration)
-          (.join ^Thread it (int duration)))))
-
-     CountDownLatch
-     (-await!
-       ([it]
-        (.await ^CountDownLatch it))
-       ([it duration]
-        (let [timeout (if (instance? Duration duration)
-                        (.toMillis ^Duration duration)
-                        (long duration))]
-          (.await ^CountDownLatch it ^long timeout TimeUnit/MILLISECONDS))))))
-
-
-#?(:clj
-   (extend-protocol pt/IJoinable
-     Thread
-     (-join
-       ([it] (.join ^Thread it))
-       ([it duration]
-        (if (instance? Duration duration)
-          (.join ^Thread it ^Duration duration)
-          (.join ^Thread it (int duration)))))
-
-     CountDownLatch
-     (-join
-       ([it]
-        (.await ^CountDownLatch it))
-       ([it duration]
-        (let [timeout (if (instance? Duration duration)
-                        (.toMillis ^Duration duration)
-                        (long duration))]
-          (.await ^CountDownLatch it ^long timeout TimeUnit/MILLISECONDS))))))
-
 ;; #?(:clj
 ;;    (defn managed-blocker
 ;;      {:no-doc true}
@@ -1140,6 +1008,17 @@
 ;;      (ForkJoinPool/managedBlock m#)
 ;;      (deref m#)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; BACKWARD COMAPATIBILITY
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+#?(:clj
+   (extend-protocol pt/IAwaitable
+     Object
+     (-await!
+       ([it] (pt/-join it))
+       ([it duration] (pt/-join it duration)))))
+
 #?(:clj
    (defn await!
      "Generic await operation. Block current thread until some operatiomn terminates.
@@ -1154,13 +1033,156 @@
       (pt/-join resource duration))))
 
 #?(:clj
-   (defn join
-     "Block current thread until some operatiomn terminates. The return
-  value is implementation specific."
-     ([resource]
-      (pt/-join resource))
-     ([resource duration-or-ms]
-      (pt/-join resource duration-or-ms))))
+   (defn shutdown!
+     "Shutdowns the executor service.
+
+  DEPRECATED: replaced by `shutdown`"
+     {:deprecated "12.0.0"
+      :no-doc true}
+     [^ExecutorService executor]
+     (.shutdown executor)))
+
+#?(:clj
+   (defn shutdown-now!
+     "Shutdowns and interrupts the executor service.
+
+  DEPRECATED: replaced by `shutdown`"
+     {:deprecated "12.0.0"
+      :no-doc true}
+     [^ExecutorService executor]
+     (.shutdownNow executor)))
+
+(defn exec!
+  "Run the task in the provided executor, returns `nil`. Analogous to
+  the `(.execute executor f)`. Fire and forget.
+
+  Exception unsafe, can raise exceptions if the executor
+  rejects the task.
+
+  DEPRECATED: use `exec`"
+  {:deprecated "12.0.0"
+   :no-doc true}
+  ([f]
+   (let [f (wrap-bindings f)]
+     (pt/-exec! (resolve-executor *default-executor*) f)))
+  ([executor f]
+   (let [f (wrap-bindings f)]
+     (pt/-exec! (resolve-executor executor) f))))
+
+(defn run!
+  "Run the task in the provided executor.
+
+  Exception unsafe, can raise exceptions if the executor
+  rejects the task.
+
+  DEPRECATED: use `run`"
+  {:deprecated "12.0.0"
+   :no-doc true}
+  ([f]
+   (let [f (wrap-bindings f)]
+     (pt/-run! (resolve-executor *default-executor*) f)))
+  ([executor f]
+   (let [f (wrap-bindings f)]
+     (pt/-run! (resolve-executor executor) f))))
+
+(defn submit!
+  "Submit a task to be executed in a provided executor
+  and return a promise that will be completed with
+  the return value of a task.
+
+  Exception unsafe, can raise exceptions if the executor
+  rejects the task.
+
+  DEPRECATED: use `submit`"
+  {:deprecated "12.0.0"
+   :no-doc true}
+  ([f]
+   (let [f (wrap-bindings f)]
+     (pt/-submit! (resolve-executor *default-executor*) f)))
+  ([executor f]
+   (let [f (wrap-bindings f)]
+     (pt/-submit! (resolve-executor executor) f))))
+
+(defn schedule!
+  "Schedule a callable to be executed after the `ms` delay
+  is reached.
+
+  In JVM it uses a scheduled executor service and in JS
+  it uses the `setTimeout` function.
+
+  Exception unsafe, can raise exceptions if the executor
+  rejects the task.
+
+  DEPRECATED: use `schedule`"
+  {:deprecated "12.0.0"
+   :no-doc true}
+  ([ms f]
+   (pt/-schedule! (resolve-scheduler) ms f))
+  ([scheduler ms f]
+   (pt/-schedule! (resolve-scheduler scheduler) ms f)))
+
+#?(:clj
+   (defn invoke!
+     "Invoke a function to be executed in the provided executor
+  or the default one, and waits for the result. Useful for using
+  in virtual threads.
+
+  DEPRECATED"
+     {:deprecated "12.0.0"}
+     ([f]
+      (->> f
+           (pt/-submit! (resolve-executor *default-executor*))
+            pt/-join))
+     ([executor f]
+      (->> f
+           (pt/-submit! executor)
+           (pt/-join)))))
+
+#?(:clj
+   (defn configure-default-executor!
+     {:deprecated "12.0.0"
+      :no-doc true}
+     [& params]
+     (apply configure-default-executor params)))
+
+#?(:clj
+   (defn set-name!
+     "Rename thread."
+     {:deprecated "12.0.0"
+      :no-doc true}
+     ([name] (set-name! (current-thread) name))
+     ([thread name] (.setName ^Thread thread ^String name))))
+
+#?(:clj
+   (defn thread-id
+     "Retrieves the thread ID."
+     {:deprecated "11.0"}
+     ([]
+      (.getId ^Thread (Thread/currentThread)))
+     ([^Thread thread]
+      (.getId thread))))
+
+#?(:clj
+   (defn interrupt!
+     "Interrupt a thread.
+
+  DEPRECATED: replaced by `interrupt`"
+     {:deprecated "12.0.0"
+      :no-doc true}
+     ([]
+      (.interrupt (Thread/currentThread)))
+     ([^Thread thread]
+      (.interrupt thread))))
+
+#?(:clj
+   (defn throw-uncaught!
+     "Throw an exception to the current uncaught exception handler.
+
+  DEPRECATED: replaced by `throw-uncaught`"
+     {:deprecated "12.0.0"
+      :no-doc true}
+     [cause]
+     (throw-uncaught cause)))
 
 (defn close!
   {:no-doc true
