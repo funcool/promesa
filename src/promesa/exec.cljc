@@ -1009,7 +1009,7 @@
 ;;      (deref m#)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; BACKWARD COMAPATIBILITY
+;; DEPRECATED | BACKWARD COMPATIBILITY
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 #?(:clj
@@ -1128,7 +1128,8 @@
   in virtual threads.
 
   DEPRECATED"
-     {:deprecated "12.0.0"}
+     {:deprecated "12.0.0"
+      :no-doc true}
      ([f]
       (->> f
            (pt/-submit! (resolve-executor *default-executor*))
@@ -1156,7 +1157,8 @@
 #?(:clj
    (defn thread-id
      "Retrieves the thread ID."
-     {:deprecated "11.0"}
+     {:deprecated "11.0.0"
+      :no-doc true}
      ([]
       (.getId ^Thread (Thread/currentThread)))
      ([^Thread thread]

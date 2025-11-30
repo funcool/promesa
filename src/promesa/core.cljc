@@ -346,16 +346,8 @@
   ([f p] (pt/-merr p f))
   ([executor f p] (pt/-merr p f executor)))
 
-(defn error
-  "Same as `catch` but with parameters inverted.
-
-  DEPRECATED"
-
-  ([f p] (catch p f))
-  ([f type p] (catch p type f)))
-
 (defn all
-  "Given an array of promises, return a promise that is fulfilled when
+  "Given an coll of promises, return a promise that is fulfilled when
   all the items in the array are fulfilled.
 
   Example:
@@ -460,19 +452,6 @@
      [promises]
      (pt/-join (wait-all promises))))
 
-(defn run!
-  "A promise aware run! function. Executed in terms of `then` rules.
-
-  DEPRECATED, replaced by `run` (without !)"
-  {:deprecated true
-   :no-doc true}
-  ([f coll]
-   (c/-> (c/reduce #(then %1 (fn [_] (f %2))) (impl/resolved nil) coll)
-         (pt/-fmap (constantly nil))))
-  ([f coll executor]
-   (c/-> (c/reduce #(then %1 (fn [_] (f %2)) executor) (impl/resolved nil) coll)
-         (pt/-fmap (constantly nil)))))
-
 (defn run
   "A promise aware run! function. Executed in terms of `then` rules."
   ([f coll]
@@ -508,15 +487,6 @@
 
 ;; Cancellation
 
-(defn cancel!
-  "Cancel the promise.
-
-  DEPRECATED: replaced by `cancel`"
-  {:deprecated "12.0.0"}
-  [p]
-  (pt/-cancel! p)
-  p)
-
 (defn cancel
   "Cancel, a cancellable resource"
   [resource]
@@ -529,22 +499,6 @@
   (pt/-cancelled? v))
 
 ;; Completable
-
-(defn resolve!
-  "Resolve a completable promise with a value.
-
-  DEPRECATED: replaced by `resolve`"
-  {:deprecated "12.0.0"}
-  ([o] (pt/-resolve! o nil))
-  ([o v] (pt/-resolve! o v)))
-
-(defn reject!
-  "Reject a completable promise with an error.
-
-  DEPRECATED: replaced by `reject`"
-  {:deprecated "12.0.0"}
-  [p e]
-  (pt/-reject! p e))
 
 (defn resolve
   "Resolve a completable promise with a value."
@@ -590,9 +544,10 @@
   ([p t v] (timeout p t v :default))
   ([p t v scheduler]
    (c/let [timeout (deferred)
-           tid     (exec/schedule! scheduler t #(if (= v ::default)
-                                                  (reject! timeout (TimeoutException. "Operation timed out."))
-                                                  (resolve! timeout v)))]
+           tid     (exec/schedule! scheduler t
+                                   #(if (= v ::default)
+                                      (reject timeout (TimeoutException. "Operation timed out."))
+                                      (resolve timeout v)))]
      (race [(fnly (fn [_ _] (pt/-cancel! tid)) p) timeout]))))
 
 (defn delay
@@ -603,7 +558,7 @@
   ([t v] (delay t v :default))
   ([t v scheduler]
    (c/let [d (deferred)]
-     (exec/schedule! scheduler t #(resolve! d v))
+     (exec/schedule! scheduler t #(resolve d v))
      d)))
 
 (defmacro do*
@@ -627,13 +582,6 @@
     (impl/resolved nil)
     (fn [_#]
       (promesa.core/do* ~@exprs))))
-
-(defmacro do!
-  "A convenience alias for `do` macro."
-  {:deprecated "12.0.0"
-   :no-doc true}
-  [& exprs]
-  `(promesa.core/do ~@exprs))
 
 (defmacro let*
   "An exception unsafe let-like macro. Supposes that we are already
@@ -830,31 +778,6 @@
      ~xs))
 
 #?(:clj
-   (defn await!
-     "Generic await operation. Block current thread until some operation
-  terminates. Returns `nil` on timeout; does not catch any other
-  exception.
-
-  Default implementation for Thread, CompletableFuture and
-  CountDownLatch.
-
-  The return value is implementation specific.
-
-  DEPRECATED: replaced with `promesa.exec/join` or
-  `clojure.core/deref` depending on use case."
-
-     {:deprecated "12.0.0"}
-     ([resource]
-      (pt/-join resource))
-     ([resource duration]
-      (await! resource duration nil))
-     ([resource duration default-on-timeout]
-      (try
-        (pt/-join resource duration)
-        (catch TimeoutException _
-          default-on-timeout)))))
-
-#?(:clj
    (defn join
      "Block current thread until some operatiomn terminates. The return
   value is implementation specific.
@@ -891,3 +814,90 @@
           (throw cause))
         (catch Throwable cause
           cause)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; DEPRECATED | BACKWARD COMPATIBILITY
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn error
+  "Same as `catch` but with parameters inverted.
+
+  DEPRECATED"
+  {:deprecated "12.0.0"
+   :no-doc true}
+  ([f p] (catch p f))
+  ([f type p] (catch p type f)))
+
+(defn run!
+  "A promise aware run! function. Executed in terms of `then` rules.
+
+  DEPRECATED, replaced by `run` (without !)"
+  {:deprecated true
+   :no-doc true}
+  ([f coll]
+   (c/-> (c/reduce #(then %1 (fn [_] (f %2))) (impl/resolved nil) coll)
+         (pt/-fmap (constantly nil))))
+  ([f coll executor]
+   (c/-> (c/reduce #(then %1 (fn [_] (f %2)) executor) (impl/resolved nil) coll)
+         (pt/-fmap (constantly nil)))))
+
+(defn cancel!
+  "Cancel the promise.
+
+  DEPRECATED: replaced by `cancel`"
+  {:deprecated "12.0.0"
+   :no-doc true}
+  [p]
+  (pt/-cancel! p)
+  p)
+
+(defn resolve!
+  "Resolve a completable promise with a value.
+
+  DEPRECATED: replaced by `resolve`"
+  {:deprecated "12.0.0"
+   :no-doc true}
+  ([o] (pt/-resolve! o nil))
+  ([o v] (pt/-resolve! o v)))
+
+(defn reject!
+  "Reject a completable promise with an error.
+
+  DEPRECATED: replaced by `reject`"
+  {:deprecated "12.0.0"
+   :no-doc true}
+  [p e]
+  (pt/-reject! p e))
+
+#?(:clj
+   (defn await!
+     "Generic await operation. Block current thread until some operation
+  terminates. Returns `nil` on timeout; does not catch any other
+  exception.
+
+  Default implementation for Thread, CompletableFuture and
+  CountDownLatch.
+
+  The return value is implementation specific.
+
+  DEPRECATED: replaced with `promesa.exec/join` or
+  `clojure.core/deref` depending on use case."
+
+     {:deprecated "12.0.0"
+      :no-doc true}
+     ([resource]
+      (pt/-join resource))
+     ([resource duration]
+      (await! resource duration nil))
+     ([resource duration default-on-timeout]
+      (try
+        (pt/-join resource duration)
+        (catch TimeoutException _
+          default-on-timeout)))))
+
+(defmacro do!
+  "A convenience alias for `do` macro."
+  {:deprecated "12.0.0"
+   :no-doc true}
+  [& exprs]
+  `(promesa.core/do ~@exprs))
