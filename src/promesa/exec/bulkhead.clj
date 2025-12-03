@@ -225,7 +225,7 @@
 
 (defn invoke
   ([instance f]
-   (let [f (if (instance? Bulkhead instance?)
+   (let [f (if (instance? Bulkhead instance)
              (px/wrap-bindings f)
              f)
          f (pu/->Supplier f)]
