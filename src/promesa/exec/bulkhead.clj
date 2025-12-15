@@ -222,3 +222,11 @@
   "Check if the provided object is instance of Bulkhead type."
   [o]
   (satisfies? Bulkhead o))
+
+(defn invoke!
+  {:deprecated "12.0.0"
+   :no-doc true}
+  ([context f]
+   (pt/-invoke context f))
+  ([context f ms-or-duration]
+   (pt/-invoke context f ms-or-duration)))
