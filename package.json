@@ -1,6 +1,6 @@
 {
   "name": "promesa",
-  "version": "11.0",
+  "version": "12.0.0",
   "description": "-",
   "author": "-",
   "license": "SEE LICENSE IN <LICENSE>",
@@ -10,9 +10,9 @@
   },
   "scripts": {
     "test:watch": "clojure -M:dev:shadow-cljs watch test",
-    "test:compile": "clojure -M:dev:shadow-cljs compile test --config-merge '{:autorun false}'",
+    "test:build": "clojure -M:dev:shadow-cljs compile test --config-merge '{:autorun false}'",
     "test:run": "node target/tests.js",
-    "test": "yarn run test:compile && yarn run test:run"
+    "test": "yarn run test:build && yarn run test:run"
   },
   "devDependencies": {
     "source-map-support": "^0.5.21"
