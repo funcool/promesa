@@ -22,13 +22,13 @@
 ;; Or using a transducer
 (sp/chan :buf 10 :xf (map inc))
 
-;; `close!` a channel to stop accepting puts. Remaining values are
+;; `close` a channel to stop accepting puts. Remaining values are
 ;; still available to take and pending puts are cancelled. Drained
 ;; channels return nil on take. Nils may not be sent over a channel
 ;; explicitly.
 
 (let [c (sp/chan)]
-  (sp/close! c)
+  (sp/close c)
   (assert (true? (sp/closed? c))))
 
 ;; The put and take operations; we use `put!` (blocking put) and
@@ -37,7 +37,7 @@
 (let [c (sp/chan :buf 1)]
   (sp/put! c "hello")
   (assert (= "hello" (sp/take! c)))
-  (sp/close! c))
+  (sp/close c))
 
 ;; Because these are blocking calls, if we try to put on an unbuffered
 ;; channel, we will block the main thread. We can use `p/thread` (like
@@ -48,7 +48,7 @@
 (let [c (sp/chan)]
   (p/thread (sp/put! c "hello"))
   (assert (= "hello" (sp/take! c)))
-  (sp/close! c))
+  (sp/close c))
 
 ;; There are non-blocking promise returning API for put & take
 ;; operations, we use the clojure standard way do get a future value:
@@ -59,7 +59,7 @@
   ;; what we ignore in this concrete example
   (sp/put c "hello")
   (assert (= "hello" @(sp/take c)))
-  (sp/close! c))
+  (sp/close c))
 
 ;;;; GO BLOCKS
 
@@ -72,7 +72,7 @@
 (let [c (sp/chan)]
   (sp/go (sp/put! c "hello"))
   (assert (= "hello" (sp/take! c)))
-  (sp/close! c))
+  (sp/close c))
 
 ;; The go block/macro returns a promise which will be eventually resolved with last-expr/return
 ;; value inside the block:
@@ -107,8 +107,8 @@
   (sp/>! c1 "hi")
   (sp/>! c2 "there")
 
-  (sp/close! c1)
-  (sp/close! c2))
+  (sp/close c1)
+  (sp/close c2))
 
 ;; Prints (on stdout, possibly not visible at your repl):
 ;;   Read hi from #<promesa.exec.csp.channel.Channel ...>
@@ -130,7 +130,7 @@
       (assert (= "hi" v))))
 
   ;; Close all channels
-  (run! sp/close! cs)
+  (run! sp/close cs)
 
   (println "Read" n "msgs in" (- (System/currentTimeMillis) begin) "ms"))
 
