@@ -87,6 +87,16 @@
 
     (t/is (= @result 12))))
 
+
+(t/deftest submit-with-same-thread-executor
+  (let [context (px/current-thread-executor)
+        handler (fn []
+                  (binding [*context* (inc *context*)]
+                    *context*))
+        result  (binding [*context* 11]
+                  (px/submit :same-thread handler))]
+    (t/is (= @result 12))))
+
 (t/deftest invoke-1
   (let [context (reify
                   java.util.concurrent.Executor
