@@ -5,50 +5,55 @@ on:
     branches:
     - master
   pull_request:
-  schedule:
-    # monthly
-    - cron: "0 0 1 * *"
+    types:
+      - opened
+      - synchronize
 
 env:
   #bump to clear caches
   ACTION_CACHE_VERSION: 'v1'
 
+concurrency:
+  group: ${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test-clj:
     strategy:
       matrix:
-        java: ['11', '17', '21', '24']
-    runs-on: ubuntu-latest
+        java: ['11', '21', '25']
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: ${{ matrix.java }}
 
       - uses: DeLaGuardo/setup-clojure@13.4
         with:
-          cli: 1.12.0.1530
+          cli: 1.12.3.1577
 
       - run: clojure -M:dev -m promesa.tests.main
 
   test-cljs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
-          java-version: '24'
+          java-version: '25'
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.15.0'
+          node-version: '24.12.0'
+          cache: 'npm'
 
       - uses: DeLaGuardo/setup-clojure@13.4
         with:
-          cli: 1.12.0.1530
+          cli: 1.12.3.1577
 
       - run: |
           corepack enable
@@ -57,7 +62,7 @@ jobs:
           yarn run test
 
   test-bb:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
