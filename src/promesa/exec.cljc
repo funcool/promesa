@@ -624,7 +624,8 @@
 
      pt/IInvoke
      (-invoke [this f]
-       (let [cfuture (CompletableFuture/supplyAsync ^Supplier (pu/->Supplier f) ^Executor this)]
+       (let [f  (-> f wrap-bindings pu/->Supplier)
+             cf (CompletableFuture/supplyAsync ^Supplier f ^Executor this)]
          (.get ^CompletableFuture cf)))
 
      (-invoke [this f ms-or-duration]
@@ -633,11 +634,14 @@
                (.toMillis ^Duration ms-or-duration)
                (long ms-or-duration))
 
+             supplier
+             (-> f wrap-bindings pu/->Supplier)
+
              cfuture
-             (CompletableFuture/supplyAsync ^Supplier (pu/->Supplier f) ^Executor this)]
+             (CompletableFuture/supplyAsync ^Supplier supplier ^Executor this)]
 
          (try
-           (.get ^CompletableFuture this ^long timeout TimeUnit/MILLISECONDS)
+           (.get ^CompletableFuture cfuture ^long timeout TimeUnit/MILLISECONDS)
            (catch TimeoutException cause
              (.cancel ^CompletableFuture cfuture true)
              (throw cause)))))))

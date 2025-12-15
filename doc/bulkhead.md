@@ -45,14 +45,13 @@ the task in the current thread, blocking the call on the submit).
 
 Additionally to the executor interface, it also implemens the new
 `IInvokable` protocol, so you can execute a synchronous call
-(independently of the final bulkhead implementation) thaks to the
+(independently of the final bulkhead implementation) thanks to the
 `px/invoke` helper. Internally, on async bulkhead is just a
 combination of `px/submit` with `px/join`, but on the `sync` bulkhead
 implementation it does not uses the CompletableFuture machinary and
 just executes the function almost with no indirections.
 
 NOTE: The `sync` bulkhead works fine with JVM virtual threads.
-
 
 
 ## Available options

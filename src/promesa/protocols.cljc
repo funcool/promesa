@@ -98,6 +98,7 @@
   (-blockable? [it]))
 
 #?(:clj
+   ;; DEPRECATED
    (defprotocol IAwaitable
      (-await! [it] [it duration] "block current thread await termination")))
 
