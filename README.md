@@ -24,15 +24,15 @@ funcool/promesa {:mvn/version "11.0.678"}
 Or you can try the latest RC:
 
 ```clojure
-funcool/promesa {:mvn/version "12.0.0-RC1"}
+funcool/promesa {:mvn/version "12.0.0-RC2"}
 ```
 
 You also can get it via git:
 
 ```clojure
 funcool/promesa
-{:git/sha "3723662"
- :git/tag "12.0.0-RC1"
+{:git/sha "f152066"
+ :git/tag "12.0.0-RC2"
  :git/url "https://github.com/funcool/promesa"}
 ```
 

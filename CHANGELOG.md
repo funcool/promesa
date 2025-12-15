@@ -1,6 +1,6 @@
 # Changelog #
 
-## Version 12.0.0-RC2 (Unreleased)
+## Version 12.0.0-RC2
 
 - Mark the `promesa.exec.csp` namespace no longer experimental and unify all
   related protocols with the current naming style, removing the usage of `!`
