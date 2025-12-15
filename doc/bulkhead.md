@@ -51,7 +51,7 @@ combination of `px/submit` with `px/join`, but on the `sync` bulkhead
 implementation it does not uses the CompletableFuture machinary and
 just executes the function almost with no indirections.
 
-NOTE: The `sync` bulkhead works fine with JVM virtual threads.
+NOTE: The `:sync` bulkhead works fine with JVM virtual threads.
 
 
 ## Available options
@@ -65,14 +65,15 @@ The `create` function accept the following parameters and its defaults:
 - `:queue`: the max queued jobs allowed (defaults to
   Integer/MAX_VALUE), when maximum queue is reached, the task
   submision will be rejected
-- `:timeout`: this settings means two different things depending on
-  the used implementation (although in practical terms they represent
-  something analogous):
-  - on the `async` it means the timeout to put the task on the queue
-    and is effective only if the queue is full, and it happens
-    synchronously (before the task is submited to the internal
-    executor)
-  - on the `sync` it means the timeout of aquiring the semaphore
-    and is always happens synchronously.
+- `:timeout`: maximum time to wait synchronously to enqueue the task
+  (on async it measn time to put the task to the internal queue and on
+  sync means tiem to wait to aquire the semaphore, if not specified
+  and the max-queue is reached, an exception will be raised that queue
+  is full).
+
+For backward compatibility we still preserve the old types:
+
+- `:executor` alias for `:async`
+- `:semaphore` alias for `:sync`
 
 [0]: https://stackoverflow.com/questions/30391809/what-is-bulkhead-pattern-used-by-hystrix

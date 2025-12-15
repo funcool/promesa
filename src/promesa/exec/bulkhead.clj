@@ -107,7 +107,7 @@
 
       (when-not res
         (let [size  (.size queue)
-              hint  (str "queue max capacity reached: " size)
+              hint  (str "bulkhead: queue max capacity reached (" max-queue ")")
               props {:type :bulkhead-error
                      :code :capacity-limit-reached
                      :size size}]
@@ -150,8 +150,8 @@
     (let [result (volatile! nil)
           f'     (fn [] (vreset! result (f)))]
       (.execute ^Executor this
-                ^Runnable f)
-      (deref @result)))
+                ^Runnable f')
+      (deref result)))
 
   (-invoke [this f ms-or-duration]
     (-> this
@@ -222,16 +222,3 @@
   "Check if the provided object is instance of Bulkhead type."
   [o]
   (satisfies? Bulkhead o))
-
-(defn invoke
-  ([instance f]
-   (let [f (if (instance? Bulkhead instance?)
-             (px/wrap-bindings f)
-             f)
-         f (pu/->Supplier f)]
-     @(CompletableFuture/supplyAsync ^Supplier f
-                                     ^Executor instance)))
-
-  ([instance f timeout-ms]
-   (-> (assoc instance :timeout timeout-ms)
-       (invoke f))))

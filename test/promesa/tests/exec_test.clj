@@ -62,3 +62,46 @@
 (t/deftest pmap-sample-2
   (let [result (pmap + (range 5) (range 5))]
     (t/is (= result [0 2 4 6 8]))))
+
+
+(def ^:dynamic *context* nil)
+
+(t/deftest submit-with-context-1
+  (let [context (reify
+                  java.util.concurrent.Executor
+                  (execute [_ f]
+                    (.run ^Runnable f)))
+        result (binding [*context* 11]
+                 (px/submit context (fn []
+                                      (binding [*context* (inc *context*)]
+                                        *context*))))]
+    (t/is (= @result 12))))
+
+(t/deftest submit-with-context-2
+  (let [context (px/single-executor)
+        handler (fn []
+                  (binding [*context* (inc *context*)]
+                    *context*))
+        result  (binding [*context* 11]
+                  (px/submit context handler))]
+
+    (t/is (= @result 12))))
+
+(t/deftest invoke-1
+  (let [context (reify
+                  java.util.concurrent.Executor
+                  (execute [_ f]
+                    (.run ^Runnable f)))
+        result (px/invoke context (constantly 10))]
+    (t/is (= result 10))))
+
+(t/deftest invoke-2
+  (let [context (px/single-executor)
+        handler (fn []
+                  (binding [*context* (inc *context*)]
+                    *context*))
+
+        result  (binding [*context* 11]
+                  (px/invoke context handler))]
+
+    (t/is (= result 12))))

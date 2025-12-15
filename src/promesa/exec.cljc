@@ -360,7 +360,6 @@
 (defn exec
   "Run the task in the provided executor, returns `Promise<nil>`. Analogous to
   the `(.execute executor f)`. Fire and forget."
-
   ([f]
    (try
      (let [f (wrap-bindings f)]
@@ -422,7 +421,8 @@
      "Execute a function `f` in a provided context. Optional timeout can be
   provided. If timeout is reached and the context allows cancellation,
   the task will be cancelled."
-     ([context f] (pt/-invoke context f))
+     ([context f]
+      (pt/-invoke context f))
      ([context f ms-or-duration]
       (pt/-invoke context f ms-or-duration))))
 
@@ -623,28 +623,29 @@
        (CompletableFuture/supplyAsync ^Supplier (pu/->Supplier f) ^Executor this))
 
      pt/IInvoke
-     (-invoke [this f]
-       (let [f  (-> f wrap-bindings pu/->Supplier)
-             cf (CompletableFuture/supplyAsync ^Supplier f ^Executor this)]
-         (.get ^CompletableFuture cf)))
+     (-invoke
+       ([this f]
+        (let [f  (-> f wrap-bindings pu/->Supplier)
+              cf (CompletableFuture/supplyAsync ^Supplier f ^Executor this)]
+          (.get ^CompletableFuture cf)))
 
-     (-invoke [this f ms-or-duration]
-       (let [timeout
-             (if (instance? Duration ms-or-duration)
-               (.toMillis ^Duration ms-or-duration)
-               (long ms-or-duration))
+       ([this f ms-or-duration]
+        (let [timeout
+              (if (instance? Duration ms-or-duration)
+                (.toMillis ^Duration ms-or-duration)
+                (long ms-or-duration))
 
-             supplier
-             (-> f wrap-bindings pu/->Supplier)
+              supplier
+              (-> f wrap-bindings pu/->Supplier)
 
-             cfuture
-             (CompletableFuture/supplyAsync ^Supplier supplier ^Executor this)]
+              cfuture
+              (CompletableFuture/supplyAsync ^Supplier supplier ^Executor this)]
 
-         (try
-           (.get ^CompletableFuture cfuture ^long timeout TimeUnit/MILLISECONDS)
-           (catch TimeoutException cause
-             (.cancel ^CompletableFuture cfuture true)
-             (throw cause)))))))
+          (try
+            (.get ^CompletableFuture cfuture ^long timeout TimeUnit/MILLISECONDS)
+            (catch TimeoutException cause
+              (.cancel ^CompletableFuture cfuture true)
+              (throw cause))))))))
 
 ;; --- Scheduler
 

@@ -6,7 +6,7 @@
    [promesa.util :as pu]
    [clojure.test :as t]))
 
-(def ^:dynamic *executor* nil)
+(def ^:dynamic *context* 1)
 
 (t/use-fixtures :each (fn [next]
                         (binding [px/*default-executor* (px/forkjoin-executor)]
@@ -90,3 +90,27 @@
           data  (ex-data cause)]
       (t/is (= :bulkhead-error (:type data)))
       (t/is (= :capacity-limit-reached (:code data))))))
+
+(t/deftest bulkhead-with-invoke-1
+  (let [instance (pbh/create {:permits 1 :queue 1 :type :semaphore})
+        handler  (fn []
+                   (binding [*context* (inc *context*)]
+                     *context*))
+        result1  (px/invoke instance handler)
+        result2  (binding [*context* 11]
+                   (px/invoke instance handler))]
+
+    (t/is (= 2 result1))
+    (t/is (= 12 result2))))
+
+(t/deftest bulkhead-with-invoke-2
+  (let [executor (px/single-executor)
+        instance (pbh/create {:permits 1 :queue 1 :type :executor :executor executor})
+        handler  (fn []
+                   (binding [*context* (inc *context*)]
+                     *context*))
+        result1  (px/invoke instance handler)
+        result2  (binding [*context* 11]
+                   (px/invoke instance handler))]
+    (t/is (= 2 result1))
+    (t/is (= 12 result2))))
