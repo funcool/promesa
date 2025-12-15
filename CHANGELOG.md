@@ -1,57 +1,58 @@
 # Changelog #
 
-## Version 12.0.xxx
+## Version 12.0.0-RC1
+
+BREAKING CHANGES:
+
+- The `:name` option on `thread-factory` constructor helper now is interpreted
+  as-is, without template interpolation; use the new `:prefix` for that purpose
+
+- Remove Inst impl on Duration class; it's bad practice to make global and
+  implicit type extensions at a library level, and that should never have been
+  there
+
+- Don't cancel pending puts on CSP channel close, allowing process flows without
+  lossing messages
+
+- Remove unwraping of `ExecutionException` and `CompletionException` exceptions
+  on the JVM-only experimental helpers: `await!`, `await` and `with-dispatch!`
+  macro (was a very bad decision because unwrapping removes the ability to know
+  the real cause of the exception)
+
 
 RELEVANT CHANGES:
 
-- Remove unwraping of `ExecutionException` and `CompletionException`
-  exceptions on the JVM only experimental helpers: `await!`, `await`
-  and `with-dispatch!` macro (was a very bad decision because
-  unwrapping removes the ability to know the real cause of the
-  exception)
+- Add near 83x performance improvement on internal dynamic binding handling
+  (more info https://github.com/funcool/promesa/pull/156)
 
-- The `:name` option on `thread-factory` constructor helper now is
-  interpreted as-is, without template interpolation; use the new
-  `:prefix` for that purpose
+- Simplify a broken/experimental Bulkhead API and add coherent documentation for
+  it; it also adds the option to pass timeout
 
-- Remove Inst impl on Duration class; it's bad practice to make global
-  and implicit type extensions at a library level, and that should
-  never have been there
+- Internal IAwaitable protocol is deprecated and replaced with IJoinable; we
+  still preserve the old protocol for backward compatibility
 
-- Add near 83x performance improvement on internal dynamic binding
-  handling (more info https://github.com/funcool/promesa/pull/156)
+- Deprecate several functions like `run!`, `exec!`, `submit!`, `resolve!`,
+  `reject!`, `cancel!`, `await!` and probably other functions that have the `!`
+  suffix. They are all replaced with the alternative name without the
+  suffix. The internal protocols still continue use the same pattern for not
+  make this a breaking change and the old symbols are still available for the
+  same reason
 
-- Simplify a broken Bulkhead interface and add coherent documentation
-  for it; it also adds the option to pass timeout
-
-- Don't cancel pending puts on CSP channel close, allowing process
-  flows without lossing messages
-
-- Internal IAwaitable protocol is deprecated and replaced with
-  IJoinable; we still preserve the old protocol for backward
-  compatibility
-
-- Deprecate several functions like `run!`, `exec!`, `submit!`,
-  `resolve!`, `reject!`, `cancel!`, `await!` and probably other
-  functions that have the `!`  suffix. They are all replaced with the
-  alternative name without the suffix. The internal protocols still
-  continue use the same pattern for not make this a breaking change
-  and the old symbols are still available for the same reason.
-
-- The `promesa.exec/set-name!` is replaced with
-  `promesa.exec/set-thread-name`, preserving backward compatibility.
+- The `promesa.exec/set-name!` is replaced with `promesa.exec/set-thread-name`,
+  preserving backward compatibility
 
 OTHER CHANGES:
 
 - Remove deprecated executors constructors (deprecated in v9)
-- Add default-on-timeout arity for `p/await` and `p/await!`
-- Add helper for properly unwrap concurrent exceptions: `pu/unwrap-exception`
-- Add performance improvement by removing extensive usage of
-  `satisfies?` on promise coerce operation
-- Fix incorrect promise coerce operation on `p/wait-all` and `p/wait-all*`
+- Add `p/join` helper, a cleaner name for the depracted `promesa.core/await!`
+- Add default-on-timeout arity for `promesa.core/await`
+- Add helper for properly unwrap concurrent exceptions:
+  `promesa.util/unwrap-exception`
+- Add performance improvement by removing extensive usage of `satisfies?` on
+  promise coerce operation
+- Fix incorrect promise coerce operation on `promesa.core/wait-all` and
+  `promesa.core/wait-all*`
 - Add csp/merge operation (jvm only)
-
-
 
 
 ## Version 11.0.678
