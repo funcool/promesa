@@ -13,11 +13,16 @@
    :extra-paths ["test" "dev"]}
 
   :repl
-  {:main-opts  ["-m" "rebel-readline.main"]}
+  {:main-opts  ["-m" "rebel-readline.main"]
+   :jvm-opts ["--sun-misc-unsafe-memory-access=allow"
+              "-XX:+UnlockExperimentalVMOptions"
+              "-XX:CompileCommand=blackhole,criterium.blackhole.Blackhole::consume"]}
 
   :shadow-cljs
   {:main-opts ["-m" "shadow.cljs.devtools.cli"]
-   :jvm-opts ["--sun-misc-unsafe-memory-access=allow"]}
+   :jvm-opts ["--sun-misc-unsafe-memory-access=allow"
+              "-XX:+UnlockExperimentalVMOptions"
+              "-XX:CompileCommand=blackhole,criterium.blackhole.Blackhole::consume"]}
 
   :codox
   {:extra-deps
