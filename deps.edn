@@ -7,16 +7,13 @@
     org.clojure/tools.namespace {:mvn/version "RELEASE"},
     org.clojure/core.async {:mvn/version "1.6.673"}
     org.clojure/clojure {:mvn/version "1.12.1"}
-    criterium/criterium {:mvn/version "RELEASE"}
+    criterium/criterium {:mvn/version "0.4.6"}
     thheller/shadow-cljs {:mvn/version "RELEASE"}}
 
    :extra-paths ["test" "dev"]}
 
   :repl
-  {:main-opts  ["-m" "rebel-readline.main"]
-   :jvm-opts ["--sun-misc-unsafe-memory-access=allow"
-              "-XX:+UnlockExperimentalVMOptions"
-              "-XX:CompileCommand=blackhole,criterium.blackhole.Blackhole::consume"]}
+  {:main-opts  ["-m" "rebel-readline.main"]}
 
   :shadow-cljs
   {:main-opts ["-m" "shadow.cljs.devtools.cli"]

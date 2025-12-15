@@ -6,10 +6,12 @@ export JAVA_OPTS="\
        -XX:-OmitStackTraceInFastThrow \
        -XX:+UnlockDiagnosticVMOptions \
        -XX:+DebugNonSafepoints \
+       -XX:+UnlockExperimentalVMOptions \
+       -XX:CompileCommand=blackhole,criterium.blackhole.Blackhole::consume \
        --sun-misc-unsafe-memory-access=allow \
        --enable-native-access=ALL-UNNAMED \
        --enable-preview";
 
 set -ex
 
-clojure -M:dev -m rebel-readline.main
+clojure -M:dev:repl
