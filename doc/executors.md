@@ -49,7 +49,7 @@ used (bound on the `promesa.exec/*default-executor*` dynamic var).
 Also, in both cases, the returned promise is cancellable, so if for
 some reason the function is still not executed, the cancellation will
 prevent the execution. You can cancel a cancellable promise with
-`p/cancel!` function.
+`p/cancel` function.
 
 
 ## Delayed Tasks
@@ -73,7 +73,7 @@ The tasks can be cancelled using its return value:
 ```clojure
 (def task (exec/schedule 1000 #(do-stuff)))
 
-(p/cancel! task)
+(p/cancel task)
 ```
 
 The execution model depends on the platform: on the **JVM** a default
