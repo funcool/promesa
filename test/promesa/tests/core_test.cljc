@@ -904,3 +904,14 @@
               (p/fnly (fn [r]
                         (t/is (= r 2))
                         (done))))))))
+
+#?(:cljs
+   (t/deftest do-expr-with-catch
+     (t/async done
+       (->> (p/do (throw (ex-info "test" {})))
+            (p/merr (fn [cause]
+                      (p/do "ok")))
+            (p/fnly (fn [result cause]
+                      (t/is (nil? cause))
+                      (t/is (= "ok" result))
+                      (done)))))))
