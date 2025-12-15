@@ -21,9 +21,7 @@
   This code is implemented in CLJS for make available the channel
   abstraction to the CLJS, but the main use case for this ns is
   targeted to the JVM, where you will be able to take advantage of
-  virtual threads and seamless blocking operations on channels.
-
-  **EXPERIMENTAL API**"
+  virtual threads and seamless blocking operations on channels."
   (:refer-clojure :exclude [take merge])
   (:require
    [promesa.core :as p]
@@ -58,8 +56,8 @@
   [bindings & body]
   `(go (loop ~bindings ~@body)))
 
-(declare offer!)
-(declare close!)
+(declare offer)
+(declare close)
 (declare chan)
 
 (defmacro go-chan
@@ -71,8 +69,8 @@
      (->> (p/thread-call *executor* f#)
           (p/fnly (fn [v# e#]
                     (if e#
-                      (close! c# e#)
-                      (offer! c# v#)))))
+                      (close c# e#)
+                      (offer c# v#)))))
      c#))
 
 (defmacro thread-chan
@@ -84,8 +82,8 @@
      (->> (p/thread-call :thread f#)
           (p/fnly (fn [v# e#]
                     (if e#
-                      (close! c# e#)
-                      (offer! c# v#)))))
+                      (close c# e#)
+                      (offer c# v#)))))
      c#))
 
 (defn chan
@@ -136,21 +134,21 @@
    (defn put!
      "A blocking version of `put`."
      ([port val]
-      (p/await! (put port val)))
+      (p/join (put port val)))
      ([port val timeout-duration]
-      (p/await! (put port val timeout-duration nil)))
+      (p/join (put port val timeout-duration nil)))
      ([port val timeout-duration timeout-value]
-      (p/await! (put port val timeout-duration timeout-value)))))
+      (p/join (put port val timeout-duration timeout-value)))))
 
 #?(:clj
    (defn >!
      "A convenience alias for `put!`."
      ([port val]
-      (p/await! (put port val)))
+      (p/join (put port val)))
      ([port val timeout-duration]
-      (p/await! (put port val timeout-duration nil)))
+      (p/join (put port val timeout-duration nil)))
      ([port val timeout-duration timeout-value]
-      (p/await! (put port val timeout-duration timeout-value)))))
+      (p/join (put port val timeout-duration timeout-value)))))
 
 (defn take
   "Schedules a take operation on the channel. Returns a promise instance
@@ -172,21 +170,21 @@
    (defn take!
      "Blocking version of `take`."
      ([port]
-      (p/await! (take port)))
+      (p/join (take port)))
      ([port timeout-duration]
-      (p/await! (take port timeout-duration nil)))
+      (p/join (take port timeout-duration nil)))
      ([port timeout-duration timeout-value]
-      (p/await! (take port timeout-duration timeout-value)))))
+      (p/join (take port timeout-duration timeout-value)))))
 
 #?(:clj
    (defn <!
      "A convenience alias for `take!`."
      ([port]
-      (p/await! (take port)))
+      (p/join (take port)))
      ([port timeout-duration]
-      (p/await! (take port timeout-duration nil)))
+      (p/join (take port timeout-duration nil)))
      ([port timeout-duration timeout-value]
-      (p/await! (take port timeout-duration timeout-value)))))
+      (p/join (take port timeout-duration timeout-value)))))
 
 (defn- alts*
   [ports {:keys [priority]}]
@@ -196,14 +194,14 @@
         handler (fn [port]
                   (reify
                     pt/ILock
-                    (-lock! [_] (pt/-lock! lock))
-                    (-unlock! [_] (pt/-unlock! lock))
+                    (-lock [_] (pt/-lock lock))
+                    (-unlock [_] (pt/-unlock lock))
 
                     pt/IHandler
                     (-active? [_] (pt/-active? lock))
                     (-blockable? [_] (pt/-blockable? lock))
-                    (-commit! [_]
-                      (when-let [f (pt/-commit! lock)]
+                    (-commit [_]
+                      (when-let [f (pt/-commit lock)]
                         (fn
                           ([val]
                            (f [val port]))
@@ -215,8 +213,8 @@
       (when-let [port (first ports)]
         (if (vector? port)
           (let [[port val] port]
-            (pt/-put! port val (handler port)))
-          (pt/-take! port (handler port)))
+            (pt/-put port val (handler port)))
+          (pt/-take port (handler port)))
         (recur (rest ports))))
     ret))
 
@@ -240,15 +238,15 @@
    (defn alts!
      "A blocking variant of `alts`."
      [ports & {:as opts}]
-     (p/await! (alts* ports opts))))
+     (p/join (alts* ports opts))))
 
 (defn close
   "Close the channel."
   ([port]
-   (pt/-close! port)
+   (pt/-close port)
    nil)
   ([port cause]
-   (pt/-close! port cause)
+   (pt/-close port cause)
    nil))
 
 (defn close!
@@ -256,10 +254,10 @@
   {:no-doc true
    :deprecated "12.0.0"}
   ([port]
-   (pt/-close! port)
+   (pt/-close port)
    nil)
   ([port cause]
-   (pt/-close! port cause)
+   (pt/-close port cause)
    nil))
 
 (defn closed?
@@ -278,11 +276,11 @@
   first argument."
   ([ms]
    (let [ch (chan)]
-     (px/schedule! ms #(pt/-close! ch))
+     (px/schedule ms #(pt/-close ch))
      ch))
   ([scheduler ms]
    (let [ch (chan)]
-     (px/schedule! scheduler ms #(pt/-close! ch))
+     (px/schedule scheduler ms #(pt/-close ch))
      ch)))
 
 (defn timeout
@@ -324,7 +322,7 @@
   Returns `true` if the operation succeeded. Never blocks."
   [port val]
   (let [o (volatile! nil)]
-    (pt/-put! port val (channel/volatile->handler o))
+    (pt/-put port val (channel/volatile->handler o))
     (first @o)))
 
 (defn offer!
@@ -342,7 +340,7 @@
   the value if succeeded, `nil` otherwise."
   [port]
   (let [o (volatile! nil)]
-    (pt/-take! port (channel/volatile->handler o))
+    (pt/-take port (channel/volatile->handler o))
     (let [[v c] (deref o)]
       (if c
         (throw c)
@@ -369,7 +367,7 @@
       (go-loop []
         (let [v (take! from)]
           (if (nil? v)
-            (if close? (pt/-close! to))
+            (if close? (pt/-close to))
             (if (put! to v)
               (recur)))))
       :cljs
@@ -378,7 +376,7 @@
              (p/mcat (fn [v]
                        (if (nil? v)
                          (do
-                           (when close? (pt/-close! to))
+                           (when close? (pt/-close to))
                            (p/resolved nil))
                          (->> (put to v)
                               (p/map (fn [res]
@@ -400,7 +398,7 @@
         (if (and coll (put! ch (first coll)))
           (recur (next coll))
           (when close?
-            (close! ch))))
+            (close ch))))
 
       :cljs
       (->> (p/loop [items (seq coll)]
@@ -412,7 +410,7 @@
                                 (p/recur nil)))))))
            (p/fnly (fn [_ _]
                      (when close?
-                       (pt/-close! ch))))))))
+                       (pt/-close ch))))))))
 
 (defn onto-chan!
   "Puts the contents of coll into the supplied channel.
@@ -433,40 +431,40 @@
   values in because multiplexer implements the IWriteChannel protocol.
 
   Optionally accepts `close?` argument, that determines if the channel will
-  be closed when `close!` is called on multiplexer o not."
+  be closed when `close` is called on multiplexer o not."
   ([ch] (mult* ch false))
   ([ch close?]
    (let [state (atom {})
          mx    (reify
                  pt/IChannelMultiplexer
-                 (-tap! [_ ch close?]
+                 (-tap [_ ch close?]
                    (swap! state assoc ch close?))
-                 (-untap! [_ ch]
+                 (-untap [_ ch]
                    (swap! state dissoc ch))
 
                  pt/ICloseable
-                 (-close! [_]
-                   (when close? (pt/-close! ch))
+                 (-close [_]
+                   (when close? (pt/-close ch))
                    (->> @state
                         (filter (comp true? peek))
-                        (run! (comp pt/-close! key))))
+                        (run! (comp pt/-close key))))
 
                  pt/IWriteChannel
-                 (-put! [_ val handler]
-                   (pt/-put! ch val handler)))]
+                 (-put [_ val handler]
+                   (pt/-put ch val handler)))]
 
      #?(:clj
         (go-loop []
           (let [v (take! ch)]
             (if (nil? v)
-              (pt/-close! mx)
+              (pt/-close mx)
               (do
-                (p/await!
+                (p/join
                  (p/wait-all* (for [ch (keys @state)]
                                 (->> (put ch v)
                                      (p/fnly (fn [v _]
                                                (when (nil? v)
-                                                 (pt/-untap! mx ch))))))))
+                                                 (pt/-untap mx ch))))))))
                 (recur)))))
         :cljs
         (p/loop []
@@ -474,13 +472,13 @@
                (p/mcat (fn [v]
                          (if (nil? v)
                            (do
-                             (pt/-close! mx)
+                             (pt/-close mx)
                              (p/resolved nil))
                            (->> (p/wait-all* (for [ch (-> @state keys vec)]
                                                (->> (put ch v)
                                                     (p/fnly (fn [v _]
                                                               (when (nil? v)
-                                                                (pt/-untap! mx ch)))))))
+                                                                (pt/-untap mx ch)))))))
                                 (p/fmap (fn [_] (p/recur))))))))))
 
 
@@ -510,10 +508,10 @@
 (defn tap
   "Copies the multiplexer source onto the provided channel."
   ([mult ch]
-   (pt/-tap! mult ch true)
+   (pt/-tap mult ch true)
    ch)
   ([mult ch close?]
-   (pt/-tap! mult ch close?)
+   (pt/-tap mult ch close?)
    ch))
 
 (defn tap!
@@ -527,7 +525,7 @@
 (defn untap
   "Disconnects a channel from the multiplexer."
   [mult ch]
-  (pt/-untap! mult ch)
+  (pt/-untap mult ch)
   ch)
 
 (defn untap!
@@ -573,7 +571,7 @@
           (recur)))
       (prn \"RES: END\"))
 
-    (p/await! (sp/onto-chan! inp [\"1\" \"2\" \"3\" \"4\"] true))
+    (p/join (sp/onto-chan! inp [\"1\" \"2\" \"3\" \"4\"] true))
 
   Internally, uses 2 vthreads for pipeline internals processing.
 
@@ -596,12 +594,12 @@
                            (f val rch)
                            (recur)))
                        (catch Throwable cause
-                         (close! jch)
-                         (close! rch)
+                         (close jch)
+                         (close rch)
                          (let [exh (or exh close-with-exception)]
                            (exh out cause)
                            (when (and close? (not (closed? out)))
-                             (close! out)))))))
+                             (close out)))))))
 
              (map (fn [f]
                     (p/thread-call typ f))))]
@@ -612,11 +610,11 @@
            (if (>! jch [val res-ch])
              (if (>! rch res-ch)
                (recur)
-               (close! jch))
-             (close! rch)))
+               (close jch))
+             (close rch)))
          (do
-           (close! rch)
-           (close! jch))))
+           (close rch)
+           (close jch))))
 
      (go-loop []
        (if-let [rch' (<! rch)]
@@ -626,11 +624,11 @@
                (if (>! out val)
                  (recur)
                  (do
-                   (close! jch)
-                   (close! rch)))))
+                   (close jch)
+                   (close rch)))))
            (recur))
          (when close?
-           (close! out))))
+           (close out))))
 
      (-> (into #{} xfm (range n))
          (p/wait-all*)))))
@@ -651,5 +649,5 @@
             (do
               (put! out v)
               (recur cs))))
-        (close! out)))
+        (close out)))
     out)))

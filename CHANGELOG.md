@@ -1,5 +1,15 @@
 # Changelog #
 
+## Version 12.0.0-RC2 (Unreleased)
+
+- Mark the `promesa.exec.csp` namespace no longer experimental and unify all
+  related protocols with the current naming style, removing the usage of `!`
+  suffix from protocol function names. This is tecnicaly a **breaking change**
+  but CSP was experimental and this kind of changes was expected. Still several
+  csp helpers are marked as experimental on docs and they continue have that
+  label.
+
+
 ## Version 12.0.0-RC1
 
 BREAKING CHANGES:

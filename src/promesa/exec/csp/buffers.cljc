@@ -23,20 +23,20 @@
       pt/IBuffer
       (-full? [_]
         (>= (mlist/size buf) n))
-      (-poll! [this]
-        (mlist/remove-last! buf))
-      (-offer! [this o]
+      (-poll [this]
+        (mlist/remove-last buf))
+      (-offer [this o]
         (if (>= (mlist/size buf) n)
           false
           (do
-            (mlist/add-first! buf o)
+            (mlist/add-first buf o)
             true)))
       (-size [_]
         (mlist/size buf))
 
       pt/ICloseable
       (-closed? [this] nil)
-      (-close! [this] nil))))
+      (-close [this] nil))))
 
 (defn expanding
   "Fixed but with the ability to expand.
@@ -54,17 +54,17 @@
       pt/IBuffer
       (-full? [_]
         (>= (mlist/size buf) n))
-      (-poll! [this]
-        (mlist/remove-last! buf))
-      (-offer! [this o]
-        (mlist/add-first! buf o)
+      (-poll [this]
+        (mlist/remove-last buf))
+      (-offer [this o]
+        (mlist/add-first buf o)
         true)
       (-size [_]
         (mlist/size buf))
 
       pt/ICloseable
       (-closed? [this] nil)
-      (-close! [this] nil))))
+      (-close [this] nil))))
 
 (defn dropping
   [n]
@@ -72,18 +72,18 @@
     (reify
       pt/IBuffer
       (-full? [_] false)
-      (-poll! [this]
-        (mlist/remove-last! buf))
-      (-offer! [this o]
+      (-poll [this]
+        (mlist/remove-last buf))
+      (-offer [this o]
         (when-not (>= (mlist/size buf) n)
-          (mlist/add-first! buf o))
+          (mlist/add-first buf o))
         true)
       (-size [_]
         (mlist/size buf))
 
       pt/ICloseable
       (-closed? [this] nil)
-      (-close! [this] nil))))
+      (-close [this] nil))))
 
 (defn sliding
   "A buffer that works as sliding window, if max capacity is reached,
@@ -93,19 +93,19 @@
     (reify
       pt/IBuffer
       (-full? [_] false)
-      (-poll! [this]
-        (mlist/remove-last! buf))
-      (-offer! [this o]
+      (-poll [this]
+        (mlist/remove-last buf))
+      (-offer [this o]
         (when (= (mlist/size buf) n)
-          (mlist/remove-last! buf))
-        (mlist/add-first! buf o)
+          (mlist/remove-last buf))
+        (mlist/add-first buf o)
         true)
       (-size [_]
         (mlist/size buf))
 
       pt/ICloseable
       (-closed? [this] nil)
-      (-close! [this] nil))))
+      (-close [this] nil))))
 
 (def no-val
   #?(:clj (Object.)
@@ -115,13 +115,13 @@
                      ^:unsynchronized-mutable ^Boolean closed]
   pt/IBuffer
   (-full? [_] false)
-  (-poll! [this]
+  (-poll [this]
     (when-not closed
       value))
 
-  (-offer! [this o]
+  (-offer [this o]
     (when (identical? value no-val)
-      (set! value o)
+      (set value o)
       true))
 
   (-size [_]
@@ -132,7 +132,7 @@
 
   pt/ICloseable
   (-closed? [this] closed)
-  (-close! [this] (compare-and-set! closed false true)))
+  (-close [this] (compare-and-set! closed false true)))
 
 (defn once
   "Creates a promise like buffer that holds a single value and only

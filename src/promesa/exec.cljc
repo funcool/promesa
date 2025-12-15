@@ -1195,6 +1195,6 @@
   {:no-doc true
    :deprecated true}
   ([o]
-   (pt/-close! o))
+   (pt/-close o))
   ([o reason]
-   (pt/-close! o reason)))
+   (pt/-close o reason)))

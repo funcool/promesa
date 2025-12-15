@@ -22,8 +22,6 @@
                   ^:mutable next
                   ^:mutable prev]))
 
-;; FIXME: simplify (?)
-
 #?(:cljs
    (deftype LinkedList [^:mutable head
                         ^:mutable tail
@@ -35,7 +33,7 @@
            (do (set! (.-head this) n)
                (set! (.-tail this) n))
            (do (set! (.-next n) (.-head this))
-               (set! (.-prev (.-head this)) n)
+               (set! (.-prev ^Node (.-head this)) n)
                (set! (.-head this) n)))
          (set! (.-size this) (inc (.-size this)))
          this))
@@ -56,7 +54,7 @@
          (let [val (.-value h)]
            (set! (.-head this) (.-next h))
            (if (.-head this)
-             (set! (.-prev (.-head this)) nil)
+             (set! (.-prev ^Node (.-head this)) nil)
              (set! (.-tail this) nil))
            (set! (.-size this) (dec (.-size this)))
            val)))
@@ -64,7 +62,7 @@
      (removeLast [this]
        (when-let [t (.-tail this)]
          (let [val (.-value t)]
-           (set! (.-tail this) (.-prev t))
+           (set! (.-tail  this) (.-prev ^Node t))
            (if (.-tail this)
              (set! (.-next (.-tail this)) nil)
              (set! (.-head this) nil))
@@ -84,18 +82,17 @@
   #?(:clj (LinkedList.)
      :cljs (LinkedList. nil nil 0)))
 
-(defn add-first!
+(defn add-first
   [o v]
   (.addFirst ^LinkedList o v)
   o)
 
-(defn add-last!
+(defn add-last
   [o v]
-  #?(:clj (.add ^LinkedList o v)
-     :cljs (.addFirst ^LinkedList o v))
+  (.addLast ^LinkedList o v)
   o)
 
-(defn remove-last!
+(defn remove-last
   "Remove the last element from list and return it. If no elements,
   `nil` is returned."
   [o]
@@ -104,7 +101,7 @@
     (catch #?(:clj java.util.NoSuchElementException :cljs :default) _
       nil)))
 
-(defn remove-first!
+(defn remove-first
   "Remove the first element from list and return it. If no elements,
   `nil` is returned."
   [o]

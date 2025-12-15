@@ -387,7 +387,7 @@
           (pt/-fnly
            (pt/-promise p)
            (fn [v exception]
-             (pt/-lock! lock)
+             (pt/-lock lock)
              (try
                (if exception
                  (when-not (:resolved? @state)
@@ -409,7 +409,7 @@
                      #?(:clj (c/run! pt/-cancel! pending))
                      (resolve v))))
                (finally
-                 (pt/-unlock! lock)))))))))))
+                 (pt/-unlock lock)))))))))))
 
 (defn wait-all*
   "Given an array of promises, return a promise that is fulfilled when

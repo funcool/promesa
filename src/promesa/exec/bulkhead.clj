@@ -62,7 +62,7 @@
       (try
         (.run ^Runnable f)
         (finally
-          (psm/release! semaphore :permits 1)
+          (psm/release semaphore :permits 1)
           (log "cmd:" "Task/run" "f:" (hash f)
                "task:" (hash this)
                "permits:" (.availablePermits ^Semaphore semaphore)
@@ -121,10 +121,10 @@
     (log "cmd:" "Bulkhead/run" "queue:" (.size queue) "permits:" (.availablePermits semaphore))
     (loop []
       (log "cmd:" "Bulkhead/run$loop1" "queue:" (.size queue) "permits:" (.availablePermits semaphore))
-      (when-let [task (when (pt/-try-acquire! semaphore)
+      (when-let [task (when (pt/-try-acquire semaphore)
                         (if-let [task (-poll queue)]
                           task
-                          (pt/-release! semaphore)))]
+                          (pt/-release semaphore)))]
         (log "cmd:" "Bulkhead/run$loop2" "task:" (hash task) "available-permits:" (.availablePermits semaphore))
         (.execute ^Executor executor ^Runnable task)
         (recur)))))
@@ -170,11 +170,11 @@
           (throw (ex-info hint props))))
 
       (try
-        (if (psm/acquire! semaphore :permits 1 :timeout timeout)
+        (if (psm/acquire semaphore :permits 1 :timeout timeout)
           (try
             (.run ^Runnable f)
             (finally
-              (psm/release! semaphore)))
+              (psm/release semaphore)))
           (let [props {:type :bulkhead-error
                        :code :capacity-limit-reached
                        :timeout timeout}]

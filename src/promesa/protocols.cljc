@@ -58,50 +58,6 @@
   "A generic abstraction for scheduler facilities."
   (-schedule! [it ms func] "Schedule a function to be executed in future."))
 
-(defprotocol ISemaphore
-  "An experimental semaphore protocol, used internally; no public api"
-  (-try-acquire! [it] [it n] [it n t] "Try acquire n or n permits, non-blocking or optional timeout")
-  (-acquire! [it] [it n] "Acquire 1 or N permits")
-  (-release! [it] [it n] "Release 1 or N permits"))
-
-(defprotocol ILock
-  "An experimental lock protocol, used internally; no public api"
-  (-lock! [it])
-  (-unlock! [it]))
-
-(defprotocol IReadChannel
-  (-take! [it handler]))
-
-(defprotocol IWriteChannel
-  (-put! [it val handler]))
-
-(defprotocol IChannelInternal
-  (^:no-doc -cleanup! [it]))
-
-(defprotocol IChannelMultiplexer
-  (^:no-doc -tap! [it ch close?])
-  (^:no-doc -untap! [it ch]))
-
-(defprotocol ICloseable
-  (-closed? [it])
-  (-close! [it] [it reason]))
-
-(defprotocol IBuffer
-  (-full? [it])
-  (-poll! [it])
-  (-offer! [it val])
-  (-size [it]))
-
-(defprotocol IHandler
-  (-active? [it])
-  (-commit! [it])
-  (-blockable? [it]))
-
-#?(:clj
-   ;; DEPRECATED
-   (defprotocol IAwaitable
-     (-await! [it] [it duration] "block current thread await termination")))
-
 #?(:clj
    (defprotocol IJoinable
      (-join [it] [it duration-or-ms] "block current thread await termination")))
@@ -110,4 +66,54 @@
    (defprotocol IInvoke
      (-invoke [it f] [it f duration-or-ms] "Call a function f in a context with optional timeout")))
 
+(defprotocol ISemaphore
+  "A semaphore protocol, used internally; no public api"
+  (^:no-doc -try-acquire [it] [it n] [it n t] "Try acquire n or n permits, non-blocking or optional timeout")
+  (^:no-doc -acquire [it] [it n] "Acquire 1 or N permits")
+  (^:no-doc -release [it] [it n] "Release 1 or N permits"))
+
+(defprotocol ILock
+  "A lock protocol, used internally; no public api"
+  (^:no-doc -lock [it])
+  (^:no-doc -unlock [it]))
+
+(defprotocol IReadChannel
+  "Used internally; no public api"
+  (^:no-doc -take [it handler]))
+
+(defprotocol IWriteChannel
+  "Used internally; no public api"
+  (^:no-doc -put [it val handler]))
+
+(defprotocol IChannelInternal
+  "Used internally; no public api"
+  (^:no-doc -cleanup [it]))
+
+(defprotocol IChannelMultiplexer
+  "Used internally; no public api"
+  (^:no-doc -tap [it ch close?])
+  (^:no-doc -untap [it ch]))
+
+(defprotocol ICloseable
+  "Used internally; no public api"
+  (^:no-doc -closed? [it])
+  (^:no-doc -close [it] [it reason]))
+
+(defprotocol IBuffer
+  "Used internally; no public api"
+  (^:no-doc -full? [it])
+  (^:no-doc -poll [it])
+  (^:no-doc -offer [it val])
+  (^:no-doc -size [it]))
+
+(defprotocol IHandler
+  "Used internally; no public api"
+  (^:no-doc -active? [it])
+  (^:no-doc -commit [it])
+  (^:no-doc -blockable? [it]))
+
+#?(:clj
+   ;; DEPRECATED
+   (defprotocol IAwaitable
+     (-await! [it] [it duration] "block current thread await termination")))
 

@@ -159,13 +159,13 @@
      (let [m (ReentrantLock.)]
        (reify
          pt/ILock
-         (-lock! [_] (.lock m))
-         (-unlock! [_] (.unlock m))))
+         (-lock [_] (.lock m))
+         (-unlock [_] (.unlock m))))
      :cljs
      (reify
        pt/ILock
-       (-lock! [_])
-       (-unlock! [_]))))
+       (-lock [_])
+       (-unlock [_]))))
 
 
 (defn try*
@@ -186,9 +186,9 @@
 
 (defn close
   ([o]
-   (pt/-close! o))
+   (pt/-close o))
   ([o reason]
-   (pt/-close! o reason)))
+   (pt/-close o reason)))
 
 (defn close!
   {:deprecated "12.0.0"}
@@ -200,7 +200,7 @@
      java.util.concurrent.ExecutorService
      (-closed? [it]
        (.isTerminated it))
-     (-close! [it]
+     (-close [it]
        (let [interrupted (volatile! false)]
          (loop [terminated? ^Boolean (.isTerminated it)]
            (when-not terminated?
@@ -222,7 +222,7 @@
      java.lang.AutoCloseable
      (-closed? [_]
        (throw (IllegalArgumentException. "not implemented")))
-     (-close! [it]
+     (-close [it]
        (.close ^java.lang.AutoCloseable it))))
 
 (defmacro with-open
@@ -242,6 +242,6 @@
                    (let [target# ~(first bindings)]
                      (if (instance? java.lang.AutoCloseable target#)
                        (.close ^java.lang.AutoCloseable target#)
-                       (pt/-close! target#)))))))
+                       (pt/-close target#)))))))
           `(do ~@body)
           (reverse (partition 2 bindings))))
