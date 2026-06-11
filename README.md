@@ -18,21 +18,15 @@ Here you can look a detailed [documentation][1].
 deps.edn:
 
 ```clojure
-funcool/promesa {:mvn/version "11.0.678"}
-```
-
-Or you can try the latest RC:
-
-```clojure
-funcool/promesa {:mvn/version "12.0.0-RC2"}
+funcool/promesa {:mvn/version "12.0.0"}
 ```
 
 You also can get it via git:
 
 ```clojure
 funcool/promesa
-{:git/sha "f152066"
- :git/tag "12.0.0-RC2"
+{:git/sha "1f94377"
+ :git/tag "12.0.0"
  :git/url "https://github.com/funcool/promesa"}
 ```
 
