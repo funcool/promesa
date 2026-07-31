@@ -544,10 +544,10 @@
   ([p t v] (timeout p t v :default))
   ([p t v scheduler]
    (c/let [timeout (deferred)
-           tid     (exec/schedule! scheduler t
-                                   #(if (= v ::default)
-                                      (reject timeout (TimeoutException. "Operation timed out."))
-                                      (resolve timeout v)))]
+           tid     (exec/schedule scheduler t
+                                  #(if (= v ::default)
+                                     (reject timeout (TimeoutException. "Operation timed out."))
+                                     (resolve timeout v)))]
      (race [(fnly (fn [_ _] (pt/-cancel! tid)) p) timeout]))))
 
 (defn delay
@@ -558,7 +558,7 @@
   ([t v] (delay t v :default))
   ([t v scheduler]
    (c/let [d (deferred)]
-     (exec/schedule! scheduler t #(resolve d v))
+     (exec/schedule scheduler t #(resolve d v))
      d)))
 
 (defmacro do*
