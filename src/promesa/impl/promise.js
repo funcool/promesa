@@ -146,7 +146,7 @@ goog.scope(function() {
       this[QUEUE].push({
         type: resolveType,
         resolve: defaultResolveMapHandler,
-        reject: defaultResolveMapHandler,
+        reject: defaultRejectHandler,
         complete: fn,
         // metadata: {
         //   origin: goog.getUid(this),
@@ -284,9 +284,8 @@ goog.scope(function() {
   function processNextTick(p) {
     if (p[QUEUE].length === 0) return;
 
-    const value = p[VALUE];
-    let state = p[STATE];
-    let task, rvalue;
+    const pstate = p[STATE];
+    const pvalue = p[VALUE];
 
     // console.log(":: process:",
     //             "uid:", goog.getUid(p),
@@ -295,12 +294,29 @@ goog.scope(function() {
     //             "value:", fmtValue(p[VALUE]));
 
     while (p[QUEUE].length) {
-      task = p[QUEUE].shift();
+      // The outcome (state/rvalue) is task-local: each task is
+      // computed only from the source promise state/value and its own
+      // handler, never from the outcome of a previous task in the
+      // same queue (several independent chains may share the same
+      // source promise, e.g. the shared NULL_PROMISE).
+      const task = p[QUEUE].shift();
+      let state, rvalue;
+
       try {
-        if (state === RESOLVED) {
-          rvalue = task.resolve(value)
-        } else if (state === REJECTED) {
-          rvalue = task.reject(value)
+        if (pstate === RESOLVED) {
+          rvalue = task.resolve(pvalue);
+          state = RESOLVED;
+        } else if (pstate === REJECTED) {
+          if (task.reject === defaultRejectHandler) {
+            // Same outcome as calling defaultRejectHandler (which
+            // rethrows the cause, see the catch block below), without
+            // the cost of throwing.
+            state = REJECTED;
+            rvalue = (task.type === RESOLVE_TYPE_BIND) ? self.rejected(pvalue) : pvalue;
+          } else {
+            rvalue = task.reject(pvalue);
+            state = RESOLVED;
+          }
         } else {
           rvalue = new TypeError("invalid state");
           state = REJECTED;

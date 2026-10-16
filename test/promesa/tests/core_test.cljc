@@ -96,6 +96,39 @@
 
          (p/reject! p1 (ex-info "boom" {}))))))
 
+#?(:cljs
+   (t/deftest independent-chains-from-nil-do-not-share-outcome
+     ;; (p/resolved nil) returns a shared instance, so both chains are
+     ;; queued on the same promise; the exception of the first chain
+     ;; should not leak into the second one.
+     (t/async done
+       (let [a  (p/then (p/resolved nil) (fn [_] (throw (ex-info "A" {}))))
+             b  (p/then (p/resolved nil) (fn [_] "b-ok"))
+             a' (.catch ^js a (fn [_] nil))]
+         (->> (p/wait-all a' b)
+              (p/fnly (fn [_ _]
+                        (t/is (p/rejected? a))
+                        (t/is (= "A" (ex-message (p/extract a))))
+                        (t/is (p/resolved? b))
+                        (t/is (= "b-ok" (p/extract b)))
+                        (done))))))))
+
+#?(:cljs
+   (t/deftest throw-in-then-recover-in-catch-and-continue
+     (t/async done
+       (let [c (-> ^js (p/resolved nil)
+                   (.then (fn [_] (throw (ex-info "C" {}))))
+                   (.catch (fn [e] (str "recovered:" (ex-message e))))
+                   (.then (fn [v] (str v ":continued"))))
+             d (p/then (p/resolved nil) (fn [_] "d-ok"))]
+         (->> (p/wait-all c d)
+              (p/fnly (fn [_ _]
+                        (t/is (p/resolved? c))
+                        (t/is (= "recovered:C:continued" (p/extract c)))
+                        (t/is (p/resolved? d))
+                        (t/is (= "d-ok" (p/extract d)))
+                        (done))))))))
+
 (t/deftest rejected-and-wrap-on-catch
   (let [p1 (p/rejected (ex-info "foobar" {}))
         p2 (p/catch p1 (fn [cause]
