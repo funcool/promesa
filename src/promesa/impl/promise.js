@@ -285,7 +285,6 @@ goog.scope(function() {
     if (p[QUEUE].length === 0) return;
 
     const value = p[VALUE];
-    let state = p[STATE];
     let task, rvalue;
 
     // console.log(":: process:",
@@ -296,6 +295,9 @@ goog.scope(function() {
 
     while (p[QUEUE].length) {
       task = p[QUEUE].shift();
+      // Each task starts from the promise's own state, so a task that
+      // throws cannot change how the next task in the queue completes.
+      let state = p[STATE];
       try {
         if (state === RESOLVED) {
           rvalue = task.resolve(value)
