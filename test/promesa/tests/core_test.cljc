@@ -915,3 +915,26 @@
                       (t/is (nil? cause))
                       (t/is (= "ok" result))
                       (done)))))))
+
+#?(:cljs
+   (t/deftest throwing-task-leaves-its-siblings-alone
+     ;; https://github.com/funcool/promesa/issues/172: the tasks queued on one
+     ;; promise run in the same processNextTick drain, and a task that threw
+     ;; used to change how the later ones completed. (p/resolved nil) is one
+     ;; shared promise, so unrelated p/do blocks share a drain too.
+     (t/async done
+       (let [shared   (p/resolved :v)
+             thrower  (p/then shared (fn [_] (throw (ex-info "a" {}))))
+             sibling  (p/then shared (fn [v] [:sibling v]))
+             do-throw (p/do (throw (ex-info "b" {})))
+             do-ok    (p/do :ok)
+             settle   (fn [pr]
+                        (-> pr
+                            (p/then (fn [v] [:ok v]))
+                            (p/catch (fn [cause] [:err (ex-message cause)]))))]
+         (->> (p/all (map settle [thrower sibling do-throw do-ok]))
+              (p/fnly (fn [results cause]
+                        (t/is (nil? cause))
+                        (t/is (= [[:err "a"] [:ok [:sibling :v]] [:err "b"] [:ok :ok]]
+                                 results))
+                        (done))))))))
